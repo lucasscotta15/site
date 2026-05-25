@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projetos &amp; Pesquisas | Prof. Lucas Scotta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+<script>
+  fetch('components/menu.html')
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('nav-placeholder').outerHTML = html;
+    });
+</script>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb"><a href="index.html">Início</a><span>/</span> Projetos &amp; Pesquisas</div>
+    <h1><i class="fas fa-flask" style="margin-right:12px"></i>Projetos &amp; Pesquisas</h1>
+    <div class="subtitle">Projetos de pesquisa, extensão e desenvolvimento · Lattes: <a href="http://lattes.cnpq.br/8272843505564643" target="_blank" style="color:var(--accent)">8272843505564643</a></div>
+  </div>
+</div>
+
+<div class="main-wrap">
+  <main>
+
+    <!-- ÁREAS DE ATUAÇÃO -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-microscope"></i> Áreas de Atuação em Pesquisa</h2>
+      <div class="areas-grid">
+        <div class="area-card">
+          <i class="fas fa-network-wired"></i>
+          <div><h4>Redes de Computadores</h4><p>Redes e segurança, sistemas distribuídos, comunicação sem fio.</p></div>
+        </div>
+        <div class="area-card">
+          <i class="fas fa-robot"></i>
+          <div><h4>Robótica, Mecatrônica e Automação</h4><p>Sistemas embarcados, prototipagem, robótica educacional.</p></div>
+        </div>
+        <div class="area-card">
+          <i class="fas fa-wifi"></i>
+          <div><h4>Internet das Coisas (IoT)</h4><p>Dispositivos conectados, automação de ambientes, microcontroladores.</p></div>
+        </div>
+        <div class="area-card">
+          <i class="fas fa-code"></i>
+          <div><h4>Engenharia de Software</h4><p>Sistemas de informação, algoritmos, desenvolvimento de aplicações.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJETOS EM ANDAMENTO -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-spinner"></i> Projetos em Andamento</h2>
+
+      <div class="card">
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:#e74c3c"><i class="fas fa-star"></i></div>
+          <div class="timeline-content">
+            <h3>Hub Guard 2.0 — Gestão Inteligente de Fechaduras e Controle de Ambientes</h3>
+            <div class="year">2025 – Atual · Pesquisa · IFF Campus Macaé</div>
+            <p>Sistema inteligente com IoT, aprendizado de máquina e câmeras (TensorFlow/OpenCV) para monitoramento e controle de acesso. Migração para nuvem Azure com Docker. Alunos: Gustavo Lira da Silva, Maicon Anthony de Souza Clemente.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:#e74c3c"><i class="fas fa-gamepad"></i></div>
+          <div class="timeline-content">
+            <h3>CodeTrail — Jogo para Ensino de Lógica e Eletrônica</h3>
+            <div class="year">2024 – Atual · Pesquisa + Desenvolvimento · Financiador: CNPq</div>
+            <p>Jogo eletrônico com puzzles colaborativos para ensino de lógica de programação e eletrônica. Alunos: Gabriel Solino de Abreu Areas, Maria Eduarda Pinheiro Nascimento Almeida, Pedro Lucas Cosmo Vieira.</p>
+          </div>
+        </div>
+        <div class="timeline-item" style="margin-bottom:0">
+          <div class="timeline-dot" style="background:#e74c3c"><i class="fas fa-lock"></i></div>
+          <div class="timeline-content">
+            <h3>Hub Guard — Fechadura Eletrônica para IFF Macaé</h3>
+            <div class="year">2023 – Atual · Desenvolvimento · Financiador: IFF</div>
+            <p>Sistema de gerenciamento de espaços compartilhados com IoT, Angular, ASP.NET, SQL Server e bot Telegram. Alunos: Gustavo Lira da Silva, Pedro Lucas Cosmo Vieira.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJETOS CONCLUÍDOS -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-check-circle"></i> Projetos Concluídos</h2>
+      <div class="card">
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:#27ae60"><i class="fas fa-sun"></i></div>
+          <div class="timeline-content">
+            <h3>Irrigação Automática com Energia Solar</h3>
+            <div class="year">2020 – 2021 · Pesquisa · IFF</div>
+            <p>Protótipo microcontrolado (Arduino/NodeMCU) para irrigação autônoma com painel solar. Transmissão Wi-Fi e rádio AM/FM. Aluno: Rafael Gomes Silva.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:#27ae60"><i class="fas fa-building"></i></div>
+          <div class="timeline-content">
+            <h3>Gerência de Espaços Compartilhados com IoT</h3>
+            <div class="year">2020 – 2021 · Pesquisa · IFF</div>
+            <p>Aplicação para reserva e controle de acesso automatizado usando IoT, NodeMCU/Raspberry, SQL e aplicações web. Aluno: Rafael Gomes Silva.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:#27ae60"><i class="fas fa-seedling"></i></div>
+          <div class="timeline-content">
+            <h3>Irrigação Automática — Integração Escola-Aluno</h3>
+            <div class="year">2018 – 2019 · Pesquisa · Financiador: IFF</div>
+            <p>Protótipo com sensores de umidade/temperatura/luminosidade e transmissão Bluetooth, Wi-Fi e rádio AM/FM. Aluno: Rafael Gomes Silva.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:#27ae60"><i class="fas fa-seedling"></i></div>
+          <div class="timeline-content">
+            <h3>Irrigação Automática — Agricultura Familiar</h3>
+            <div class="year">2017 – 2018 · Pesquisa · Financiador: IFF</div>
+            <p>Sistema automático de controle de irrigação com Arduino, sensores de solo e IHM web para monitoramento remoto.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--accent2)"><i class="fas fa-snowflake"></i></div>
+          <div class="timeline-content">
+            <h3>AC/IFF — Controle Inteligente de Ar-Condicionado</h3>
+            <div class="year">2016 – 2017 · Pesquisa · Financiador: IFF</div>
+            <p>Protótipo com Arduino + ZigBee/XBee e sensores de temperatura e presença para redução de consumo de energia elétrica no Campus Macaé.</p>
+          </div>
+        </div>
+        <div class="timeline-item" style="margin-bottom:0">
+          <div class="timeline-dot" style="background:#8e44ad"><i class="fas fa-robot"></i></div>
+          <div class="timeline-content">
+            <h3>Robótica Educativa a partir da Reciclagem de Materiais</h3>
+            <div class="year">2013 – 2014 · Extensão · IFF</div>
+            <p>Oficinas de robótica com sucata e Arduino para alunos do ensino fundamental e médio da rede pública de Macaé. Parceiro: Ivan Costa da Silva.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRODUÇÃO CIENTÍFICA -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-file-alt"></i> Produção Científica</h2>
+      <div class="card">
+        <div class="timeline-item">
+          <div class="timeline-dot"><i class="fas fa-book"></i></div>
+          <div class="timeline-content">
+            <h3>Collaborative Edition Support of Interactive Digital TV Programs</h3>
+            <div class="year">2009 · VI Simpósio Brasileiro de Sistemas Colaborativos — Fortaleza, CE</div>
+            <p>MERLO, L. A. S.; MARQUES FILHO, F. A.; Roberta Lima Gomes. Trabalho completo publicado em anais de congresso.</p>
+          </div>
+        </div>
+        <div class="timeline-item" style="margin-bottom:0">
+          <div class="timeline-dot"><i class="fas fa-file-alt"></i></div>
+          <div class="timeline-content">
+            <h3>SDI — Sistema de Detecção de Intrusos</h3>
+            <div class="year">2006 · I Semana de Tecnologia e VII Workshop de Informática — Governador Valadares</div>
+            <p>MERLO, L. A. S. Resumo publicado em anais. Sistema de Detecção de Intrusos utilizando o SNORT.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EVENTOS -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-calendar-alt"></i> Participação em Eventos</h2>
+      <div class="card">
+        <div class="links-grid">
+          <div class="link-card" style="cursor:default">
+            <i class="fas fa-calendar" style="color:var(--accent2)"></i>
+            <div class="link-info"><strong>XVI Congresso Fluminense de IC e Tecnologia</strong><span>2024 · UENF — Comissão Julgadora</span></div>
+          </div>
+          <div class="link-card" style="cursor:default">
+            <i class="fas fa-calendar" style="color:var(--accent2)"></i>
+            <div class="link-info"><strong>XI Simpósio Brasileiro de Automação Inteligente</strong><span>2013 · SBAI</span></div>
+          </div>
+          <div class="link-card" style="cursor:default">
+            <i class="fas fa-calendar" style="color:var(--accent2)"></i>
+            <div class="link-info"><strong>XXX SBRC — Redes de Computadores</strong><span>2012 · Simpósio Brasileiro</span></div>
+          </div>
+          <div class="link-card" style="cursor:default">
+            <i class="fas fa-calendar" style="color:var(--accent2)"></i>
+            <div class="link-info"><strong>VI Jornada Acadêmica IST Paracambi</strong><span>2011 · Juiz Maratona de Programação + Palestra</span></div>
+          </div>
+          <div class="link-card" style="cursor:default">
+            <i class="fas fa-calendar" style="color:var(--accent2)"></i>
+            <div class="link-info"><strong>VI Simpósio Brasileiro de Sistemas Colaborativos</strong><span>2009 · Artigo publicado</span></div>
+          </div>
+          <div class="link-card" style="cursor:default">
+            <i class="fas fa-calendar" style="color:var(--accent2)"></i>
+            <div class="link-info"><strong>XIV WebMedia 2008 + V SBSC 2008</strong><span>2008 · Simpósios</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <aside>
+    <div class="sidebar-card">
+      <div class="sidebar-title">Números</div>
+      <div class="facts-grid">
+        <div class="fact-item"><div class="fact-num">9+</div><div class="fact-label">Projetos de Pesquisa</div></div>
+        <div class="fact-item"><div class="fact-num">3</div><div class="fact-label">Em Andamento</div></div>
+        <div class="fact-item"><div class="fact-num">2025</div><div class="fact-label">Último Projeto</div></div>
+        <div class="fact-item"><div class="fact-num">CNPq</div><div class="fact-label">Financiador</div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sidebar-title">Áreas Principais</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="info-box" style="padding:10px 14px;margin:0"><i class="fas fa-wifi" style="color:var(--accent2);margin-right:8px"></i>IoT / Sistemas Embarcados</div>
+        <div class="info-box" style="padding:10px 14px;margin:0"><i class="fas fa-robot" style="color:var(--accent2);margin-right:8px"></i>Robótica e Automação</div>
+        <div class="info-box" style="padding:10px 14px;margin:0"><i class="fas fa-network-wired" style="color:var(--accent2);margin-right:8px"></i>Redes de Computadores</div>
+        <div class="info-box" style="padding:10px 14px;margin:0"><i class="fas fa-code" style="color:var(--accent2);margin-right:8px"></i>Engenharia de Software</div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sidebar-title">Currículo</div>
+      <a href="http://lattes.cnpq.br/8272843505564643" target="_blank" class="btn-link">
+        <i class="fas fa-id-card"></i> Lattes CNPq
+      </a>
+      <a href="mailto:lscotta@iff.edu.br" class="btn-link accent" style="margin-top:8px">
+        <i class="fas fa-envelope"></i> Propor Projeto
+      </a>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  <p>© 2026 Prof. Lucas Scotta · Instituto Federal Fluminense · Campus Macaé</p>
+  <p style="margin-top:6px;">Hospedado no <a href="https://pages.github.com" target="_blank">GitHub Pages</a></p>
+</footer>
+</body>
+</html>

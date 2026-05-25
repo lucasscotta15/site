@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ensino | Prof. Lucas Scotta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+<script>
+  fetch('components/menu.html')
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('nav-placeholder').outerHTML = html;
+    });
+</script>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb"><a href="index.html">Início</a><span>/</span> Ensino</div>
+    <h1><i class="fas fa-chalkboard-teacher" style="margin-right:12px"></i>Ensino</h1>
+    <div class="subtitle">Disciplinas, turmas e materiais de aula</div>
+  </div>
+</div>
+
+<div class="main-wrap full">
+  <main>
+
+    <div class="info-box">
+      <strong>Atenção:</strong> Procure a disciplina desejada no menu ou abaixo. Observe que alguns arquivos só permitem leitura/edição em softwares específicos.<br><br>
+      <strong>Arquivos PPT/PPTX:</strong> <a href="https://view.officeapps.live.com" target="_blank">Visualizador do PowerPoint</a> · <a href="https://www.libreoffice.org" target="_blank">LibreOffice</a> &nbsp;|&nbsp;
+      <strong>DOC/DOCX:</strong> <a href="https://view.officeapps.live.com" target="_blank">Visualizador do Word</a> · <a href="https://www.libreoffice.org" target="_blank">LibreOffice</a> &nbsp;|&nbsp;
+      <strong>PDF:</strong> <a href="https://get.adobe.com/reader/" target="_blank">Adobe Reader</a>
+    </div>
+
+    <section>
+      <h2 class="section-title"><i class="fas fa-th-large"></i> Disciplinas e Atividades de Ensino</h2>
+      <div class="card">
+        <a href="atp-emi.html" class="course-item">
+          <div class="course-item-left"><i class="fas fa-code"></i><span class="course-name">ATP — Algoritmos e Técnicas de Programação</span></div>
+          <div class="course-right"><span class="course-tag">EMI</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="ic-graduacao.html" class="course-item">
+          <div class="course-item-left"><i class="fas fa-microchip"></i><span class="course-name">IC — Infraestrutura de Computadores</span></div>
+          <div class="course-right"><span class="course-tag">Graduação</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="#monitoria" class="course-item">
+          <div class="course-item-left"><i class="fas fa-chalkboard-teacher"></i><span class="course-name">Monitoria</span></div>
+          <div class="course-right"><span class="course-tag">Extensão</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="#cdr" class="course-item">
+          <div class="course-item-left"><i class="fas fa-desktop"></i><span class="course-name">CDR EMI</span></div>
+          <div class="course-right"><span class="course-tag">EMI</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="#informatica" class="course-item">
+          <div class="course-item-left"><i class="fas fa-laptop"></i><span class="course-name">Informática</span></div>
+          <div class="course-right"><span class="course-tag">Técnico</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+      </div>
+    </section>
+
+    <section id="monitoria">
+      <h2 class="section-title"><i class="fas fa-chalkboard-teacher"></i> Monitoria</h2>
+      <div class="card">
+        <p class="about-text">Informações sobre o programa de monitoria serão disponibilizadas aqui. Entre em contato pelo e-mail institucional para mais detalhes.</p>
+      </div>
+    </section>
+
+    <section id="cdr">
+      <h2 class="section-title"><i class="fas fa-desktop"></i> CDR EMI</h2>
+      <div class="card">
+        <p class="about-text">Materiais e informações da disciplina CDR (Configuração e Diagnóstico de Redes) do Ensino Médio Integrado serão disponibilizados aqui.</p>
+      </div>
+    </section>
+
+    <section id="informatica">
+      <h2 class="section-title"><i class="fas fa-laptop"></i> Informática</h2>
+      <div class="card">
+        <p class="about-text">Materiais e informações da disciplina de Informática do curso técnico serão disponibilizados aqui.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <p>© 2026 Prof. Lucas Scotta · Instituto Federal Fluminense · Campus Macaé</p>
+  <p style="margin-top:6px;">Hospedado no <a href="https://pages.github.com" target="_blank">GitHub Pages</a></p>
+</footer>
+</body>
+</html>

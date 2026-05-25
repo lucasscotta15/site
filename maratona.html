@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maratona de Programação | Prof. Lucas Scotta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+<script>
+  fetch('components/menu.html')
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('nav-placeholder').outerHTML = html;
+    });
+</script>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb"><a href="index.html">Início</a><span>/</span> Maratona de Programação</div>
+    <h1><i class="fas fa-trophy" style="margin-right:12px"></i>Maratona de Programação</h1>
+    <div class="subtitle">IFF Campus Macaé · Coordenação: Prof. Lucas Scotta</div>
+  </div>
+</div>
+
+<div class="main-wrap">
+  <main>
+
+    <!-- SOBRE A MARATONA -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-info-circle"></i> Sobre a Maratona</h2>
+      <div class="card">
+        <p class="about-text">
+          A <strong>Maratona de Programação do IFF Campus Macaé</strong> tem por objetivos:
+        </p>
+        <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div class="area-card">
+            <i class="fas fa-laptop-code"></i>
+            <div>
+              <h4>Difundir a Programação</h4>
+              <p>Promover a cultura de programação no IFFluminense Campus Macaé, incentivando alunos a desenvolverem raciocínio lógico e habilidades computacionais.</p>
+            </div>
+          </div>
+          <div class="area-card">
+            <i class="fas fa-users"></i>
+            <div>
+              <h4>Interação e Lazer</h4>
+              <p>Ser um momento de lazer aos alunos, permitindo uma interação entre alunos e professores de diferentes séries e cursos.</p>
+            </div>
+          </div>
+          <div class="area-card">
+            <i class="fas fa-medal"></i>
+            <div>
+              <h4>Formação de Equipe</h4>
+              <p>Selecionar e formar uma equipe representativa para a <strong>Maratona Nacional de Programação</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EDIÇÕES -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-calendar-alt"></i> Edições e Resultados</h2>
+      <div class="card">
+        <div class="timeline-item">
+          <div class="timeline-dot"><i class="fas fa-star"></i></div>
+          <div class="timeline-content">
+            <h3>Edição 2021</h3>
+            <div class="year">Resultados disponíveis</div>
+            <p><a href="#" target="_blank" style="color:var(--accent2)"><i class="fas fa-external-link-alt"></i> Link dos resultados das inscrições</a></p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"><i class="fas fa-star"></i></div>
+          <div class="timeline-content">
+            <h3>Edição 2020</h3>
+            <div class="year">Resultados disponíveis</div>
+            <p><a href="#" target="_blank" style="color:var(--accent2)"><i class="fas fa-external-link-alt"></i> Link dos resultados</a></p>
+          </div>
+        </div>
+        <div class="timeline-item" style="margin-bottom:0">
+          <div class="timeline-dot"><i class="fas fa-history"></i></div>
+          <div class="timeline-content">
+            <h3>Edições anteriores</h3>
+            <div class="year">Em breve</div>
+            <p>Histórico de edições anteriores será disponibilizado aqui.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMO PARTICIPAR -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-flag-checkered"></i> Como Participar</h2>
+      <div class="card">
+        <p class="about-text">Para participar da próxima edição da Maratona de Programação do IFF Campus Macaé, entre em contato com o professor responsável pelo e-mail abaixo ou fique atento aos avisos institucionais.</p>
+        <div style="margin-top: 18px;">
+          <a href="mailto:lscotta@iff.edu.br" class="btn-link" style="width: auto; display:inline-flex;">
+            <i class="fas fa-envelope"></i> Entrar em Contato
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- LINKS ÚTEIS -->
+    <section>
+      <h2 class="section-title"><i class="fas fa-link"></i> Links Úteis para Treino</h2>
+      <div class="card">
+        <div class="links-grid">
+          <a href="https://www.beecrowd.com.br/" target="_blank" class="link-card">
+            <i class="fas fa-code" style="color:var(--accent2)"></i>
+            <div class="link-info"><strong>Beecrowd (URI Online Judge)</strong><span>Plataforma de problemas de programação</span></div>
+          </a>
+          <a href="https://codeforces.com/" target="_blank" class="link-card">
+            <i class="fas fa-terminal" style="color:#1da462"></i>
+            <div class="link-info"><strong>Codeforces</strong><span>Competições e problemas online</span></div>
+          </a>
+          <a href="https://leetcode.com/" target="_blank" class="link-card">
+            <i class="fas fa-puzzle-piece" style="color:#f89f1b"></i>
+            <div class="link-info"><strong>LeetCode</strong><span>Desafios de programação</span></div>
+          </a>
+          <a href="https://www.youtube.com/lucasscotta" target="_blank" class="link-card">
+            <i class="fab fa-youtube" style="color:#ff0000"></i>
+            <div class="link-info"><strong>Canal do Professor</strong><span>Videoaulas de algoritmos</span></div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <aside>
+    <div class="sidebar-card">
+      <div class="sidebar-title">Coordenação</div>
+      <div class="contact-item">
+        <i class="fas fa-user-tie"></i>
+        <div><div><strong>Prof. Lucas Scotta</strong></div><span>Professor responsável</span></div>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-envelope"></i>
+        <div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-university"></i>
+        <div><div>IFF Campus Macaé</div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sidebar-title">Objetivos</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div class="fact-item"><i class="fas fa-laptop-code" style="color:var(--accent2); font-size:1.4rem; display:block; margin-bottom:6px"></i><div class="fact-label">Difundir Programação</div></div>
+        <div class="fact-item"><i class="fas fa-users" style="color:var(--accent2); font-size:1.4rem; display:block; margin-bottom:6px"></i><div class="fact-label">Integração de Alunos</div></div>
+        <div class="fact-item"><i class="fas fa-medal" style="color:var(--accent2); font-size:1.4rem; display:block; margin-bottom:6px"></i><div class="fact-label">Equipe Nacional</div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sidebar-title">Treino Rápido</div>
+      <a href="https://www.beecrowd.com.br/" target="_blank" class="btn-link" style="margin-bottom:8px"><i class="fas fa-code"></i> Beecrowd</a>
+      <a href="https://programacaodescomplicada.wordpress.com/" target="_blank" class="btn-link accent"><i class="fab fa-wordpress"></i> Prog. Descomplicada</a>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  <p>© 2026 Prof. Lucas Scotta · Instituto Federal Fluminense · Campus Macaé</p>
+  <p style="margin-top:6px;">Hospedado no <a href="https://pages.github.com" target="_blank">GitHub Pages</a></p>
+</footer>
+</body>
+</html>

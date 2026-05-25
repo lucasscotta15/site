@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ferramentas | Prof. Lucas Scotta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+<script>
+  fetch('components/menu.html')
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('nav-placeholder').outerHTML = html;
+    });
+</script>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb"><a href="index.html">Início</a><span>/</span> Ferramentas</div>
+    <h1><i class="fas fa-tools" style="margin-right:12px"></i>Ferramentas</h1>
+    <div class="subtitle">Recursos online para alunos · IFF Campus Macaé</div>
+  </div>
+</div>
+
+<div class="main-wrap full">
+  <main>
+
+    <section>
+      <h2 class="section-title"><i class="fas fa-code"></i> Compilador Pseudo-C</h2>
+      <div class="card">
+        <div class="area-card" style="margin-bottom: 20px;">
+          <i class="fas fa-terminal" style="font-size:2rem; color:#7c6ff7;"></i>
+          <div>
+            <h4>Compilador Pseudo-C <span style="font-size:0.75rem; color:var(--muted); font-weight:400;">v0.5.4.1</span></h4>
+            <p>Ambiente online para escrever, executar e testar algoritmos na linguagem Pseudo-C — desenvolvida pelo professor para o ensino de lógica de programação. Suporta variáveis, estruturas condicionais, laços, funções matemáticas e muito mais.</p>
+          </div>
+        </div>
+        <a href="IFF Compiler/index.html" target="_blank" class="btn-link" style="width:auto; display:inline-flex;">
+          <i class="fas fa-external-link-alt"></i> Abrir Compilador
+        </a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <p>© 2026 Prof. Lucas Scotta · Instituto Federal Fluminense · Campus Macaé</p>
+  <p style="margin-top:6px;">Hospedado no <a href="https://pages.github.com" target="_blank">GitHub Pages</a></p>
+</footer>
+</body>
+</html>

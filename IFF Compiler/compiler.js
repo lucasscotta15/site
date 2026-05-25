@@ -1,0 +1,1104 @@
+// ══════════════════════════════════════════════════════════════
+//  COMPILADOR PSEUDO-C — IFF
+//  compiler.js — Motor de interpretação separado da interface
+// ══════════════════════════════════════════════════════════════
+
+// ── Referências ao DOM (preenchidas após carregamento) ──
+let editor, lineNums, consoleEl, diagEl, inputEl, sendBtn, statusDot, statusTxt;
+
+document.addEventListener('DOMContentLoaded', () => {
+  editor    = document.getElementById('editor');
+  lineNums  = document.getElementById('line-numbers');
+  consoleEl = document.getElementById('console-output');
+  diagEl    = document.getElementById('diagnostics');
+  inputEl   = document.getElementById('user-input');
+  sendBtn   = document.getElementById('btn-send');
+  statusDot = document.getElementById('status-dot');
+  statusTxt = document.getElementById('status-text');
+
+  editor.addEventListener('input',  () => { updateLineNumbers(); lintCode(); });
+  editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
+  inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') sendInput(); });
+
+  // Tab → indentação no editor
+  editor.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const s = editor.selectionStart, end = editor.selectionEnd;
+      editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(end);
+      editor.selectionStart = editor.selectionEnd = s + 2;
+      updateLineNumbers();
+    }
+  });
+
+  // Ctrl+Enter → executar
+  editor.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runProgram(); }
+  });
+
+  updateLineNumbers();
+  _initHelpMenuClose();
+});
+
+// ══════════════════════════════════════════════
+//  EDITOR
+// ══════════════════════════════════════════════
+
+function updateLineNumbers() {
+  const count = editor.value.split('\n').length;
+  lineNums.textContent = Array.from({ length: count }, (_, i) => i + 1).join('\n');
+}
+
+// ══════════════════════════════════════════════
+//  CONSOLE
+// ══════════════════════════════════════════════
+
+function consolePrint(text, cls = 'console-out') {
+  const span = document.createElement('span');
+  span.className = 'console-line ' + cls;
+  span.textContent = text;
+  consoleEl.appendChild(span);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function clearConsole() { consoleEl.innerHTML = ''; setStatus('Pronto', ''); }
+function clearEditor()  { editor.value = ''; updateLineNumbers(); lintCode(); clearConsole(); }
+
+// ══════════════════════════════════════════════
+//  STATUS
+// ══════════════════════════════════════════════
+
+function setStatus(text, type = '') {
+  statusTxt.textContent = text;
+  statusDot.className = 'status-dot' + (type ? ' ' + type : '');
+}
+
+// ══════════════════════════════════════════════
+//  MODAL / DICIONÁRIO
+// ══════════════════════════════════════════════
+
+function showDict() { document.getElementById('dict-overlay').classList.add('open'); }
+function hideDict() { document.getElementById('dict-overlay').classList.remove('open'); }
+
+// ── Menu Ajuda ──
+function toggleHelpMenu() {
+  const m = document.getElementById('help-menu');
+  m.classList.toggle('open');
+}
+function closeHelpMenu() {
+  document.getElementById('help-menu').classList.remove('open');
+  const sub = document.getElementById('examples-submenu');
+  if (sub) sub.classList.remove('open');
+}
+// Fecha menu ao clicar fora (registrado após DOMContentLoaded)
+function _initHelpMenuClose() {
+  document.addEventListener('click', e => {
+    const m = document.getElementById('help-menu');
+    if (m && !m.contains(e.target)) m.classList.remove('open');
+  });
+}
+// Carrega exemplo pelo menu e fecha o menu
+function loadExampleMenu(n) {
+  loadExample(n);
+  closeHelpMenu();
+  document.getElementById('examples-submenu').classList.remove('open');
+}
+
+function toggleExamplesMenu(e) {
+  e.stopPropagation();
+  const sub   = document.getElementById('examples-submenu');
+  const arrow = document.getElementById('examples-arrow');
+  const isOpen = sub.classList.toggle('open');
+  if (arrow) arrow.textContent = isOpen ? '▾' : '▸';
+}
+
+// ── Feedback ──
+function showFeedback() {
+  window.open('https://form.jotform.com/261395029833058', '_blank');
+  closeHelpMenu();
+}
+function hideFeedback() {
+  document.getElementById('feedback-overlay').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════
+//  TOKENIZER — remove comentários
+// ══════════════════════════════════════════════
+
+function stripComments(src) {
+  // Remove blocos /* ... */
+  src = src.replace(/\/\*[\s\S]*?\*\//g, m => '\n'.repeat((m.match(/\n/g) || []).length));
+  // Remove linhas // ...
+  src = src.replace(/\/\/[^\n]*/g, '');
+  return src;
+}
+
+// ══════════════════════════════════════════════
+//  LINTER — validação em tempo real
+// ══════════════════════════════════════════════
+
+function lintCode() {
+  const raw = editor.value.trim();
+  if (!raw) {
+    diagEl.innerHTML = '<span class="diag-ok">✔ Sem erros de sintaxe</span>';
+    return;
+  }
+
+  const src   = stripComments(raw);
+  const all   = src.split('\n').map(l => l.trim()).filter(l => l);
+  const lines = all.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(l => l);
+  const errors = [];
+
+  // INICIO e FIM obrigatórios
+  const first = lines[0] || '';
+  const last  = lines[lines.length - 1] || '';
+  if (!/^inicio$/i.test(first))
+    errors.push({ msg: 'A primeira instrução deve ser INICIO', hint: 'Adicione INICIO na primeira linha do código.' });
+  if (!/^fim$/i.test(last))
+    errors.push({ msg: 'A última instrução deve ser FIM', hint: 'Adicione FIM na última linha do código.' });
+
+  // Chaves balanceadas
+  let depth = 0;
+  lines.forEach((l, idx) => {
+    depth += (l.match(/\{/g) || []).length;
+    depth -= (l.match(/\}/g) || []).length;
+    if (depth < 0) {
+      errors.push({ msg: `Linha ${idx + 1}: chave } sem { correspondente`, hint: 'Remova o } extra ou adicione um { antes.' });
+      depth = 0;
+    }
+  });
+  if (depth > 0)
+    errors.push({ msg: `${depth} bloco(s) aberto(s) sem fechar`, hint: 'Verifique se todo { tem um } correspondente.' });
+
+  // Bug 3: parênteses balanceados por linha
+  lines.forEach((l, idx) => {
+    // ignora linhas de comentário
+    if (/^\/\//.test(l)) return;
+    const opens  = (l.match(/\(/g) || []).length;
+    const closes = (l.match(/\)/g) || []).length;
+    if (opens !== closes) {
+      errors.push({
+        msg:  `Linha ${idx + 1}: parêntese${opens > closes ? ' não fechado' : ' extra'} em: ${l}`,
+        hint: opens > closes ? 'Adicione o ) que está faltando.' : 'Remova o ) extra.'
+      });
+    }
+  });
+
+  // Variáveis declaradas com GUARDAR (ignora palavras de tipo)
+  const TIPOS_KW = new Set(['inteiro','real','letra','frase']);
+  const declared = new Set();
+  lines.forEach(l => {
+    const m = l.match(/^guardar\s+(.+)$/i);
+    if (m) {
+      m[1].split(/[\s,]+/).filter(v => v)
+          .filter(v => !TIPOS_KW.has(v.toLowerCase()))
+          .forEach(v => declared.add(v.toLowerCase()));
+    }
+  });
+
+  // MOSTRAR e LER com variável não declarada
+  if (declared.size > 0) {
+    lines.forEach((l, idx) => {
+      const mMost = l.match(/^mostrar\s*\((.+)\)$/i);
+      const mLer  = l.match(/^ler\s*\((.+)\)$/i);
+      const ref   = mMost ? mMost[1].trim() : (mLer ? mLer[1].trim() : null);
+      if (ref && !declared.has(ref.toLowerCase())) {
+        errors.push({
+          msg:  `Linha ${idx + 1}: variável '${ref}' não foi declarada`,
+          hint: `Use GUARDAR ${ref} no início do programa para declarar a variável.`
+        });
+      }
+    });
+  }
+
+  // Passo de PARA sem atribuição (ex: i+1 em vez de i=i+1 ou i++)
+  lines.forEach((l, idx) => {
+    const paraM = l.match(/^para\s*\((.+?);(.+?);(.+?)\)\s*\{?$/i);
+    if (paraM) {
+      const step = paraM[3].trim();
+      // Passo é válido se for: i++, i--, i=expr, i+=expr, i-=expr, i*=expr, i/=expr
+      const validStep = /^[A-Za-zÀ-ÿ_]\w*\s*(\+\+|--)$/.test(step)
+                     || /^[A-Za-zÀ-ÿ_]\w*\s*(\+=|-=|\*=|\/=)/.test(step)
+                     || /^[A-Za-zÀ-ÿ_]\w*\s*=\s*.+/.test(step);
+      if (!validStep) {
+        errors.push({
+          msg:  `Linha ${idx + 1}: passo do PARA inválido: '${step}'`,
+          hint: `Use i++, i--, i = i + 1 ou i += 1 como passo do loop.`
+        });
+      }
+    }
+  });
+
+  // Verifica palavras-chave em minúsculo
+  const kwPattern = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b', 'gi');
+  const hasLower = lines.some(l => {
+    return (l.match(kwPattern) || []).some(m => m !== m.toUpperCase());
+  });
+  const warnings = hasLower
+    ? [`<span class="diag-warn">⚠ Palavras-chave em minúsculo serão corrigidas automaticamente ao executar. Use MAIÚSCULAS: INICIO, FIM, GUARDAR, LER, ESCREVER, MOSTRAR...</span>`]
+    : [];
+
+  if (errors.length === 0) {
+    diagEl.innerHTML = warnings.length
+      ? warnings.join('')
+      : '<span class="diag-ok">✔ Sem erros de sintaxe detectados</span>';
+    setStatus(warnings.length ? 'Aviso' : 'Pronto', '');
+  } else {
+    diagEl.innerHTML = errors.map(e =>
+      `<div><span class="diag-error">✖ ${e.msg}</span>` +
+      (e.hint ? `<br><span class="diag-fix">💡 ${e.hint}</span>` : '') +
+      `</div>`
+    ).join('');
+    setStatus('Erros de sintaxe', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  PARSER — constrói a AST a partir das linhas
+// ══════════════════════════════════════════════
+
+// Mapa global: instrução → número de linha original (para mensagens de erro)
+let _lineMap = {};
+
+function buildStatements(lines) {
+  const cleaned = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(l => l);
+
+  // Monta mapa instrução → linha (linha real no editor = índice + 1 após INICIO)
+  _lineMap = {};
+  cleaned.forEach((l, idx) => { _lineMap[l] = idx + 1; });
+
+  // Expande "} SENAO SE (...) {" e "} SENAO {" numa mesma linha em dois tokens
+  const expanded = [];
+  for (const l of cleaned) {
+    const inlineSenaoSe = l.match(/^\}\s*(senao\s+se\s*\(.+\)\s*\{?)$/i);
+    const inlineSenao   = l.match(/^\}\s*(senao\s*\{?)$/i);
+    if (inlineSenaoSe) {
+      expanded.push('}');
+      expanded.push(inlineSenaoSe[1].trim());
+    } else if (inlineSenao) {
+      expanded.push('}');
+      expanded.push(inlineSenao[1].trim());
+    } else {
+      expanded.push(l);
+    }
+  }
+
+  return parseBlock(expanded, 0, expanded.length);
+}
+
+// Parseia um SE (ou SENAO SE) e todos os encadeamentos recursivamente
+function parseSE(lines, i) {
+  // aceita tanto "SE (...)" quanto "SENAO SE (...)"
+  const seM = lines[i].match(/^(?:senao\s+)?se\s*\((.+)\)\s*\{?$/i);
+  if (!seM) {
+    const err = new Error(`Sintaxe inválida no SE: "${lines[i]}"`);
+    err.hint = 'Use o formato: SE (condição) { ... }';
+    throw err;
+  }
+  const blk  = extractBlock(lines, i);
+  const body = parseBlock(blk.inner, 0, blk.inner.length);
+
+  let elseBody = null;
+  let afterIdx = blk.afterIdx;
+
+  const nxt      = lines[blk.afterIdx] || '';
+  const senaoSeM = nxt.match(/^senao\s+se\s*\((.+)\)\s*\{?$/i);
+  const senaoM   = /^senao\s*\{?$/i.test(nxt);
+
+  if (senaoSeM) {
+    // Encadeia outro SE recursivamente
+    const inner = parseSE(lines, blk.afterIdx);
+    elseBody = [inner.node];
+    afterIdx = inner.afterIdx;
+  } else if (senaoM) {
+    const eb = extractBlock(lines, blk.afterIdx);
+    elseBody = parseBlock(eb.inner, 0, eb.inner.length);
+    afterIdx = eb.afterIdx;
+  }
+
+  return {
+    node: { type: 'SE', cond: seM[1].trim(), body, elseBody },
+    afterIdx
+  };
+}
+
+function parseBlock(lines, start, end) {
+  const stmts = [];
+  let i = start;
+
+  while (i < end) {
+    const line = lines[i];
+    if (/^inicio$/i.test(line)) { i++; continue; }
+    if (/^fim$/i.test(line))    { i++; continue; }
+
+    // ── SE ──
+    const seM = line.match(/^se\s*\((.+)\)\s*\{?$/i);
+    if (seM) {
+      const { node, afterIdx } = parseSE(lines, i);
+      stmts.push(node);
+      i = afterIdx;
+      continue;
+    }
+
+    // ── ENQUANTO ──
+    const enqM = line.match(/^enquanto\s*\((.+)\)\s*\{?$/i);
+    if (enqM) {
+      const blk = extractBlock(lines, i);
+      stmts.push({ type: 'ENQUANTO', cond: enqM[1].trim(),
+                   body: parseBlock(blk.inner, 0, blk.inner.length) });
+      i = blk.afterIdx;
+      continue;
+    }
+
+    // ── PARA ──
+    const paraM = line.match(/^para\s*\((.+?);(.+?);(.+?)\)\s*\{?$/i);
+    if (paraM) {
+      const blk = extractBlock(lines, i);
+      stmts.push({ type: 'PARA', init: paraM[1].trim(), cond: paraM[2].trim(),
+                   step: paraM[3].trim(), body: parseBlock(blk.inner, 0, blk.inner.length) });
+      i = blk.afterIdx;
+      continue;
+    }
+
+    stmts.push({ type: 'STMT', src: line });
+    i++;
+  }
+
+  return stmts;
+}
+
+function extractBlock(lines, lineIdx) {
+  let innerLines = [], depth = 0, started = false;
+  let scanStart = lineIdx;
+
+  // Se a linha de cabeçalho não tem {, verifica a próxima
+  if (!/{/.test(lines[lineIdx]) && lines[lineIdx + 1] && /^\{/.test(lines[lineIdx + 1].trim()))
+    scanStart = lineIdx + 1;
+
+  for (let j = scanStart; j < lines.length; j++) {
+    const l      = lines[j];
+    const opens  = (l.match(/\{/g) || []).length;
+    const closes = (l.match(/\}/g) || []).length;
+
+    if (!started) {
+      if (opens > 0) { depth += opens; depth -= closes; started = true; }
+      continue;
+    }
+
+    const nd = depth + opens - closes;
+    if (nd === 0) {
+      const bc = l.replace(/\}.*$/, '').trim();
+      // remove número de linha interno antes de guardar
+      const bcClean = bc.replace(/^\d+\.\s*/, '').trim();
+      if (bcClean) innerLines.push(bcClean);
+      return { inner: innerLines, afterIdx: j + 1 };
+    }
+    depth = nd;
+    // remove número de linha interno (ex: "1. Escrever (...)")
+    const lClean = l.replace(/^\d+\.\s*/, '').trim();
+    if (lClean) innerLines.push(lClean);
+  }
+
+  return { inner: innerLines, afterIdx: lines.length };
+}
+
+// ══════════════════════════════════════════════
+//  INTERPRETER
+// ══════════════════════════════════════════════
+
+let execState = null;
+
+// Palavras-chave da linguagem
+const KEYWORDS = ['INICIO','FIM','GUARDAR','LER','ESCREVER','MOSTRAR','SE','SENAO','ENQUANTO','PARA','SQRT','POW','INTEIRO','REAL','LETRA','FRASE'];
+
+// Corrige palavras-chave para maiúsculo
+// Retorna { src: string corrigida, corrected: bool, palavras: Set das corrigidas }
+// CUIDADO: não substituir dentro de strings de ESCREVER
+function normalizeKeywords(src) {
+  let corrected = false;
+  const palavras = new Set();
+  const lines = src.split('\n');
+  const pattern = new RegExp('\\b(' + KEYWORDS.join('|') + ')\\b', 'gi');
+
+  const normalized = lines.map(line => {
+    // Linhas de ESCREVER: normaliza só o comando, preserva o conteúdo entre parênteses
+    const escM = line.match(/^(\s*)(escrever\s*\()(.*)(\)\s*)$/i);
+    if (escM) {
+      const cmd = escM[2].replace(/^escrever/i, m => {
+        if (m !== 'ESCREVER') { corrected = true; palavras.add('ESCREVER'); }
+        return 'ESCREVER';
+      });
+      return escM[1] + cmd + escM[3] + escM[4];
+    }
+    // Demais linhas: substituição normal
+    return line.replace(pattern, (match) => {
+      if (match !== match.toUpperCase()) {
+        corrected = true;
+        palavras.add(match.toUpperCase());
+        return match.toUpperCase();
+      }
+      return match;
+    });
+  });
+
+  return { src: normalized.join('\n'), corrected, palavras };
+}
+
+function runProgram() {
+  clearConsole();
+  setStatus('Executando…', 'running');
+
+  const raw = editor.value;
+
+  // ── Pré-compilação: normaliza keywords e atualiza o editor ──
+  const norm = normalizeKeywords(stripComments(raw));
+  if (norm.corrected) {
+    // Atualiza o editor com o código corrigido (preserva comentários)
+    const normFull = normalizeKeywords(raw);
+    editor.value = normFull.src;
+    updateLineNumbers();
+    lintCode();
+
+    // Avisa antes de qualquer saída de execução
+    consolePrint('─────────────────────────────────', 'console-sep');
+    consolePrint('⚠ Palavras-chave encontradas em minúsculo foram corrigidas para MAIÚSCULAS:', 'console-err-hint');
+    consolePrint('   ' + [...norm.palavras].join(', '), 'console-sys');
+    consolePrint('💡 Para os próximos programas, escreva os comandos em MAIÚSCULAS desde o início.', 'console-err-hint');
+    consolePrint('─────────────────────────────────', 'console-sep');
+  } else {
+    consolePrint('─────────────────────────────────', 'console-sep');
+  }
+
+  const src   = norm.src;
+  const lines = src.split('\n').map(l => l.trim()).filter(l => l);
+
+  if (!lines.length) {
+    consolePrint('// Nenhum código para executar.', 'console-sys');
+    setStatus('Pronto', '');
+    return;
+  }
+
+  const clean = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(l => l);
+
+  if (!/^inicio$/i.test(clean[0])) {
+    runtimeError('O algoritmo deve começar com INICIO.', 'Adicione INICIO como primeira instrução.');
+    return;
+  }
+  if (!/^fim$/i.test(clean[clean.length - 1])) {
+    runtimeError('O algoritmo deve terminar com FIM.', 'Adicione FIM como última instrução.');
+    return;
+  }
+
+  // Encerra execução anterior se ainda estiver rodando
+  if (execState) {
+    execState.stopped = true;
+    execState = null;
+  }
+
+  let stmts;
+  try {
+    stmts = buildStatements(clean);
+  } catch (e) {
+    runtimeError('Erro de sintaxe ao analisar o código: ' + e.message, 'Verifique a estrutura dos blocos SE, ENQUANTO e PARA.');
+    return;
+  }
+
+  execState = new Interpreter(stmts);
+  execState.run();
+}
+
+function runtimeError(msg, hint, linha) {
+  const linhaInfo = linha ? ` (linha ${linha})` : '';
+  consolePrint('✖ ERRO' + linhaInfo + ': ' + msg, 'console-err');
+  if (hint) consolePrint('💡 ' + hint, 'console-err-hint');
+  consolePrint('─────────────────────────────────', 'console-sep');
+  consolePrint('✖ Execução não concluída.', 'console-err');
+  setStatus('Erro', 'error');
+  disableInput();
+  if (execState) execState.stopped = true;
+  execState = null;
+}
+
+class Interpreter {
+  constructor(stmts) {
+    this.stmts   = stmts;
+    this.vars    = {};
+    this.waitCb  = null;
+    this.stopped = false;
+  }
+
+  run() { this._execStmts(this.stmts, () => this._done()); }
+
+  _done() {
+    if (this.stopped) return;  // Bug 4: não mostrar sucesso se parou com erro
+    consolePrint('─────────────────────────────────', 'console-sep');
+    consolePrint('✔ Execução concluída com sucesso.', 'console-sys');
+    setStatus('Concluído', '');
+    disableInput();
+    execState = null;
+  }
+
+  _execStmts(stmts, cb) {
+    let i = 0;
+    const next = () => {
+      if (this.stopped) return;
+      if (i >= stmts.length) { cb(); return; }
+      this._execStmt(stmts[i++], next);
+    };
+    next();
+  }
+
+  _execStmt(stmt, next) {
+    if (this.stopped) return;
+    try {
+      if (stmt.type === 'SE')       { this._execSE(stmt, next);   return; }
+      if (stmt.type === 'ENQUANTO') { this._execENQ(stmt, next);  return; }
+      if (stmt.type === 'PARA')     { this._execPARA(stmt, next); return; }
+      this._currentSrc = stmt.src;
+      this._execSimple(stmt.src, next);
+    } catch (e) {
+      const linha = _lineMap[this._currentSrc] || null;
+      runtimeError(e.message, e.hint || null, linha);
+      this.stopped = true;
+    }
+  }
+
+  _execSimple(src, next) {
+    // GUARDAR — aceita: GUARDAR x, y  ou  GUARDAR INTEIRO x, REAL y, LETRA c, FRASE s
+    // NÃO aceita parênteses: GUARDAR (a, b) → erro didático
+    if (/^guardar\s+/i.test(src)) {
+      const TIPOS = ['INTEIRO', 'REAL', 'LETRA', 'FRASE'];
+      let resto = src.replace(/^guardar\s+/i, '').trim();
+
+      // Bug 6: rejeita GUARDAR (a, b) com parênteses
+      if (/^\(/.test(resto)) {
+        const err = new Error(`GUARDAR não usa parênteses.`);
+        err.hint = `Escreva sem parênteses. Exemplo: GUARDAR INTEIRO a, b`;
+        throw err;
+      }
+
+      // Verifica se começa com um tipo conhecido
+      const temTipo = TIPOS.some(t => new RegExp('^' + t + '\\b', 'i').test(resto));
+
+      if (temTipo) {
+        const segmentos = resto.split(',').map(s => s.trim()).filter(s => s);
+        let tipoAtual = null;
+        for (const seg of segmentos) {
+          const tokens = seg.split(/\s+/).filter(t => t);
+          for (const tok of tokens) {
+            if (TIPOS.some(t => t.toLowerCase() === tok.toLowerCase())) {
+              tipoAtual = tok.toUpperCase();
+            } else {
+              // Preserva o nome EXATO da variável (case-sensitive)
+              this.vars[tok] = tipoAtual === 'REAL' ? 0.0
+                             : tipoAtual === 'FRASE' ? ''
+                             : tipoAtual === 'LETRA' ? ''
+                             : 0;
+              this.varTypes = this.varTypes || {};
+              this.varTypes[tok] = tipoAtual;
+            }
+          }
+        }
+      } else {
+        // Sem tipo — declara com nome exato mas avisa
+        const vars = resto.split(/[\s,]+/).filter(v => v);
+        for (const v of vars) {
+          this.vars[v] = 0;  // preserva case original
+        }
+        consolePrint(`⚠ Aviso: variáveis declaradas sem tipo de dado.`, 'console-err-hint');
+        consolePrint(`💡 O correto em pseudo-C é informar o tipo: INTEIRO, REAL, LETRA ou FRASE.`, 'console-err-hint');
+        consolePrint(`   Exemplo: GUARDAR INTEIRO ${vars.join(', ')}`, 'console-sys');
+      }
+      next(); return;
+    }
+
+    // ESCREVER — sintaxe inspirada no printf do C:
+    //   ESCREVER ("texto fixo")
+    //   ESCREVER ("texto com %d e %f", var1, var2)
+    //   ESCREVER (texto fixo)           ← compatibilidade sem aspas
+    const escM = src.match(/^escrever\s*\((.+)\)$/i);
+    if (escM) {
+      const inner = escM[1].trim();
+
+      // ── Detecta sintaxe COM aspas: ESCREVER ("template", var1, var2)
+      const comAspas = inner.match(/^"((?:[^"\\]|\\.)*)"\s*(,.*)?$/);
+      if (comAspas) {
+        const template = comAspas[1]; // texto dentro das aspas (vírgulas são literais)
+        const restVars = comAspas[2] ? comAspas[2].slice(1).split(',').map(v => v.trim()).filter(v => v) : [];
+        const specs    = template.match(/%[dfsc]/gi) || [];
+
+        if (specs.length !== restVars.length) {
+          this.stopped = true;
+          runtimeError(
+            `ESCREVER tem ${specs.length} especificador(es) mas ${restVars.length} variável(is).`,
+            `Exemplo: ESCREVER ("Resultado: %d e %f", intVar, realVar)`
+          );
+          return;
+        }
+        consolePrint('📢 ' + this._formatEscrever(template, specs, restVars), 'console-out');
+        next(); return;
+      }
+
+      // ── Sintaxe SEM aspas (retrocompatível) ──
+      // Vírgula só separa variáveis se houver especificador % no texto
+      const specs = inner.match(/%[dfsc]/gi) || [];
+      if (specs.length > 0) {
+        const partes   = inner.split(',').map(p => p.trim());
+        const template = partes[0];
+        const varNames = partes.slice(1).filter(v => v);
+
+        if (varNames.length !== specs.length) {
+          this.stopped = true;
+          runtimeError(
+            `ESCREVER tem ${specs.length} especificador(es) mas ${varNames.length} variável(is).`,
+            `Prefira a sintaxe com aspas: ESCREVER ("texto %d", variavel)`
+          );
+          return;
+        }
+        consolePrint('📢 ' + this._formatEscrever(template, specs, varNames), 'console-out');
+      } else {
+        // Texto fixo sem especificadores — vírgula é literal
+        consolePrint('📢 ' + inner, 'console-out');
+      }
+      next(); return;
+    }
+
+    // MOSTRAR
+    const mostM = src.match(/^mostrar\s*\((.+)\)$/i);
+    if (mostM) {
+      const vn  = mostM[1].trim(); // preserva case
+      const val = this._getVar(vn);
+      consolePrint('   ➜ ' + vn + ' = ' + this._fmt(val), 'console-in');
+      next(); return;
+    }
+
+    // LER
+    const lerM = src.match(/^ler\s*\((.+)\)$/i);
+    if (lerM) {
+      const vn = lerM[1].trim(); // preserva case
+      if (!(vn in this.vars)) {
+        const similar = Object.keys(this.vars).filter(k => k.toLowerCase() === vn.toLowerCase());
+        if (similar.length > 0) {
+          const err = new Error(`Variável '${vn}' não encontrada — você declarou '${similar.join("', '")}'.`);
+          err.hint = `O nome deve ser idêntico ao do GUARDAR. Maiúsculas/minúsculas importam.`;
+          throw err;
+        }
+        consolePrint(`⚠ Aviso: variável '${vn}' não foi declarada com GUARDAR. Criando automaticamente.`, 'console-err-hint');
+        this.vars[vn] = 0;
+      }
+      inputEl.placeholder = `Digite o valor para ${vn.toUpperCase()}...`;
+      this._waitInput(raw => {
+        const num = parseFloat(raw.replace(',', '.'));
+        this.vars[vn] = isNaN(num) ? raw : num;
+        consolePrint(`   ↩ ${vn.toUpperCase()} = ${this.vars[vn]}`, 'console-in');
+        next();
+      });
+      return;
+    }
+
+    // i++ ou i--
+    const incM = src.match(/^([A-Za-zÀ-ÿ_]\w*)\s*(\+\+|--)$/i);
+    if (incM) {
+      const vn = incM[1]; // preserva case
+      const cur = this._getVar(vn);
+      this.vars[vn] = incM[2] === '++' ? cur + 1 : cur - 1;
+      next(); return;
+    }
+
+    // Operadores compostos +=, -=, *=, /= — VÁLIDOS
+    const compM = src.match(/^([A-Za-zÀ-ÿ_]\w*)\s*(\+=|-=|\*=|\/=)\s*(.+)$/i);
+    if (compM) {
+      const vn  = compM[1]; // preserva case
+      const op  = compM[2];
+      const rhs = compM[3].trim();
+      const cur = this._getVar(vn);
+      const val = this._eval(rhs, src);
+      if      (op === '+=') this.vars[vn] = cur + val;
+      else if (op === '-=') this.vars[vn] = cur - val;
+      else if (op === '*=') this.vars[vn] = cur * val;
+      else if (op === '/=') {
+        if (val === 0) {
+          const err = new Error(`Divisão por zero em '${src}'.`);
+          err.hint = 'Verifique se o divisor pode ser zero.';
+          throw err;
+        }
+        this.vars[vn] = cur / val;
+      }
+      next(); return;
+    }
+
+    // Expressão sem atribuição usada como passo (ex: i + 1) — erro didático
+    if (/^[A-Za-zÀ-ÿ_]\w*\s*[+\-*\/]/.test(src) && !/^[A-Za-zÀ-ÿ_]\w*\s*=/.test(src)) {
+      const vn = src.match(/^([A-Za-zÀ-ÿ_]\w*)/)[1];
+      const err = new Error(`Expressão '${src}' não faz nada — falta a atribuição.`);
+      err.hint = `Para incrementar, use: ${vn} = ${src}  ou  ${vn}++`;
+      throw err;
+    }
+
+    // ATRIBUIÇÃO: VAR = expr (preserva case-sensitive do nome)
+    const attrM = src.match(/^([A-Za-zÀ-ÿ_]\w*)\s*=\s*(.+)$/i);
+    if (attrM) {
+      const vn  = attrM[1]; // preserva case exato
+      const val = this._eval(attrM[2], src);
+      // Verifica se foi declarada (com mesmo case)
+      if (!(vn in this.vars)) {
+        const similar = Object.keys(this.vars).filter(k => k.toLowerCase() === vn.toLowerCase());
+        const err = new Error(`Variável '${vn}' não foi declarada.`);
+        if (similar.length > 0) {
+          err.hint = `Você declarou '${similar.join("', '")}' — o nome deve ser idêntico. Maiúsculas/minúsculas importam.`;
+        } else {
+          err.hint = `Adicione GUARDAR ${vn} antes de atribuir um valor.`;
+        }
+        throw err;
+      }
+      this.vars[vn] = val;
+      next(); return;
+    }
+
+    // Instrução desconhecida
+    consolePrint('⚠ Instrução não reconhecida: ' + src, 'console-err');
+    consolePrint('💡 Verifique o dicionário (botão acima) para a sintaxe correta.', 'console-err-hint');
+    next();
+  }
+
+  // Formata template substituindo especificadores pelas variáveis
+  _formatEscrever(template, specs, varNames) {
+    const TIPO_SPEC = { INTEIRO: '%d', REAL: '%f', LETRA: '%c', FRASE: '%s' };
+    let output = template;
+    let tipoErro = null;
+
+    specs.forEach((spec, idx) => {
+      const s        = spec.toLowerCase();
+      const vn       = varNames[idx];
+      if (!vn) return;
+      const val      = this._getVar(vn);
+      const tipoDecl = (this.varTypes && this.varTypes[vn]) || null;
+      const specCerto = tipoDecl ? TIPO_SPEC[tipoDecl] : null;
+
+      // Validação cruzada tipo × especificador
+      if (tipoDecl && specCerto && s !== specCerto) {
+        const err = new Error(`'${vn}' foi declarado como ${tipoDecl} — use ${specCerto} em vez de ${s}.`);
+        err.hint = `Corrija para: ESCREVER ("...${specCerto}...", ${vn})`;
+        tipoErro = err;
+        return;
+      }
+
+      // Avisos pedagógicos sem tipo declarado
+      if (!tipoDecl) {
+        if (s === '%d' && typeof val === 'number' && !Number.isInteger(val))
+          consolePrint(`⚠ Aviso: '%d' é para inteiros, mas '${vn}' vale ${val}. Use %f para decimais.`, 'console-err-hint');
+        if (s === '%f' && typeof val === 'number' && Number.isInteger(val))
+          consolePrint(`💡 Dica: '${vn}' é inteiro — poderia usar %d em vez de %f.`, 'console-err-hint');
+        if ((s === '%s' || s === '%c') && typeof val === 'number')
+          consolePrint(`⚠ Aviso: '${s}' é para texto, mas '${vn}' contém o número ${val}.`, 'console-err-hint');
+      }
+
+      // Formata o valor
+      let formatted;
+      if      (s === '%d') formatted = String(Math.trunc(Number(val)));
+      else if (s === '%f') formatted = typeof val === 'number' ? val.toFixed(2) : String(val);
+      else if (s === '%c') formatted = String(val).charAt(0);
+      else                 formatted = String(val);
+
+      output = output.replace(/%[dfsc]/i, formatted);
+    });
+
+    if (tipoErro) {
+      this.stopped = true;
+      runtimeError(tipoErro.message, tipoErro.hint);
+      return '';
+    }
+    return output;
+  }
+
+  _execSE(stmt, next) {
+    const condResult = this._evalCond(stmt.cond);
+    if (condResult) {
+      this._execStmts(stmt.body, next);
+    } else if (stmt.elseBody) {
+      if (Array.isArray(stmt.elseBody) && stmt.elseBody[0]?.type === 'SE') {
+        this._execSE(stmt.elseBody[0], next);
+      } else {
+        this._execStmts(stmt.elseBody, next);
+      }
+    } else { next(); }
+  }
+
+  _execENQ(stmt, next) {
+    let iter = 0;
+    const loop = () => {
+      if (this.stopped) return;
+      if (++iter > 100000) {
+        const e = new Error('Loop infinito detectado (>100.000 iterações)');
+        e.hint = 'Verifique se a condição do ENQUANTO pode se tornar falsa.';
+        throw e;
+      }
+      if (this._evalCond(stmt.cond)) this._execStmts(stmt.body, loop);
+      else next();
+    };
+    loop();
+  }
+
+  _execPARA(stmt, next) {
+    this._execSimple(stmt.init, () => {
+      let iter = 0;
+      const loop = () => {
+        if (this.stopped) return;
+        if (++iter > 100000) {
+          const e = new Error('Loop infinito detectado');
+          e.hint = 'Verifique a condição e o passo do PARA.';
+          throw e;
+        }
+        if (this._evalCond(stmt.cond))
+          this._execStmts(stmt.body, () => this._execSimple(stmt.step, loop));
+        else next();
+      };
+      loop();
+    });
+  }
+
+  _waitInput(cb) {
+    enableInput();
+    consolePrint('⌨  Aguardando entrada do usuário…', 'console-sys');
+    this.waitCb = cb;
+  }
+
+  receiveInput(value) {
+    if (!this.waitCb) return;
+    disableInput();
+    const cb = this.waitCb;
+    this.waitCb = null;
+    cb(value);
+  }
+
+  // ── Avaliador de expressões ──
+  _eval(expr, srcCtx) {
+    expr = expr.trim();
+
+    // SQRT(x) — avalia argumento primeiro
+    expr = expr.replace(/SQRT\s*\(\s*([^)]+)\s*\)/gi, (_, e) => {
+      const v = this._eval(e);
+      if (typeof v === 'number' && v < 0) {
+        const err = new Error(`SQRT de número negativo (${v}). Raiz quadrada não é definida para negativos.`);
+        err.hint = 'Verifique se o valor dentro de SQRT pode ser negativo. Use SE para verificar antes.';
+        throw err;
+      }
+      return '(' + Math.sqrt(v) + ')';
+    });
+    // SQRT var
+    expr = expr.replace(/SQRT\s+([A-Za-z_]\w*)/gi, (_, v) => {
+      const val = this._getVar(v); // case-sensitive
+      if (typeof val === 'number' && val < 0) {
+        const err = new Error(`SQRT de número negativo (${val}). Raiz quadrada não é definida para negativos.`);
+        err.hint = 'Use SE para verificar se o valor é negativo antes de calcular SQRT.';
+        throw err;
+      }
+      return '(' + Math.sqrt(val) + ')';
+    });
+    // POW(base, exp)
+    expr = expr.replace(/POW\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/gi,
+      (_, b, e) => '(' + Math.pow(this._eval(b), this._eval(e)) + ')');
+
+    // Substitui nomes de variáveis pelos seus valores (case-sensitive)
+    // Protege NaN e Infinity que podem vir de resultados anteriores
+    const self = this;
+    expr = expr.replace(/[A-Za-zÀ-ÿ_]\w*/g, m => {
+      // Palavras reservadas do JS que podem aparecer em resultados numéricos
+      if (m === 'NaN' || m === 'Infinity') return m;
+      if (m in self.vars) {
+        const v = self.vars[m];
+        if (typeof v === 'number' && !isFinite(v)) return String(v);
+        return '(' + v + ')';
+      }
+      // Verifica se existe com case diferente
+      const similar = Object.keys(self.vars).filter(k => k.toLowerCase() === m.toLowerCase());
+      const err = new Error(`Variável '${m}' não foi declarada ou o nome está diferente do declarado.`);
+      if (similar.length > 0) {
+        err.hint = `Você declarou '${similar.join("', '")}' — o nome deve ser idêntico (maiúsculas/minúsculas importam).`;
+      } else {
+        err.hint = `Declare '${m}' com GUARDAR antes de usá-la.`;
+      }
+      throw err;
+    });
+
+    try {
+      // eslint-disable-next-line no-new-func
+      const result = Function('"use strict"; return (' + expr + ')')();
+      // preserva boolean para que _evalCond funcione corretamente
+      if (typeof result === 'boolean') return result;
+      if (typeof result === 'number') {
+        if (isNaN(result)) {
+          const err = new Error('O cálculo resultou em NaN (valor indefinido). Verifique os operandos.');
+          err.hint = 'Isso pode acontecer com 0/0, Infinity-Infinity ou operações com texto.';
+          throw err;
+        }
+        if (!isFinite(result)) {
+          const err = new Error('Divisão por zero: o resultado é infinito.');
+          err.hint = 'Verifique se o divisor pode ser zero. Use SE para verificar antes de dividir.';
+          throw err;
+        }
+        return result;
+      }
+      return String(result);
+    } catch (e) {
+      if (e.hint) throw e;
+      const err = new Error('Expressão matemática inválida: ' + (srcCtx || expr));
+      err.hint = 'Verifique os operadores e parênteses da expressão.';
+      throw err;
+    }
+  }
+
+  _evalCond(cond) {
+    // Avisa se o aluno usou = em vez de == em condição
+    const singleEq = cond.trim().match(/(?<![=!<>])=(?![=])/);
+    if (singleEq) {
+      consolePrint(`⚠ Aviso: condição "${cond.trim()}" usa = (atribuição). Em condições use == para comparar.`, 'console-err-hint');
+    }
+    // Normaliza = → == (mas não ==, !=, <=, >=)
+    let c = cond.trim().replace(/(?<![=!<>])=(?![=])/g, '==');
+    // Converte == → === e != → !==, mas evita === já existente
+    c = c.replace(/([^=!<>])==/g, '$1===').replace(/^==/g, '===')
+         .replace(/([^!])!=/g, '$1!==').replace(/^!=/g, '!==');
+    // Remove === duplicados criados acidentalmente
+    c = c.replace(/====/g, '===');
+    return Boolean(this._eval(c));
+  }
+
+  _getVar(name) {
+    // Busca exata (case-sensitive)
+    if (name in this.vars) return this.vars[name];
+    // Verifica se existe com case diferente — orienta o aluno
+    const declared = Object.keys(this.vars);
+    const similar = declared.filter(v => v.toLowerCase() === name.toLowerCase());
+    const err = new Error(`Variável '${name}' não foi declarada ou o nome está diferente do declarado.`);
+    if (similar.length > 0) {
+      err.hint = `Você declarou '${similar.join("', '")}' — verifique maiúsculas/minúsculas. O nome deve ser idêntico ao declarado no GUARDAR.`;
+    } else {
+      const lista = declared.length > 0 ? `Variáveis declaradas: ${declared.join(', ')}.` : '';
+      err.hint = `Declare '${name}' com GUARDAR antes de usá-la. ${lista}`;
+    }
+    throw err;
+  }
+
+  _fmt(val) {
+    if (typeof val === 'number') {
+      if (!isFinite(val)) return String(val);
+      return Number.isInteger(val) ? val.toString() : parseFloat(val.toFixed(6)).toString();
+    }
+    return String(val);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  INPUT DO USUÁRIO
+// ══════════════════════════════════════════════
+
+function enableInput()  { inputEl.disabled = false; sendBtn.disabled = false; inputEl.focus(); }
+function disableInput() { inputEl.disabled = true;  sendBtn.disabled = true; inputEl.value = ''; inputEl.placeholder = 'Aguardando execução...'; }
+
+function sendInput() {
+  if (!execState || !execState.waitCb) return;
+  const val = inputEl.value;
+  inputEl.value = '';
+  execState.receiveInput(val);
+}
+
+// ══════════════════════════════════════════════
+//  EXEMPLOS
+// ══════════════════════════════════════════════
+
+const EXAMPLES = {
+  1: `// Exemplo 1 — Bhaskara (fórmula simples)
+// X = (-b +/- SQRT(D)) / (2*a)
+
+INICIO
+GUARDAR REAL a, b, c, D, XA, XB
+ESCREVER ("Digite o valor de a: ")
+LER (a)
+ESCREVER ("Digite o valor de b: ")
+LER (b)
+ESCREVER ("Digite o valor de c: ")
+LER (c)
+D = (b*b) - 4*a*c
+XA = (-b + SQRT(D)) / (2*a)
+XB = (-b - SQRT(D)) / (2*a)
+ESCREVER ("Raiz 1 = %f", XA)
+ESCREVER ("Raiz 2 = %f", XB)
+FIM`,
+
+  2: `/*
+ * Exemplo 2 — Bhaskara com SE/SENAO
+ * Verifica o discriminante antes de calcular
+ */
+
+INICIO
+GUARDAR REAL D, A, B, C, Raiz1, Raiz2
+ESCREVER ("Digite A: ")
+LER (A)
+ESCREVER ("Digite B: ")
+LER (B)
+ESCREVER ("Digite C: ")
+LER (C)
+D = B*B - (4*A*C)
+SE (D < 0) {
+  ESCREVER ("Nao ha raiz real pois D eh negativo")
+} SENAO SE (D == 0) {
+  Raiz1 = (-B + SQRT(D)) / (2*A)
+  ESCREVER ("Ha uma raiz real: %f", Raiz1)
+} SENAO SE (D > 0) {
+  Raiz1 = (-B + SQRT(D)) / (2*A)
+  Raiz2 = (-B - SQRT(D)) / (2*A)
+  ESCREVER ("Raiz 1 = %f", Raiz1)
+  ESCREVER ("Raiz 2 = %f", Raiz2)
+}
+FIM`,
+
+  3: `// Exemplo 3 — POW (potenciação)
+// R = POW(base, expoente)  ex: POW(2,3) = 8
+
+INICIO
+GUARDAR REAL base, exp, resultado
+ESCREVER ("Digite a base: ")
+LER (base)
+ESCREVER ("Digite o expoente: ")
+LER (exp)
+resultado = POW(base, exp)
+ESCREVER ("Resultado = %f", resultado)
+FIM`,
+
+  4: `// Exemplo 4 — Loop com PARA
+// Soma os números de 1 até N
+
+INICIO
+GUARDAR INTEIRO n, soma, i
+ESCREVER ("Digite o valor de N: ")
+LER (n)
+soma = 0
+PARA (i=1; i<=n; i++) {
+  soma = soma + i
+}
+ESCREVER ("Somei de 1 ate %d e o resultado eh %d", n, soma)
+FIM`,
+
+  5: `// Exemplo 5 — Loop com ENQUANTO
+// Conta de 1 até N usando ENQUANTO
+
+INICIO
+GUARDAR INTEIRO n, i
+ESCREVER ("Digite o valor de N: ")
+LER (n)
+i = 1
+ENQUANTO (i <= n) {
+  ESCREVER ("Contando: %d", i)
+  i = i + 1
+}
+ESCREVER ("Contagem concluida!")
+FIM`
+};
+
+function loadExample(n) {
+  editor.value = EXAMPLES[n] || '';
+  updateLineNumbers();
+  lintCode();
+  clearConsole();
+}

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prof. Lucas Scotta | IFF Macaé</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+<script>
+  fetch('components/menu.html')
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('nav-placeholder').outerHTML = html;
+    });
+</script>
+
+<div class="hero">
+  <div class="hero-inner">
+    <img src="img/foto.jpg" class="hero-photo" alt="Lucas Scotta"> 
+    <!-- <div class="hero-photo-placeholder"><i class="fas fa-user"></i></div> -->
+    <div class="hero-info">
+      <h1>Lucas Scotta</h1>
+      <div class="title">Professor de Informática</div>
+      <div class="institution"><i class="fas fa-university"></i> Instituto Federal de Educação, Ciência e Tecnologia Fluminense (IFF)</div>
+      <div class="institution"><i class="fas fa-map-marker-alt"></i> Campus Macaé — Macaé, RJ</div>
+      <div class="hero-badges">
+        <span class="badge">Algoritmos e Programação</span>
+        <span class="badge">Rede de Computadores</span>
+        <span class="badge">Automação</span>
+        <span class="badge">Projetos</span>
+      </div>
+      <div class="hero-contact">
+        <a href="mailto:lscotta@iff.edu.br"><i class="fas fa-envelope"></i> lscotta@iff.edu.br</a>
+        <a href="http://lattes.cnpq.br/8272843505564643" target="_blank"><i class="fas fa-id-card"></i> CV Lattes</a>
+        <span><i class="fas fa-phone"></i> (22) 3399-1500</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main-wrap">
+  <main>
+
+    <section id="sobre">
+      <h2 class="section-title"><i class="fas fa-user-circle"></i> Sobre Mim</h2>
+      <div class="card">
+        <p class="about-text">
+          Sou Professor de Informática do <strong>Instituto Federal de Educação, Ciência e Tecnologia
+          Fluminense (IFF)</strong>, Campus Macaé, desde janeiro de 2012. Possuo <strong>Mestrado em
+          Informática</strong> pela Universidade Federal do Espírito Santo (UFES, 2010), com dissertação
+          desenvolvida no Laboratório de Pesquisa em Redes Multimídia (LPRM), e <strong>Bacharelado em
+          Ciência da Computação</strong> pela Universidade Vale do Rio Doce (UNIVALE, 2006).
+        </p>
+        <p class="about-text" style="margin-top:14px;">
+          Atuo no campus Macaé nas áreas de <strong>Algoritmos e Técnicas de Programação</strong>,
+          <strong>Rede de Computadores</strong> e <strong>Automação</strong>.
+          Possuo trabalhos de pesquisa e extensão relacionados a essas áreas, além de experiência em projetos de
+          robótica educacional e orientação científica. 
+          Sou dedicado ao ensino, com foco em metodologias ativas e desenvolvimento de competências técnicas e práticas nos alunos. 
+        </p>
+      </div>
+    </section>
+
+    <section id="formacao">
+      <h2 class="section-title"><i class="fas fa-graduation-cap"></i> Formação Acadêmica</h2>
+      <div class="card">
+        <div class="timeline-item">
+          <div class="timeline-dot"><i class="fas fa-graduation-cap"></i></div>
+          <div class="timeline-content">
+            <h3>Mestrado em Informática</h3>
+            <div class="year">2010 · UFES — Universidade Federal do Espírito Santo</div>
+            <p>Dissertação desenvolvida no Laboratório de Pesquisa em Redes Multimídia (LPRM).</p>
+          </div>
+        </div>
+        <div class="timeline-item" style="margin-bottom:0">
+          <div class="timeline-dot"><i class="fas fa-university"></i></div>
+          <div class="timeline-content">
+            <h3>Bacharelado em Ciência da Computação</h3>
+            <div class="year">2006 · UNIVALE — Universidade Vale do Rio Doce</div>
+            <p>Formação em fundamentos de computação, algoritmos, sistemas e redes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pesquisa">
+      <h2 class="section-title"><i class="fas fa-flask"></i> Áreas de Interesse</h2>
+      <div class="areas-grid">
+        <div class="area-card">
+          <i class="fas fa-code"></i>
+          <div><h4>Algoritmos e Técnicas de Programação</h4><p>Lógica de programação, estruturas de dados, linguagem C e técnicas de resolução de problemas.</p></div>
+        </div>
+        <div class="area-card">
+          <i class="fas fa-network-wired"></i>
+          <div><h4>Infraestrutura de Computadores</h4><p>Redes, sistemas operacionais, arquitetura e infraestrutura de TI.</p></div>
+        </div>
+        <div class="area-card">
+          <i class="fas fa-robot"></i>
+          <div><h4>Robótica</h4><p>Automação, robótica educacional e projetos de extensão com robótica.</p></div>
+        </div>
+        <div class="area-card">
+          <i class="fas fa-laptop-code"></i>
+          <div><h4>Tecnologia Educacional</h4><p>Orientação científica, extensão universitária e ensino técnico-superior.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ensino">
+      <h2 class="section-title"><i class="fas fa-chalkboard-teacher"></i> Disciplinas e Atividades</h2>
+      <div class="card">
+        <a href="atp-emi.html" class="course-item">
+          <div class="course-item-left"><i class="fas fa-code"></i><span class="course-name">ATP — Algoritmos e Técnicas de Programação (EMI)</span></div>
+          <div class="course-right"><span class="course-tag">EMI</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="ic-graduacao.html" class="course-item">
+          <div class="course-item-left"><i class="fas fa-microchip"></i><span class="course-name">IC — Infraestrutura de Computadores (Graduação)</span></div>
+          <div class="course-right"><span class="course-tag">Superior</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="ensino.html#monitoria" class="course-item">
+          <div class="course-item-left"><i class="fas fa-chalkboard-teacher"></i><span class="course-name">Monitoria</span></div>
+          <div class="course-right"><span class="course-tag">Extensão</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="ensino.html#cdr" class="course-item">
+          <div class="course-item-left"><i class="fas fa-desktop"></i><span class="course-name">CDR EMI</span></div>
+          <div class="course-right"><span class="course-tag">EMI</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+        <a href="ensino.html#informatica" class="course-item">
+          <div class="course-item-left"><i class="fas fa-laptop"></i><span class="course-name">Informática</span></div>
+          <div class="course-right"><span class="course-tag">Técnico</span><i class="fas fa-chevron-right course-arrow"></i></div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <aside>
+    <div class="sidebar-card" id="contato">
+      <div class="sidebar-title">Contato &amp; Links</div>
+      <div class="contact-item">
+        <i class="fas fa-envelope"></i>
+        <div><div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div><span>E-mail institucional</span></div>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-phone"></i>
+        <div><div>(22) 3399-1500</div><span>Telefone do Campus</span></div>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-map-marker-alt"></i>
+        <div><div>Rodovia Amaral Peixoto, km 164</div><span>Imboassica, Macaé – RJ, 27932-050</span></div>
+      </div>
+      <a href="http://lattes.cnpq.br/8272843505564643" target="_blank" class="btn-link"><i class="fas fa-id-card"></i> Currículo Lattes (CNPq)</a>
+      <a href="https://www.iff.edu.br" target="_blank" class="btn-link accent" style="margin-top:8px;"><i class="fas fa-university"></i> IFF Campus Macaé</a>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-title">Experiência</div>
+      <div class="facts-grid">
+        <div class="fact-item"><div class="fact-num">15+</div><div class="fact-label">Anos como Professor</div></div>
+        <div class="fact-item"><div class="fact-num">2</div><div class="fact-label">Titulações</div></div>
+        <div class="fact-item"><div class="fact-num">3</div><div class="fact-label">Áreas Principais</div></div>
+        <div class="fact-item"><div class="fact-num">IFF</div><div class="fact-label">Instituição</div></div>
+      </div>
+    </div>
+    <!--
+    <div class="sidebar-card">
+      <div class="sidebar-title">Competências Técnicas</div>
+      <div class="skill-bar">
+        <div class="skill-label"><span>Algoritmos e Programação</span><span>Expert</span></div>
+        <div class="skill-track"><div class="skill-fill" style="width:92%"></div></div>
+      </div>
+      <div class="skill-bar">
+        <div class="skill-label"><span>Infraestrutura / Redes</span><span>Expert</span></div>
+        <div class="skill-track"><div class="skill-fill" style="width:88%"></div></div>
+      </div>
+      <div class="skill-bar">
+        <div class="skill-label"><span>Robótica</span><span>Avançado</span></div>
+        <div class="skill-track"><div class="skill-fill" style="width:80%"></div></div>
+      </div>
+      <div class="skill-bar">
+        <div class="skill-label"><span>Sistemas Operacionais</span><span>Avançado</span></div>
+        <div class="skill-track"><div class="skill-fill" style="width:82%"></div></div>
+      </div>
+    -->
+  </aside>
+</div>
+
+<footer>
+  <p>© 2026 Prof. Lucas Scotta · Instituto Federal Fluminense · Campus Macaé</p>
+  <p style="margin-top:6px;">Hospedado no <a href="https://pages.github.com" target="_blank">GitHub Pages</a></p>
+</footer>
+</body>
+</html> 	
