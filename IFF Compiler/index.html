@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compilador Pseudo-C - by Scotta</title>
-  <link rel="stylesheet" href="style.css?v=28" />
+  <link rel="stylesheet" href="style.css?v=39" />
 </head>
 <body>
 
@@ -17,7 +17,7 @@
     </svg>
     Compilador Pseudo-C
     <span class="badge">by Scotta</span>
-    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.5.4.1</span>
+    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.5.5</span>
   </div>
   <div class="header-actions">
     <!-- Menu Ajuda -->
@@ -90,6 +90,10 @@
   <button class="btn-run" onclick="runProgram()">▶ Executar</button>
   <button class="btn-clear" onclick="clearConsole()">🗑 Limpar Console</button>
   <button class="btn-clear" onclick="clearEditor()">📄 Novo</button>
+  <button class="btn-save" onclick="saveCode()" title="Salvar (Ctrl+S)">💾 Salvar</button>
+  <button class="btn-save-as" onclick="saveCodeAs()" title="Salvar em nova localização (Ctrl+Shift+S)">💾 Salvar Como…</button>
+  <button class="btn-load" onclick="openFile()" title="Abrir arquivo .pseudoC">📂 Abrir</button>
+  <input type="file" id="file-input" accept=".pseudoC,.txt" style="display:none" onchange="loadFile(event)"/>
   <div class="status-indicator">
     <span class="status-dot" id="status-dot"></span>
     <span id="status-text">Pronto</span>
@@ -140,7 +144,6 @@
         <tr><td>%f</td><td>Especificador para REAL (decimal)</td><td>ESCREVER ("media: %f", m)</td></tr>
         <tr><td>%s</td><td>Especificador para FRASE (texto)</td><td>ESCREVER ("nome: %s", n)</td></tr>
         <tr><td>%c</td><td>Especificador para LETRA (1 caractere)</td><td>ESCREVER ("letra: %c", c)</td></tr>
-        <tr><td>MOSTRAR</td><td>Exibe o valor atual de uma variável</td><td>MOSTRAR (resultado)</td></tr>
         <tr><td>SE</td><td>Estrutura condicional</td><td>SE (x &gt; 0) { ... }</td></tr>
         <tr><td>SENAO</td><td>Alternativa do SE</td><td>SENAO { ... }</td></tr>
         <tr><td>SENAO SE</td><td>Condicional encadeada</td><td>SENAO SE (x == 0) { ... }</td></tr>
@@ -235,6 +238,6 @@ FIM</pre>
   </div>
 </div>
 
-<script src="compiler.js?v=28"></script>
+<script src="compiler.js?v=39"></script>
 </body>
 </html>

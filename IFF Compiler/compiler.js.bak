@@ -31,17 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Ctrl+Enter ou F9 → executar
+  // Ctrl+Enter → executar
   editor.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runProgram(); }
-    if (e.key === 'F9') { e.preventDefault(); runProgram(); }
-  });
-
-  // Atalhos globais
-  document.addEventListener('keydown', e => {
-    if (e.key === 'F9') { e.preventDefault(); runProgram(); }
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 's') { e.preventDefault(); saveCode(); }
-    if ((e.ctrlKey || e.metaKey) &&  e.shiftKey && e.key === 'S') { e.preventDefault(); saveCodeAs(); }
   });
 
   updateLineNumbers();
@@ -165,31 +157,18 @@ function lintCode() {
   if (!/^FIM$/.test(last))
     errors.push({ msg: 'A última instrução deve ser FIM (maiúsculo)', hint: 'Todos os comandos devem ser escritos em MAIÚSCULAS. Use FIM na última linha.' });
 
-  // Chaves balanceadas — rastreia onde cada { foi aberto
-  {
-    let depth = 0;
-    const openStack = [];
-    lines.forEach((l, idx) => {
-      const opens  = (l.match(/\{/g) || []).length;
-      const closes = (l.match(/\}/g) || []).length;
-      for (let k = 0; k < opens; k++) openStack.push(idx + 1);
-      depth += opens;
-      depth -= closes;
-      for (let k = 0; k < closes; k++) { if (openStack.length > 0) openStack.pop(); }
-      if (depth < 0) {
-        errors.push({ msg: `Linha ${idx + 1}: } sem { correspondente`, hint: 'Remova o } extra ou adicione um { antes.' });
-        depth = 0;
-      }
-    });
-    if (depth > 0) {
-      openStack.forEach(openLine => {
-        errors.push({
-          msg:  `Linha ${openLine}: bloco aberto com { mas nunca fechado`,
-          hint: 'Adicione } para fechar o bloco. Todo SE, SENAO, ENQUANTO e PARA precisa de }.'
-        });
-      });
+  // Chaves balanceadas
+  let depth = 0;
+  lines.forEach((l, idx) => {
+    depth += (l.match(/\{/g) || []).length;
+    depth -= (l.match(/\}/g) || []).length;
+    if (depth < 0) {
+      errors.push({ msg: `Linha ${idx + 1}: chave } sem { correspondente`, hint: 'Remova o } extra ou adicione um { antes.' });
+      depth = 0;
     }
-  }
+  });
+  if (depth > 0)
+    errors.push({ msg: `${depth} bloco(s) aberto(s) sem fechar`, hint: 'Verifique se todo { tem um } correspondente.' });
 
   // Bug 3: parênteses balanceados por linha
   lines.forEach((l, idx) => {
@@ -649,9 +628,7 @@ function extractBlock(lines, lineIdx) {
     if (lClean) innerLines.push(lClean);
   }
 
-  const err = new Error('Bloco aberto com { mas sem } de fechamento correspondente.');
-  err.hint  = 'Todo bloco { deve ser fechado com }. Verifique se esqueceu de fechar algum SE, SENAO, ENQUANTO ou PARA.';
-  throw err;
+  return { inner: innerLines, afterIdx: lines.length };
 }
 
 // ══════════════════════════════════════════════
@@ -699,7 +676,7 @@ function runProgram() {
   try {
     stmts = buildStatements(clean);
   } catch (e) {
-    runtimeError(e.message, e.hint || 'Verifique a estrutura dos blocos SE, ENQUANTO e PARA.');
+    runtimeError('Erro de sintaxe ao analisar o código: ' + e.message, 'Verifique a estrutura dos blocos SE, ENQUANTO e PARA.');
     return;
   }
 
@@ -1295,86 +1272,4 @@ function loadExample(n) {
   lintCode();
   clearConsole();
 }
-
-// ══════════════════════════════════════════════
-//  SALVAR / ABRIR ARQUIVO
-// ══════════════════════════════════════════════
-
-let _currentFileHandle = null;
-
-async function saveCode() {
-  const code = editor.value;
-  if (!code.trim()) { consolePrint('// Nenhum código para salvar.', 'console-sys'); return; }
-  if (window.showSaveFilePicker) {
-    try {
-      if (!_currentFileHandle) {
-        const firstLine = code.split('\n').find(l => l.trim()) || 'programa';
-        const suggested = firstLine.trim().replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 30) || 'programa';
-        _currentFileHandle = await window.showSaveFilePicker({
-          suggestedName: suggested + '.pseudoC',
-          types: [{ description: 'Arquivo Pseudo-C', accept: { 'text/plain': ['.pseudoC', '.txt'] } }]
-        });
-      }
-      const writable = await _currentFileHandle.createWritable();
-      await writable.write(code);
-      await writable.close();
-      consolePrint('// Salvo: ' + _currentFileHandle.name, 'console-sys');
-    } catch (e) {
-      if (e.name !== 'AbortError') consolePrint('// Erro ao salvar: ' + e.message, 'console-err');
-    }
-  } else {
-    _saveCodeFallback(code);
-  }
-}
-
-async function saveCodeAs() {
-  _currentFileHandle = null;
-  await saveCode();
-}
-
-function _saveCodeFallback(code) {
-  const firstLine = code.split('\n').find(l => l.trim()) || 'programa';
-  const name = firstLine.trim().replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 30) || 'programa';
-  const blob = new Blob([code], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name + '.pseudoC';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  consolePrint('// Código salvo como "' + name + '.pseudoC".', 'console-sys');
-}
-
-async function loadFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    editor.value = e.target.result;
-    _currentFileHandle = null;
-    updateLineNumbers(); lintCode(); clearConsole();
-    consolePrint('// Arquivo "' + file.name + '" carregado.', 'console-sys');
-  };
-  reader.readAsText(file, 'UTF-8');
-  event.target.value = '';
-}
-
-async function openFile() {
-  if (window.showOpenFilePicker) {
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'Arquivo Pseudo-C', accept: { 'text/plain': ['.pseudoC', '.txt'] } }]
-      });
-      const file = await handle.getFile();
-      const text = await file.text();
-      editor.value = text;
-      _currentFileHandle = handle;
-      updateLineNumbers(); lintCode(); clearConsole();
-      consolePrint('// Arquivo "' + file.name + '" carregado.', 'console-sys');
-    } catch (e) {
-      if (e.name !== 'AbortError') consolePrint('// Erro ao abrir: ' + e.message, 'console-err');
-    }
-  } else {
-    document.getElementById('file-input').click();
-  }
-}
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          

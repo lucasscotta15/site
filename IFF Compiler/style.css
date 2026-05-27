@@ -189,6 +189,31 @@ button:active { transform: scale(.96); }
 }
 .btn-example:hover { background: var(--border); }
 
+.btn-save {
+  background: var(--surface);
+  color: var(--ok);
+  border: 1px solid var(--border);
+  font-size: .82rem;
+}
+.btn-save:hover { background: var(--border); color: #fff; }
+
+.btn-save-as {
+  background: var(--surface);
+  color: var(--ok);
+  border: 1px solid var(--border);
+  font-size: .82rem;
+  opacity: .8;
+}
+.btn-save-as:hover { background: var(--border); color: #fff; opacity: 1; }
+
+.btn-load {
+  background: var(--surface);
+  color: var(--info);
+  border: 1px solid var(--border);
+  font-size: .82rem;
+}
+.btn-load:hover { background: var(--border); color: #fff; }
+
 .sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
 
 .status-indicator {
