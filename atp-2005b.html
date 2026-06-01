@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
 <div id="nav-placeholder"></div>
+<p>
 <script>
   fetch('components/menu.html')
     .then(r => r.text())
@@ -18,206 +18,186 @@
       document.getElementById('nav-placeholder').outerHTML = html;
     });
 </script>
-
+</p>
 <div class="page-header">
-  <div class="page-header-inner">
-    <div class="breadcrumb">
-      <a href="index.html">Início</a><span>/</span>
-      <a href="ensino.html">Ensino</a><span>/</span>
-      <a href="atp-emi.html">ATP - EMI</a><span>/</span>
-      Turma 2005B
-    </div>
-    <h1><i class="fas fa-users" style="margin-right:12px"></i>ATP — Turma 2005B</h1>
-    <div class="subtitle">Algoritmos e Técnicas de Programação · EMI</div>
-  </div>
+<div class="page-header-inner">
+<div class="breadcrumb"><a href="index.html">In&iacute;cio</a><span>/</span> <a href="ensino.html">Ensino</a><span>/</span> <a href="atp-emi.html">ATP - EMI</a><span>/</span> Turma 2005B</div>
+<h1><i class="fas fa-users" style="margin-right: 12px;"></i>ATP &mdash; Turma 2005B</h1>
+<div class="subtitle">Algoritmos e T&eacute;cnicas de Programa&ccedil;&atilde;o &middot; EMI</div>
 </div>
-
-<div class="main-wrap">
-  <main>
-
-    <!-- INFORMAÇÕES DA TURMA -->
-    <section>
-      <h2 class="section-title"><i class="fas fa-info-circle"></i> Informações da Turma</h2>
-      <div class="card">
-        <div class="timeline-item">
-          <div class="timeline-dot"><i class="fas fa-clock"></i></div>
-          <div class="timeline-content">
-            <h3>Horário das Aulas</h3>
-            <div class="year">Terça-Feira - 13:00 ~ 14:30</div>
-            <p>Local: Laboratório de Informática 1</p>
-          </div>
-        </div>
-        <div class="timeline-item" style="margin-bottom:0">
-          <div class="timeline-dot"><i class="fas fa-bell"></i></div>
-          <div class="timeline-content">
-            <h3>Notícias e Avisos</h3>
-            <p>Nenhum aviso no momento. Verifique esta página regularmente.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-    <!-- SLIDES E MATERIAL -->
-    <section>
-      <h2 class="section-title"><i class="fas fa-folder-open"></i> Slides e Material de Aula</h2>
-      <div class="card">
-        <div class="links-grid">
-          <a href="https://docs.google.com/document/d/13peFE1jhYsXs6KThuXia6JR5YmLdyauK-Wa6VJD8JMo/edit?tab=t.0" target="_blank" class="link-card">
-            <i class="fas fa-file-word" style="color:#d35230"></i>
-            <div class="link-info"><strong>Notas de Aula (0)</strong><span>Aulas de sua turma</span></div>
-          </a>
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-tasks" style="color:var(--accent2)"></i>
-            <div class="link-info"><strong>Exercícios de Revisão</strong><span>Lista de exercícios</span></div>
-          </a>
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-book-open" style="color:var(--accent)"></i>
-            <div class="link-info"><strong>Material de Apoio</strong><span>Leituras complementares</span></div>
-          </a>
-          <!---
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-pencil-alt" style="color:#e67e22"></i>
-            <div class="link-info"><strong>Exercício 1º Bimestre (3)</strong><span>Atividade avaliativa</span></div>
-          </a>
-        -->
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-file-archive" style="color:var(--muted)"></i>
-            <div class="link-info"><strong>Arquivos em C</strong><span>Códigos-fonte dos exemplos</span></div>
-          </a>
-        </div>
-      </div>
-    </section>
-    
-    <!-- AVALIAÇÕES -->
-    <section>
-      <h2 class="section-title"><i class="fas fa-clipboard-list"></i> Avaliações</h2>
-      <div class="card">
-        <table class="provas-table">
-          <thead>
-            <tr>
-              <th>Avaliação</th>
-              <th>Data</th>
-              <th>Local</th>
-              <th>Material / Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><span class="badge-prova b1">B1</span></td>
-              <td>A definir</td>
-              <td>Sala - Semana de provas</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b1">T1</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b1">T2</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>
-             <tr>
-              <td><span class="badge-prova b2">B2</span></td>
-              <td>A definir</td>
-              <td>Sala - Semana de provas</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b2">T1</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b2">T2</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>            <tr>
-              <td><span class="badge-prova rs">RS1</span></td>
-              <td>Sala - Semana de provas</td>
-              <td>—</td>
-              <td><a href="#">—</a></td>
-            </tr>
-             <tr>
-              <td><span class="badge-prova b3">B3</span></td>
-              <td>A definir</td>
-              <td>Sala - Semana de provas</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b3">T1</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b3">T2</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>             <tr>
-              <td><span class="badge-prova b4">B4</span></td>
-              <td>A definir</td>
-              <td>Sala - Semana de provas</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b4">T1</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr class="trabalho">
-              <td><span class="badge-prova b4">T2</span></td>
-              <td>A definir</td>
-              <td>Lab 1</td>
-              <td><a href="#">—</a></td>
-            </tr>            <tr>
-              <td><span class="badge-prova rs">RS2</span></td>
-              <td>A definir</td>
-              <td>Sala - Semana de provas</td>
-              <td><a href="#">—</a></td>
-            </tr>
-            <tr>
-              <td><span class="badge-prova vs">VS</span></td>
-              <td>A definir</td>
-              <td>—</td>
-              <td><a href="#">—</a></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-  </main>
-
-  <aside>
-    <div class="sidebar-card">
-      <div class="sidebar-title">Outras Turmas ATP</div>
-      <a href="atp-2001a.html" class="btn-link" style="margin-bottom:8px"><i class="fas fa-users"></i> Turma 2001A </a>
-      <a href="atp-2001b.html" class="btn-link" style="margin-bottom:8px"><i class="fas fa-users"></i> Turma 2001B</a>
-      <a href="atp-2005a.html" class="btn-link"><i class="fas fa-users"></i> Turma 2005A</a>
-    </div>
-    <div class="sidebar-card">
-      <div class="sidebar-title">Links Rápidos</div>
-      <div class="contact-item"><i class="fab fa-youtube"></i><div><a href="https://www.youtube.com/lucasscotta" target="_blank">Canal do Professor</a></div></div>
-      <div class="contact-item"><i class="fab fa-wordpress"></i><div><a href="https://programacaodescomplicada.wordpress.com/" target="_blank">Prog. Descomplicada</a></div></div>
-      <div class="contact-item"><i class="fab fa-youtube"></i><div><a href="https://www.youtube.com/@progdescomplicada/" target="_blank">YouTube Prog. Desc.</a></div></div>
-    </div>
-    <div class="sidebar-card">
-      <div class="sidebar-title">Contato</div>
-      <div class="contact-item"><i class="fas fa-envelope"></i><div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div></div>
-    </div>
-  </aside>
 </div>
-
+<div class="main-wrap"><main><!-- INFORMAÇÕES DA TURMA -->
+<section>
+<h2 class="section-title"><i class="fas fa-info-circle"></i> Informa&ccedil;&otilde;es da Turma</h2>
+<div class="card">
+<div class="timeline-item">
+<div class="timeline-dot"><i class="fas fa-clock"></i></div>
+<div class="timeline-content">
+<h3>Hor&aacute;rio das Aulas</h3>
+<div class="year">Ter&ccedil;a-Feira - 13:00 ~ 14:30</div>
+<p>Local: Laborat&oacute;rio de Inform&aacute;tica 1</p>
+</div>
+</div>
+<div class="timeline-item" style="margin-bottom: 0;">
+<div class="timeline-dot"><i class="fas fa-bell"></i></div>
+<div class="timeline-content">
+<h3>Not&iacute;cias e Avisos</h3>
+<p>Nenhum aviso no momento. Verifique esta p&aacute;gina regularmente.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SLIDES E MATERIAL -->
+<section>
+<h2 class="section-title"><i class="fas fa-folder-open"></i> Slides e Material de Aula</h2>
+<div class="card">
+<div class="links-grid"><a href="https://docs.google.com/document/d/13peFE1jhYsXs6KThuXia6JR5YmLdyauK-Wa6VJD8JMo/edit?tab=t.0" target="_blank" class="link-card" rel="noopener"><i class="fas fa-file-word" style="color: #d35230;"></i>
+<div class="link-info"><strong>Notas de Aula&nbsp;</strong><span>Aulas de sua turma</span></div>
+</a><a href="#" target="_blank" class="link-card" rel="noopener"><i class="fas fa-tasks" style="color: var(--accent2);"></i>
+<div class="link-info"><strong>Exerc&iacute;cios de Revis&atilde;o</strong><span>Lista de exerc&iacute;cios</span></div>
+</a><a href="#" target="_blank" class="link-card" rel="noopener"><i class="fas fa-book-open" style="color: var(--accent);"></i>
+<div class="link-info"><strong>Material de Apoio</strong><span>Leituras complementares</span></div>
+</a><a href="#" target="_blank" class="link-card" rel="noopener"><i class="fas fa-file-archive" style="color: var(--muted);"></i>
+<div class="link-info"><strong>Arquivos em C</strong><span>C&oacute;digos-fonte dos exemplos</span></div>
+</a></div>
+</div>
+</section>
+<!-- AVALIAÇÕES -->
+<section>
+<h2 class="section-title"><i class="fas fa-clipboard-list"></i> Avalia&ccedil;&otilde;es</h2>
+<div class="card">
+<table class="provas-table" style="width: 83.3673%; height: 817.4px;">
+<thead>
+<tr style="height: 48.2px;">
+<th style="width: 42.0738%;">Avalia&ccedil;&atilde;o</th>
+<th style="width: 12.8857%;">Data</th>
+<th style="width: 21.4201%;">Local</th>
+<th style="width: 21.7217%;">Material / Link</th>
+</tr>
+</thead>
+<tbody>
+<tr style="height: 94.4px;">
+<td style="width: 42.0738%;"><span class="badge-prova b1">B1</span></td>
+<td style="width: 12.8857%;">27/06 a 07/07</td>
+<td style="width: 21.4201%;">Sala - Semana de provas</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b1">T1</span></td>
+<td style="width: 12.8857%;">09/06/2026</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b1">T2</span></td>
+<td style="width: 12.8857%;">22/06/2026</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr style="height: 94.4px;">
+<td style="width: 42.0738%;"><span class="badge-prova b2">B2</span></td>
+<td style="width: 12.8857%;">03/09/2026</td>
+<td style="width: 21.4201%;">Sala - Semana de provas</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b2">T1</span></td>
+<td style="width: 12.8857%;">12/8/2026</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b2">T2</span></td>
+<td style="width: 12.8857%;">26/08/2026</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr style="height: 71.3px;">
+<td style="width: 42.0738%;"><span class="badge-prova rs">RS1</span></td>
+<td style="width: 12.8857%;">29/09/2026</td>
+<td style="width: 21.4201%;">&mdash;</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr style="height: 94.4px;">
+<td style="width: 42.0738%;"><span class="badge-prova b3">B3</span></td>
+<td style="width: 12.8857%;">23/11/2026</td>
+<td style="width: 21.4201%;">Sala - Semana de provas</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b3">T1</span></td>
+<td style="width: 12.8857%;">06/10/2026</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b3">T2</span></td>
+<td style="width: 12.8857%;">20/10/2026</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr style="height: 94.4px;">
+<td style="width: 42.0738%;"><span class="badge-prova b4">B4</span></td>
+<td style="width: 12.8857%;">20/02/2027</td>
+<td style="width: 21.4201%;">Sala - Semana de provas</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b4">T1</span></td>
+<td style="width: 12.8857%;">06/12/2026</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr class="trabalho" style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova b4">T2</span></td>
+<td style="width: 12.8857%;">15/02/2027</td>
+<td style="width: 21.4201%;">Lab 1</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr style="height: 94.4px;">
+<td style="width: 42.0738%;"><span class="badge-prova rs">RS2</span></td>
+<td style="width: 12.8857%;">09/03/2027</td>
+<td style="width: 21.4201%;">Sala - Semana de provas</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+<tr style="height: 25.1px;">
+<td style="width: 42.0738%;"><span class="badge-prova vs">VS</span></td>
+<td style="width: 12.8857%;">15/03/2027</td>
+<td style="width: 21.4201%;">&mdash;</td>
+<td style="width: 21.7217%;"><a href="#">&mdash;</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<aside>
+<div class="sidebar-card">
+<div class="sidebar-title">Outras Turmas ATP</div>
+<a href="atp-2001a.html" class="btn-link" style="margin-bottom: 8px;"><i class="fas fa-users"></i> Turma 2001A </a> <a href="atp-2001b.html" class="btn-link" style="margin-bottom: 8px;"><i class="fas fa-users"></i> Turma 2001B</a> <a href="atp-2005a.html" class="btn-link"><i class="fas fa-users"></i> Turma 2005A</a></div>
+<div class="sidebar-card">
+<div class="sidebar-title">Links R&aacute;pidos</div>
+<div class="contact-item"><i class="fab fa-youtube"></i>
+<div><a href="https://www.youtube.com/lucasscotta" target="_blank" rel="noopener">Canal do Professor</a></div>
+</div>
+<div class="contact-item"><i class="fab fa-wordpress"></i>
+<div><a href="https://programacaodescomplicada.wordpress.com/" target="_blank" rel="noopener">Prog. Descomplicada</a></div>
+</div>
+<div class="contact-item"><i class="fab fa-youtube"></i>
+<div><a href="https://www.youtube.com/@progdescomplicada/" target="_blank" rel="noopener">YouTube Prog. Desc.</a></div>
+</div>
+</div>
+<div class="sidebar-card">
+<div class="sidebar-title">Contato</div>
+<div class="contact-item"><i class="fas fa-envelope"></i>
+<div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div>
+</div>
+</div>
+</aside>
+</div>
 <footer>
-  <p>© 2026 Prof. Lucas Scotta · Instituto Federal Fluminense · Campus Macaé</p>
-  <p style="margin-top:6px;">Hospedado no <a href="https://pages.github.com" target="_blank">GitHub Pages</a></p>
+<p>&copy; 2026 Prof. Lucas Scotta &middot; Instituto Federal Fluminense &middot; Campus Maca&eacute;</p>
+<p style="margin-top: 6px;">Hospedado no <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a></p>
 </footer>
 </body>
-</html>                                  
+</html>
