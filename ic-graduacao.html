@@ -11,13 +11,7 @@
 <body>
 
 <div id="nav-placeholder"></div>
-<script>
-  fetch('components/menu.html')
-    .then(r => r.text())
-    .then(html => {
-      document.getElementById('nav-placeholder').outerHTML = html;
-    });
-</script>
+<script src="js/menu.js"></script>
 
 <div class="page-header">
   <div class="page-header-inner">
@@ -62,7 +56,7 @@
       <h2 class="section-title"><i class="fas fa-film"></i> Material Geral da Disciplina</h2>
       <div class="card">
         <div class="links-grid">
-          <a href="#" target="_blank" class="link-card">
+          <a href="https://drive.google.com/drive/folders/1RiBez-ZBmnUYLOksNXRhuu5mRMSAs5oE?usp=drive_link" target="_blank" class="link-card">
             <i class="fas fa-file-powerpoint" style="color:#d35230"></i>
             <div class="link-info"><strong>Todos os Slides</strong><span>Pasta com todas as aulas</span></div>
           </a>

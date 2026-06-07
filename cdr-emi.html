@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,126 +9,81 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
 <div id="nav-placeholder"></div>
-<script>
-  fetch('components/menu.html')
-    .then(r => r.text())
-    .then(html => {
-      document.getElementById('nav-placeholder').outerHTML = html;
-    });
-</script>
-
+<p>
+<script src="js/menu.js"></script>
+</p>
 <div class="page-header">
-  <div class="page-header-inner">
-    <div class="breadcrumb"><a href="index.html">Início</a><span>/</span><a href="ensino.html">Ensino</a><span>/</span> CDR - EMI</div>
-    <h1><i class="fas fa-network-wired" style="margin-right:12px"></i>CDR - Comunicação de Dados e Redes</h1>
-    <div class="subtitle">Ensino Médio Integrado · IFF Campus Macaé</div>
-  </div>
+<div class="page-header-inner">
+<div class="breadcrumb"><a href="index.html">In&iacute;cio</a><span>/</span><a href="ensino.html">Ensino</a><span>/</span> CDR - EMI</div>
+<h1><i class="fas fa-network-wired" style="margin-right: 12px;"></i>CDR - Comunica&ccedil;&atilde;o de Dados e Redes</h1>
+<div class="subtitle">Ensino M&eacute;dio Integrado &middot; IFF Campus Maca&eacute;</div>
 </div>
-
-<div class="main-wrap">
-  <main>
-
-    <section>
-      <h2 class="section-title"><i class="fas fa-info-circle"></i> Informações Gerais</h2>
-     <!-- <div class="info-box"> </div>-->
-      <div class="card">
-        <div class="timeline-item">
-          <div class="timeline-dot"><i class="fas fa-book"></i></div>
-          <div class="timeline-content">
-            <h3>Ementa</h3>
-            <p>Conceitos básicos de comunicação de dados e redes de computadores.</p>
-          </div>
-        </div>
-        <!--
-        <div class="timeline-item" style="margin-bottom:0">
-          <div class="timeline-dot"><i class="fas fa-download"></i></div>
-          <div class="timeline-content">
-            <h3>Links de instalação</h3>
-            <p>
-              <a href="#" target="_blank" style="color:var(--accent2)"><i class="fas fa-external-link-alt"></i> CodeBlocks 20</a> &nbsp;·&nbsp;
-              <a href="https://www.libreoffice.org" target="_blank" style="color:var(--accent2)"><i class="fas fa-external-link-alt"></i> LibreOffice</a>
-            </p>
-          </div>
-        </div>
-      </div>
-      -->
-    </section>
-
-    <section>
-      <h2 class="section-title"><i class="fas fa-users"></i> Selecione sua Turma</h2>
-      <div class="turmas-grid">
-        <a href="cdr-2001a.html" class="turma-card">
-          <i class="fas fa-users"></i>
-          <span>Turma 2001A</span>
-        </a>
-        <a href="cdr-2001b.html" class="turma-card">
-          <i class="fas fa-users"></i>
-          <span>Turma 2001B</span>
-        </a>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="section-title"><i class="fas fa-film"></i> Material Geral da Disciplina</h2>
-      <div class="card">
-        <div class="links-grid">
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-file-powerpoint" style="color:#d35230"></i>
-            <div class="link-info"><strong>Todos os Slides</strong><span>Pasta com todas as aulas</span></div>
-          </a>
-          <a href="https://www.youtube.com/lucasscotta" target="_blank" class="link-card">
-            <i class="fab fa-youtube" style="color:#ff0000"></i>
-            <div class="link-info"><strong>YouTube – Lucas Scotta</strong><span>Canal do professor</span></div>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="section-title"><i class="fas fa-lightbulb"></i> Conceitos Base</h2>
-      <div class="card">
-        <div class="links-grid">
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-file-alt" style="color:var(--accent2)"></i>
-            <div class="link-info"><strong>bit e Byte</strong><span>Material de referência</span></div>
-          </a>
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-file-alt" style="color:var(--accent2)"></i>
-            <div class="link-info"><strong>bit, Byte e outros</strong><span>Unidades de armazenamento</span></div>
-          </a>
-          <a href="#" target="_blank" class="link-card">
-            <i class="fas fa-question-circle" style="color:var(--accent2)"></i>
-            <div class="link-info"><strong>Tamanho do HD no SO</strong><span>Por que o tamanho difere?</span></div>
-          </a>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <aside>
-    <div class="sidebar-card">
-      <div class="sidebar-title">Navegação Rápida</div>
-      <a href="cdr-2001a.html" class="btn-link" style="margin-bottom:8px"><i class="fas fa-users"></i> Turma 2001A</a>
-      <a href="cdr-2001b.html" class="btn-link" style="margin-bottom:8px"><i class="fas fa-users"></i> Turma 2001B</a>
-    </div>
-    <div class="sidebar-card">
-      <div class="sidebar-title">Links Úteis</div>
-      <div class="contact-item"><i class="fab fa-youtube"></i><div><a href="https://www.youtube.com/lucasscotta" target="_blank">Canal do Professor</a></div></div>
-      <div class="contact-item"><i class="fab fa-wordpress"></i><div><a href="https://programacaodescomplicada.wordpress.com/" target="_blank">Prog. Descomplicada</a></div></div>
-    </div>
-    <div class="sidebar-card">
-      <div class="sidebar-title">Contato</div>
-      <div class="contact-item"><i class="fas fa-envelope"></i><div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div></div>
-    </div>
-  </aside>
 </div>
-
+<div class="main-wrap"><main>
+<section>
+<h2 class="section-title"><i class="fas fa-info-circle"></i> Informa&ccedil;&otilde;es Gerais</h2>
+<div class="card">
+<div class="timeline-item">
+<div class="timeline-dot"><i class="fas fa-book"></i></div>
+<div class="timeline-content">
+<h3>Ementa</h3>
+<p>Conceitos b&aacute;sicos de comunica&ccedil;&atilde;o de dados e redes de computadores.</p>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="section-title"><i class="fas fa-users"></i> Selecione sua Turma</h2>
+<div class="turmas-grid"><a href="cdr-2001a.html" class="turma-card"> <i class="fas fa-users"></i> <span>Turma 2001A</span> </a> <a href="cdr-2001b.html" class="turma-card"> <i class="fas fa-users"></i> <span>Turma 2001B</span> </a></div>
+</section>
+<section>
+<h2 class="section-title"><i class="fas fa-film"></i> Material Geral da Disciplina</h2>
+<div class="card">
+<div class="links-grid"><a href="https://drive.google.com/drive/folders/1Ow_gvT6Bn2aB4ohS0GAhf0re4K_RTZb9?usp=sharing" target="_blank" class="link-card" rel="noopener"><i class="fas fa-file-powerpoint" style="color: #d35230;"></i>
+<div class="link-info"><strong>Todos os Slides</strong><span>Pasta com todas as aulas</span></div>
+</a><a href="https://www.youtube.com/lucasscotta" target="_blank" class="link-card" rel="noopener"><i class="fab fa-youtube" style="color: #ff0000;"></i>
+<div class="link-info"><strong>YouTube &ndash; Lucas Scotta</strong><span>Canal do professor</span></div>
+</a></div>
+</div>
+</section>
+<section>
+<h2 class="section-title"><i class="fas fa-lightbulb"></i> Conceitos Base</h2>
+<div class="card">
+<div class="links-grid"><a href="#" target="_blank" class="link-card" rel="noopener"><i class="fas fa-file-alt" style="color: var(--accent2);"></i>
+<div class="link-info"><strong>bit e Byte</strong><span>Material de refer&ecirc;ncia</span></div>
+</a><a href="#" target="_blank" class="link-card" rel="noopener"><i class="fas fa-file-alt" style="color: var(--accent2);"></i>
+<div class="link-info"><strong>bit, Byte e outros</strong><span>Unidades de armazenamento</span></div>
+</a><a href="#" target="_blank" class="link-card" rel="noopener"><i class="fas fa-question-circle" style="color: var(--accent2);"></i>
+<div class="link-info"><strong>Tamanho do HD no SO</strong><span>Por que o tamanho difere?</span></div>
+</a></div>
+</div>
+</section>
+</main>
+<aside>
+<div class="sidebar-card">
+<div class="sidebar-title">Navega&ccedil;&atilde;o R&aacute;pida</div>
+<a href="cdr-2001a.html" class="btn-link" style="margin-bottom: 8px;"><i class="fas fa-users"></i> Turma 2001A</a> <a href="cdr-2001b.html" class="btn-link" style="margin-bottom: 8px;"><i class="fas fa-users"></i> Turma 2001B</a></div>
+<div class="sidebar-card">
+<div class="sidebar-title">Links &Uacute;teis</div>
+<div class="contact-item"><i class="fab fa-youtube"></i>
+<div><a href="https://www.youtube.com/lucasscotta" target="_blank" rel="noopener">Canal do Professor</a></div>
+</div>
+<div class="contact-item"><i class="fab fa-wordpress"></i>
+<div><a href="https://programacaodescomplicada.wordpress.com/" target="_blank" rel="noopener">Prog. Descomplicada</a></div>
+</div>
+</div>
+<div class="sidebar-card">
+<div class="sidebar-title">Contato</div>
+<div class="contact-item"><i class="fas fa-envelope"></i>
+<div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div>
+</div>
+</div>
+</aside>
+</div>
 <footer>
-  <p>© 2026 Prof. Lucas Scotta · Instituto Federal Fluminense · Campus Macaé</p>
-  <p style="margin-top:6px;">Hospedado no <a href="https://pages.github.com" target="_blank">GitHub Pages</a></p>
+<p>&copy; 2026 Prof. Lucas Scotta &middot; Instituto Federal Fluminense &middot; Campus Maca&eacute;</p>
+<p style="margin-top: 6px;">Hospedado no <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a></p>
 </footer>
 </body>
 </html>
