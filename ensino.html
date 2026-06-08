@@ -11,13 +11,7 @@
 <body>
 
 <div id="nav-placeholder"></div>
-<script>
-  fetch('components/menu.html')
-    .then(r => r.text())
-    .then(html => {
-      document.getElementById('nav-placeholder').outerHTML = html;
-    });
-</script>
+<script src="js/menu.js"></script>
 
 <div class="page-header">
   <div class="page-header-inner">
@@ -39,6 +33,11 @@
 
     <section>
       <h2 class="section-title"><i class="fas fa-th-large"></i> Disciplinas e Atividades de Ensino</h2>
+      <div class="card">
+        <a class="course-item">
+          <div class="course-item-left"><i class="fas fa-calendar"></i><span class="course-name">Última atualização </span></div>
+          <div class="course-right"><span class="course-tag"> 08/06/2026</span><i class="fas fa-calendar"></i></div>
+        </a>
       <div class="card">
         <a href="atp-emi.html" class="course-item">
           <div class="course-item-left"><i class="fas fa-code"></i><span class="course-name">ATP — Algoritmos e Técnicas de Programação</span></div>
