@@ -12,7 +12,7 @@
     '          <a href="ic-graduacao.html"><i class="fas fa-microchip"></i> IC - Graduação</a>',
     '          <a href="ensino.html#monitoria"><i class="fas fa-chalkboard-teacher"></i> Monitoria</a>',
     '          <a href="cdr-emi.html"><i class="fas fa-network-wired"></i> CDR EMI</a>',
-    '          <a href="ensino.html#informatica"><i class="fas fa-laptop"></i> Informática</a>',
+    '          <a href="ensino-informatica.html"><i class="fas fa-laptop"></i> Informática</a>',
     '          <div style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0;"></div>',
     '          <a href="ferramentas.html"><i class="fas fa-tools"></i> Ferramentas</a>',
     '        </div>',
