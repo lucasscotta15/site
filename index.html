@@ -10,15 +10,7 @@
 </head>
 <body>
 <div id="nav-placeholder"></div>
-<p>
-<script>
-  fetch('components/menu.html')
-    .then(r => r.text())
-    .then(html => {
-      document.getElementById('nav-placeholder').outerHTML = html;
-    });
-</script>
-</p>
+<script src="js/menu.js"></script>
 <div class="hero">
 <div class="hero-inner"><img src="img/foto.jpg" class="hero-photo" alt="Lucas Scotta">
 <div class="hero-info">
@@ -100,7 +92,7 @@
 </a><a href="ensino.html#monitoria" class="course-item">
 <div class="course-item-left"><i class="fas fa-chalkboard-teacher"></i><span class="course-name">Monitoria</span></div>
 <div class="course-right"><span class="course-tag">Extens&atilde;o</span><i class="fas fa-chevron-right course-arrow"></i></div>
-</a><a href="ensino.html#cdr" class="course-item">
+</a><a href="cdr-emi.html" class="course-item">
 <div class="course-item-left"><i class="fas fa-desktop"></i><span class="course-name">CDR EMI</span></div>
 <div class="course-right"><span class="course-tag">EMI</span><i class="fas fa-chevron-right course-arrow"></i></div>
 </a><a href="ensino.html#informatica" class="course-item">
@@ -109,16 +101,6 @@
 </a><a href="ferramentas.html" class="course-item">
 <div class="course-item-left"><i class="fas fa-tools"></i><span class="course-name">Ferramentas</span></div>
 <div class="course-right"><span class="course-tag">Programação</span><i class="fas fa-chevron-right course-arrow"></i></div>
-</a></div>
-</section>
-</main>
-<aside>
-<div class="sidebar-card" id="contato">
-<div class="sidebar-title">Contato &amp; Links</div>
-<div class="contact-item"><i class="fas fa-envelope"></i>
-<div>
-<div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div>
-<span>E-mail institucional</span></div>
 </a></div>
 </section>
 </main>
