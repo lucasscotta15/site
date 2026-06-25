@@ -17,7 +17,7 @@
     </svg>
     Compilador Pseudo-C
     <span class="badge">by Scotta</span>
-    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.5.7</span>
+    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.6</span>
   </div>
   <div class="header-actions">
     <!-- Menu Ajuda -->
@@ -259,18 +259,17 @@ FIM</pre>
 })();
 
 function applyTheme(theme) {
-  const root = document.documentElement;
-  const btn   = document.getElementById('theme-toggle-btn');
+  const root  = document.documentElement;
   const icon  = document.getElementById('theme-icon');
   const label = document.getElementById('theme-label');
   if (theme === 'light') {
     root.setAttribute('data-theme', 'light');
-    icon.textContent  = '🌙';
-    label.textContent = 'Escuro';
+    if (icon)  icon.textContent  = '🌙';
+    if (label) label.textContent = 'Escuro';
   } else {
     root.removeAttribute('data-theme');
-    icon.textContent  = '☀';
-    label.textContent = 'Claro';
+    if (icon)  icon.textContent  = '☀';
+    if (label) label.textContent = 'Claro';
   }
   localStorage.setItem('iff-theme', theme);
 }
@@ -279,6 +278,12 @@ function toggleTheme() {
   const current = localStorage.getItem('iff-theme') || 'dark';
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
+
+// Garante que ícone/label do botão são atualizados após o DOM carregar
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('iff-theme') || 'dark';
+  applyTheme(saved);
+});
 
 /* ── Tamanho de Fonte ── */
 const FONT_MIN = 11, FONT_MAX = 22, FONT_DEFAULT = 14;
