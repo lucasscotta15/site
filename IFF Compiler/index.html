@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -17,7 +17,7 @@
     </svg>
     Compilador Pseudo-C
     <span class="badge">by Scotta</span>
-    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.5.6.1</span>
+    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.5.7</span>
   </div>
   <div class="header-actions">
     <!-- Menu Ajuda -->
@@ -94,6 +94,17 @@
   <button class="btn-save-as" onclick="saveCodeAs()" title="Salvar em nova localização (Ctrl+Shift+S)">💾 Salvar Como…</button>
   <button class="btn-load" onclick="openFile()" title="Abrir arquivo .pseudoC">📂 Abrir</button>
   <input type="file" id="file-input" accept=".pseudoC,.txt" style="display:none" onchange="loadFile(event)"/>
+  <div class="a11y-controls">
+    <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar modo claro/escuro">
+      <span id="theme-icon">☀</span>
+      <span id="theme-label">Claro</span>
+    </button>
+    <div class="font-size-controls" title="Tamanho da fonte">
+      <button class="btn-font" onclick="changeFontSize(-1)" title="Diminuir fonte">−</button>
+      <span class="font-size-display" id="font-size-display">14px</span>
+      <button class="btn-font" onclick="changeFontSize(1)" title="Aumentar fonte">+</button>
+    </div>
+  </div>
   <div class="status-indicator">
     <span class="status-dot" id="status-dot"></span>
     <span id="status-text">Pronto</span>
@@ -238,6 +249,59 @@ FIM</pre>
   </div>
 </div>
 
-<script src="compiler.obf.js?v=40"></script>
+<script src="compiler.obf.js?v=0.6"></script>
+
+<script>
+/* ── Tema (claro / escuro) ── */
+(function initTheme() {
+  const saved = localStorage.getItem('iff-theme') || 'dark';
+  applyTheme(saved);
+})();
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  const btn   = document.getElementById('theme-toggle-btn');
+  const icon  = document.getElementById('theme-icon');
+  const label = document.getElementById('theme-label');
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+    icon.textContent  = '🌙';
+    label.textContent = 'Escuro';
+  } else {
+    root.removeAttribute('data-theme');
+    icon.textContent  = '☀';
+    label.textContent = 'Claro';
+  }
+  localStorage.setItem('iff-theme', theme);
+}
+
+function toggleTheme() {
+  const current = localStorage.getItem('iff-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+/* ── Tamanho de Fonte ── */
+const FONT_MIN = 11, FONT_MAX = 22, FONT_DEFAULT = 14;
+
+(function initFontSize() {
+  const saved = parseInt(localStorage.getItem('iff-font-size')) || FONT_DEFAULT;
+  applyFontSize(saved);
+})();
+
+function applyFontSize(size) {
+  size = Math.min(FONT_MAX, Math.max(FONT_MIN, size));
+  document.documentElement.style.setProperty('--font-size-base', size + 'px');
+  document.getElementById('editor').style.fontSize = size + 'px';
+  document.getElementById('console-output').style.fontSize = size + 'px';
+  document.getElementById('line-numbers').style.fontSize = size + 'px';
+  document.getElementById('font-size-display').textContent = size + 'px';
+  localStorage.setItem('iff-font-size', size);
+}
+
+function changeFontSize(delta) {
+  const current = parseInt(localStorage.getItem('iff-font-size')) || FONT_DEFAULT;
+  applyFontSize(current + delta);
+}
+</script>
 </body>
 </html>
