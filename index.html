@@ -1,312 +1,154 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Compilador Pseudo-C - by Scotta</title>
-  <link rel="stylesheet" href="style.css?v=39" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prof. Lucas Scotta | IFF Macaé</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-<header>
-  <div class="logo">
-    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="28" height="28" rx="6" fill="#7c6ff7"/>
-      <path d="M7 10l4 4-4 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M13 18h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-    </svg>
-    Compilador Pseudo-C
-    <span class="badge">by Scotta</span>
-    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.6</span>
-  </div>
-  <div class="header-actions">
-    <!-- Menu Ajuda -->
-    <div class="help-menu" id="help-menu">
-      <button class="help-btn" onclick="toggleHelpMenu()">❓ Ajuda ▾</button>
-      <div class="help-dropdown">
-        <button class="help-dropdown-item" onclick="toggleExamplesMenu(event)">
-          <span class="item-icon">📂</span> Exemplos <span id="examples-arrow" style="margin-left:auto;">▸</span>
-        </button>
-        <div class="help-examples-list" id="examples-submenu">
-          <button class="help-dropdown-item" onclick="loadExampleMenu(1)"><span class="item-icon">🔢</span> Bhaskara Simples</button>
-          <button class="help-dropdown-item" onclick="loadExampleMenu(2)"><span class="item-icon">🔀</span> Bhaskara c/ SE</button>
-          <button class="help-dropdown-item" onclick="loadExampleMenu(3)"><span class="item-icon">⬆</span> POW (potência)</button>
-          <button class="help-dropdown-item" onclick="loadExampleMenu(4)"><span class="item-icon">🔁</span> PARA (loop)</button>
-          <button class="help-dropdown-item" onclick="loadExampleMenu(5)"><span class="item-icon">🔄</span> ENQUANTO (loop)</button>
-        </div>
-        <div class="sep-line"></div>
-        <button class="help-dropdown-item" onclick="showDict(); closeHelpMenu()"><span class="item-icon">📖</span> Dicionário</button>
-        <div class="sep-line"></div>
-        <button class="help-dropdown-item" onclick="showFeedback()"><span class="item-icon">💬</span> Enviar Feedback</button>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-left:10px;padding-left:12px;border-left:1px solid var(--border);">
-      <!-- Logo inline — Laboratório de Dados & Redes -->
-      <svg width="36" height="36" viewBox="50 40 160 170" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="131.44614" cy="126.21594" fill="none" stroke="#2d9d5e" stroke-width="1.2" rx="80.348358" ry="80.552597"/>
-        <ellipse cx="131.44614" cy="126.21594" fill="none" stroke="#4db877" stroke-width="0.6" opacity="0.5" rx="77.258034" ry="77.454414"/>
-        <g transform="matrix(0.6180643,0,0,0.61963534,7.8332723,27.074284)">
-          <rect x="190" y="40" width="20" height="260" fill="#cdd6f4"/>
-          <rect x="170" y="60" width="8" height="220" fill="#cdd6f4"/>
-          <rect x="222" y="60" width="8" height="220" fill="#cdd6f4"/>
-          <rect x="150" y="90" width="6" height="160" fill="#cdd6f4"/>
-          <rect x="244" y="90" width="6" height="160" fill="#cdd6f4"/>
-        </g>
-        <g transform="matrix(0.6180643,0,0,0.61963534,7.8332723,27.074284)">
-          <rect x="140" y="50" width="120" height="12" rx="1.3" fill="#2d9d5e"/>
-          <rect x="90" y="85" width="220" height="8" rx="0.9" fill="#2d9d5e"/>
-          <rect x="70" y="105" width="260" height="8" rx="0.9" fill="#2d9d5e"/>
-          <rect x="50" y="125" width="300" height="8" rx="0.9" fill="#2d9d5e"/>
-          <rect x="50" y="145" width="300" height="8" rx="0.9" fill="#2d9d5e"/>
-          <rect x="50" y="165" width="300" height="8" rx="0.9" fill="#2d9d5e"/>
-          <rect x="70" y="185" width="260" height="8" rx="0.9" fill="#2d9d5e"/>
-          <rect x="90" y="205" width="220" height="8" rx="0.9" fill="#2d9d5e"/>
-          <rect x="140" y="238" width="120" height="12" rx="1.3" fill="#2d9d5e"/>
-        </g>
-        <g transform="matrix(0.6180643,0,0,0.61963534,7.8332723,27.074284)">
-          <rect x="65" y="65" width="45" height="50" rx="1.3" fill="#4db877"/>
-          <rect x="290" y="65" width="45" height="50" rx="1.3" fill="#4db877"/>
-          <rect x="65" y="185" width="45" height="50" rx="1.3" fill="#4db877"/>
-          <rect x="290" y="185" width="45" height="50" rx="1.3" fill="#4db877"/>
-        </g>
-        <ellipse cx="131.44614" cy="126.21594" fill="#d32f2f" rx="24.722572" ry="24.785414"/>
-        <ellipse cx="131.44614" cy="126.21594" fill="none" stroke="#ffffff" stroke-width="0.8" rx="24.722572" ry="24.785414"/>
-        <g transform="matrix(0.6180643,0,0,0.61963534,138.62636,120.81708)">
-          <path d="m -35,-12 q 3,-4 6,0 3,4 6,0 3,-4 6,0 3,4 6,0" fill="none" stroke="#fff" stroke-width="0.8" stroke-linecap="round"/>
-          <path d="m -35,-4 q 3,-3 6,0 3,3 6,0 3,-3 6,0 3,3 6,0" fill="none" stroke="#fff" stroke-width="0.8" stroke-linecap="round"/>
-          <path d="m -35,4 q 3,-4 6,0 3,4 6,0 3,-4 6,0 3,4 6,0" fill="none" stroke="#fff" stroke-width="0.9" stroke-linecap="round"/>
-          <path d="m -35,12 q 3,-3 6,0 3,3 6,0 3,-3 6,0 3,3 6,0" fill="none" stroke="#fff" stroke-width="0.8" stroke-linecap="round"/>
-        </g>
-      </svg>
-      <div style="line-height:1.2;">
-        <div style="font-size:.7rem;font-weight:700;color:var(--accent2);letter-spacing:.04em;">Laboratório de</div>
-        <div style="font-size:.7rem;font-weight:700;color:var(--accent2);letter-spacing:.04em;">Dados &amp; Redes</div>
-      </div>
-    </div>
-  </div>
-</header>
-
-<div class="toolbar">
-  <button class="btn-run" onclick="runProgram()">▶ Executar</button>
-  <button class="btn-clear" onclick="clearConsole()">🗑 Limpar Console</button>
-  <button class="btn-clear" onclick="clearEditor()">📄 Novo</button>
-  <button class="btn-save" onclick="saveCode()" title="Salvar (Ctrl+S)">💾 Salvar</button>
-  <button class="btn-save-as" onclick="saveCodeAs()" title="Salvar em nova localização (Ctrl+Shift+S)">💾 Salvar Como…</button>
-  <button class="btn-load" onclick="openFile()" title="Abrir arquivo .pseudoC">📂 Abrir</button>
-  <input type="file" id="file-input" accept=".pseudoC,.txt" style="display:none" onchange="loadFile(event)"/>
-  <div class="a11y-controls">
-    <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar modo claro/escuro">
-      <span id="theme-icon">☀</span>
-      <span id="theme-label">Claro</span>
-    </button>
-    <div class="font-size-controls" title="Tamanho da fonte">
-      <button class="btn-font" onclick="changeFontSize(-1)" title="Diminuir fonte">−</button>
-      <span class="font-size-display" id="font-size-display">14px</span>
-      <button class="btn-font" onclick="changeFontSize(1)" title="Aumentar fonte">+</button>
-    </div>
-  </div>
-  <div class="status-indicator">
-    <span class="status-dot" id="status-dot"></span>
-    <span id="status-text">Pronto</span>
-  </div>
+<div id="nav-placeholder"></div>
+<script src="js/menu.js"></script>
+<div class="hero">
+<div class="hero-inner"><img src="img/foto.jpg" class="hero-photo" alt="Lucas Scotta">
+<div class="hero-info">
+<h1>Lucas Scotta</h1>
+<div class="title">Professor de Inform&aacute;tica</div>
+<div class="institution"><i class="fas fa-university"></i> Instituto Federal de Educa&ccedil;&atilde;o, Ci&ecirc;ncia e Tecnologia Fluminense (IFF)</div>
+<div class="institution"><i class="fas fa-map-marker-alt"></i> Campus Maca&eacute; &mdash; Maca&eacute;, RJ</div>
+<div class="hero-badges"><span class="badge">Algoritmos e Programa&ccedil;&atilde;o</span> <span class="badge">Rede de Computadores</span> <span class="badge">Automa&ccedil;&atilde;o</span> <span class="badge">Projetos</span></div>
+<div class="hero-contact"><a href="mailto:lscotta@iff.edu.br"><i class="fas fa-envelope"></i> lscotta@iff.edu.br</a> <a href="http://lattes.cnpq.br/8272843505564643" target="_blank" rel="noopener"><i class="fas fa-id-card"></i> CV Lattes</a> <span><i class="fas fa-phone"></i> (22) 3399-1500</span></div>
 </div>
-
-<div class="main">
-  <div class="editor-pane">
-    <div class="pane-title">✏ Editor — Pseudo-C</div>
-    <div class="editor-wrap">
-      <div class="line-numbers" id="line-numbers">1</div>
-      <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-        placeholder="// Digite seu código aqui...&#10;INICIO&#10;  ESCREVER (&quot;Oi, vamos iniciar no mundo da programação!&quot;)&#10;FIM"></textarea>
-    </div>
-    <div class="diagnostics" id="diagnostics">
-      <span class="diag-ok">✔ Sem erros de sintaxe</span>
-    </div>
-  </div>
-
-  <div class="console-pane">
-    <div class="pane-title">🖥 Console — Saída do Programa</div>
-    <div id="console-output"></div>
-    <div class="input-bar">
-      <label for="user-input">⌨ Entrada:</label>
-      <input id="user-input" type="text" placeholder="Aguardando execução..." disabled />
-      <button class="btn-send" id="btn-send" onclick="sendInput()" disabled>Enviar</button>
-    </div>
-  </div>
 </div>
-
-<!-- Dicionário modal -->
-<div class="overlay" id="dict-overlay" onclick="if(event.target===this)hideDict()">
-  <div class="modal-box">
-    <h2>📖 Dicionário — Pseudo-C</h2>
-    <table>
-      <thead><tr><th>Comando</th><th>Descrição</th><th>Exemplo de uso</th></tr></thead>
-      <tbody>
-        <tr><td>INICIO</td><td>Inicia o algoritmo (obrigatório, 1ª linha)</td><td>INICIO</td></tr>
-        <tr><td>FIM</td><td>Encerra o algoritmo (obrigatório, última linha)</td><td>FIM</td></tr>
-        <tr><td>GUARDAR</td><td>Declara variáveis/ Armazena dados (com ou sem tipo)</td><td>GUARDAR INTEIRO a, b<br>GUARDAR x, y (sem tipo — gera aviso)</td></tr>
-        <tr><td>INTEIRO</td><td>Tipo número inteiro </td><td>GUARDAR INTEIRO idade</td></tr>
-        <tr><td>REAL</td><td>Tipo número decimal </td><td>GUARDAR REAL media</td></tr>
-        <tr><td>LETRA</td><td>Tipo caractere único </td><td>GUARDAR LETRA inicial</td></tr>
-        <tr><td>FRASE</td><td>Tipo texto/string </td><td>GUARDAR FRASE nome</td></tr>
-        <tr><td>LER</td><td>Lê um valor digitado pelo usuário</td><td>LER (variavel)</td></tr>
-        <tr><td>ESCREVER</td><td>Exibe texto fixo ou texto + variável formatada. Use aspas para separar texto fixo das variáveis (estilo printf do C)</td><td>ESCREVER ("Digite um número: ")<br>ESCREVER ("resultado: %d", x)<br>ESCREVER ("media: %f", m)<br>ESCREVER ("a=%d, b=%f", a, b)</td></tr>
-        <tr><td>%d</td><td>Especificador para INTEIRO</td><td>ESCREVER ("valor: %d", x)</td></tr>
-        <tr><td>%f</td><td>Especificador para REAL (decimal)</td><td>ESCREVER ("media: %f", m)</td></tr>
-        <tr><td>%s</td><td>Especificador para FRASE (texto)</td><td>ESCREVER ("nome: %s", n)</td></tr>
-        <tr><td>%c</td><td>Especificador para LETRA (1 caractere)</td><td>ESCREVER ("letra: %c", c)</td></tr>
-        <tr><td>SE</td><td>Estrutura condicional</td><td>SE (x &gt; 0) { ... }</td></tr>
-        <tr><td>SENAO</td><td>Alternativa do SE</td><td>SENAO { ... }</td></tr>
-        <tr><td>SENAO SE</td><td>Condicional encadeada</td><td>SENAO SE (x == 0) { ... }</td></tr>
-        <tr><td>ENQUANTO</td><td>Repete enquanto condição for verdadeira</td><td>ENQUANTO (i &lt; 10) { ... }</td></tr>
-        <tr><td>PARA</td><td>Loop com variável contadora</td><td>PARA (i=1; i&lt;=5; i=i+1) { ... }</td></tr>
-        <tr><td>i++</td><td>Incrementa variável em 1 (equivale a i = i + 1)</td><td>PARA (i=1; i&lt;=n; i++) { ... }</td></tr>
-        <tr><td>i--</td><td>Decrementa variável em 1 (equivale a i = i - 1)</td><td>i--</td></tr>
-        <tr><td>SQRT</td><td>Raiz quadrada</td><td>x = SQRT(valor)</td></tr>
-        <tr><td>POW</td><td>Potenciação</td><td>R = POW(2, 3) → R = 8</td></tr>
-        <tr><td>//</td><td>Comentário de linha (ignorado)</td><td>// isso é um comentário</td></tr>
-        <tr><td>/* */</td><td>Comentário de bloco (ignorado)</td><td>/* bloco de comentário */</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Operadores disponíveis</h3>
-    <table>
-      <thead><tr><th>Operador</th><th>Significado</th></tr></thead>
-      <tbody>
-        <tr><td>+  -  *  /</td><td>Soma, subtração, multiplicação, divisão</td></tr>
-        <tr><td>%</td><td>Resto da divisão inteira (módulo). Ex: 7 % 3 = 1</td></tr>
-        <tr><td>==</td><td>Igual a / comparação</td></tr>
-        <tr><td>!=</td><td>Diferente de (!=)</td></tr>
-        <tr><td>&lt;  &gt;  &lt;=  &gt;=</td><td>Comparações</td></tr>
-        <tr><td>&amp;&amp;</td><td>E lógico (AND)</td></tr>
-        <tr><td>||</td><td>OU lógico (OR)</td></tr>
-          <tr><td>!</td><td>Não lógico (NOT)</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Estrutura mínima obrigatória</h3>
-    <pre>INICIO
-  // seu código aqui
-FIM</pre>
-
-    <h3>Erros comuns e como corrigir</h3>
-    <table>
-      <thead><tr><th>Erro</th><th>Causa</th><th>Correção</th></tr></thead>
-      <tbody>
-        <tr><td>Variável não declarada</td><td>Usou sem declarar com GUARDAR</td><td>Adicione GUARDAR &lt;nome&gt; no início</td></tr>
-        <tr><td>INICIO ausente</td><td>Primeira linha não é INICIO</td><td>Coloque INICIO na primeira linha</td></tr>
-        <tr><td>FIM ausente</td><td>Última linha não é FIM</td><td>Coloque FIM na última linha</td></tr>
-        <tr><td>Bloco não fechado</td><td>Abriu { sem fechar }</td><td>Verifique se todo { tem um } correspondente</td></tr>
-        <tr><td>Expressão inválida</td><td>Erro na fórmula matemática</td><td>Verifique parênteses e operadores</td></tr>
-      </tbody>
-    </table>
-
-    <button class="btn-clear close-btn" onclick="hideDict()">✕ Fechar</button>
-  </div>
 </div>
-
-<!-- Modal Feedback -->
-<div class="overlay" id="feedback-overlay" onclick="if(event.target===this)hideFeedback()">
-  <div class="modal-box" style="max-width:480px;">
-    <h2>💬 Enviar Feedback</h2>
-    <p style="font-size:.83rem;color:var(--text-dim);margin-top:4px;">
-      Encontrou um erro ou tem sugestão? Preencha abaixo e envie para o professor.
-    </p>
-    <div id="feedback-form-area">
-      <div class="feedback-form">
-        <div>
-          <label for="fb-nome">Seu nome</label>
-          <input type="text" id="fb-nome" placeholder="Ex: João da Silva" />
-        </div>
-        <div>
-          <label for="fb-email">E-mail (opcional)</label>
-          <input type="email" id="fb-email" placeholder="Ex: joao@email.com" />
-        </div>
-        <div>
-          <label for="fb-tipo">Tipo de feedback</label>
-          <select id="fb-tipo">
-            <option value="erro">🐛 Erro encontrado no compilador</option>
-            <option value="sugestao">💡 Sugestão de melhoria</option>
-            <option value="duvida">❓ Dúvida sobre a linguagem</option>
-            <option value="outro">📝 Outro</option>
-          </select>
-        </div>
-        <div>
-          <label for="fb-msg">Descreva o problema ou sugestão</label>
-          <textarea id="fb-msg" placeholder="Ex: Ao usar ENQUANTO com condição X, o resultado foi Y em vez de Z..."></textarea>
-        </div>
-      </div>
-      <div class="feedback-actions">
-        <button class="btn-clear" onclick="hideFeedback()">Cancelar</button>
-        <button class="btn-send-feedback" onclick="submitFeedback()">📨 Enviar</button>
-      </div>
-    </div>
-    <div id="feedback-success" class="feedback-success" style="display:none;">
-      ✅ Feedback enviado com sucesso!<br>
-      <span style="font-size:.8rem;color:var(--text-dim);">Obrigado pela contribuição!</span><br><br>
-      <button class="btn-clear close-btn" onclick="hideFeedback()">Fechar</button>
-    </div>
-  </div>
+<div class="main-wrap"><main>
+<section id="sobre">
+<h2 class="section-title"><i class="fas fa-user-circle"></i> Sobre Mim</h2>
+<div class="card">
+<p class="about-text">Sou Professor de Inform&aacute;tica do <strong>Instituto Federal de Educa&ccedil;&atilde;o, Ci&ecirc;ncia e Tecnologia Fluminense (IFF)</strong>, Campus Maca&eacute;, desde janeiro de 2012. Possuo <strong>Mestrado em Inform&aacute;tica</strong> pela Universidade Federal do Esp&iacute;rito Santo (UFES, 2010), com disserta&ccedil;&atilde;o desenvolvida no Laborat&oacute;rio de Pesquisa em Redes Multim&iacute;dia (LPRM), e <strong>Bacharelado em Ci&ecirc;ncia da Computa&ccedil;&atilde;o</strong> pela Universidade Vale do Rio Doce (UNIVALE, 2006).</p>
+<p class="about-text" style="margin-top: 14px;">Atuo no campus Maca&eacute; nas &aacute;reas de <strong>Algoritmos e T&eacute;cnicas de Programa&ccedil;&atilde;o</strong>, <strong>Rede de Computadores</strong> e <strong>Automa&ccedil;&atilde;o</strong>. Possuo trabalhos de pesquisa e extens&atilde;o relacionados a essas &aacute;reas, al&eacute;m de experi&ecirc;ncia em projetos de rob&oacute;tica educacional e orienta&ccedil;&atilde;o cient&iacute;fica. Sou dedicado ao ensino, com foco em metodologias ativas e desenvolvimento de compet&ecirc;ncias t&eacute;cnicas e pr&aacute;ticas nos alunos.</p>
 </div>
-
-<script src="compiler.obf.js?v=0.6"></script>
-
-<script>
-/* ── Tema (claro / escuro) ── */
-(function initTheme() {
-  const saved = localStorage.getItem('iff-theme') || 'dark';
-  applyTheme(saved);
-})();
-
-function applyTheme(theme) {
-  const root  = document.documentElement;
-  const icon  = document.getElementById('theme-icon');
-  const label = document.getElementById('theme-label');
-  if (theme === 'light') {
-    root.setAttribute('data-theme', 'light');
-    if (icon)  icon.textContent  = '🌙';
-    if (label) label.textContent = 'Escuro';
-  } else {
-    root.removeAttribute('data-theme');
-    if (icon)  icon.textContent  = '☀';
-    if (label) label.textContent = 'Claro';
-  }
-  localStorage.setItem('iff-theme', theme);
-}
-
-function toggleTheme() {
-  const current = localStorage.getItem('iff-theme') || 'dark';
-  applyTheme(current === 'dark' ? 'light' : 'dark');
-}
-
-// Garante que ícone/label do botão são atualizados após o DOM carregar
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('iff-theme') || 'dark';
-  applyTheme(saved);
-});
-
-/* ── Tamanho de Fonte ── */
-const FONT_MIN = 11, FONT_MAX = 22, FONT_DEFAULT = 14;
-
-(function initFontSize() {
-  const saved = parseInt(localStorage.getItem('iff-font-size')) || FONT_DEFAULT;
-  applyFontSize(saved);
-})();
-
-function applyFontSize(size) {
-  size = Math.min(FONT_MAX, Math.max(FONT_MIN, size));
-  document.documentElement.style.setProperty('--font-size-base', size + 'px');
-  document.getElementById('editor').style.fontSize = size + 'px';
-  document.getElementById('console-output').style.fontSize = size + 'px';
-  document.getElementById('line-numbers').style.fontSize = size + 'px';
-  document.getElementById('font-size-display').textContent = size + 'px';
-  localStorage.setItem('iff-font-size', size);
-}
-
-function changeFontSize(delta) {
-  const current = parseInt(localStorage.getItem('iff-font-size')) || FONT_DEFAULT;
-  applyFontSize(current + delta);
-}
-</script>
+</section>
+<section id="formacao">
+<h2 class="section-title"><i class="fas fa-graduation-cap"></i> Forma&ccedil;&atilde;o Acad&ecirc;mica</h2>
+<div class="card">
+<div class="timeline-item">
+<div class="timeline-dot"><i class="fas fa-graduation-cap"></i></div>
+<div class="timeline-content">
+<h3>Mestrado em Inform&aacute;tica</h3>
+<div class="year">2010 &middot; UFES &mdash; Universidade Federal do Esp&iacute;rito Santo</div>
+<p>Disserta&ccedil;&atilde;o desenvolvida no Laborat&oacute;rio de Pesquisa em Redes Multim&iacute;dia (LPRM).</p>
+</div>
+</div>
+<div class="timeline-item" style="margin-bottom: 0;">
+<div class="timeline-dot"><i class="fas fa-university"></i></div>
+<div class="timeline-content">
+<h3>Bacharelado em Ci&ecirc;ncia da Computa&ccedil;&atilde;o</h3>
+<div class="year">2006 &middot; UNIVALE &mdash; Universidade Vale do Rio Doce</div>
+<p>Forma&ccedil;&atilde;o em fundamentos de computa&ccedil;&atilde;o, algoritmos, sistemas e redes.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="pesquisa">
+<h2 class="section-title"><i class="fas fa-flask"></i> &Aacute;reas de Interesse</h2>
+<div class="areas-grid">
+<div class="area-card"><i class="fas fa-code"></i>
+<div>
+<h4>Algoritmos e T&eacute;cnicas de Programa&ccedil;&atilde;o</h4>
+<p>L&oacute;gica de programa&ccedil;&atilde;o, estruturas de dados, linguagem C e t&eacute;cnicas de resolu&ccedil;&atilde;o de problemas.</p>
+</div>
+</div>
+<div class="area-card"><i class="fas fa-network-wired"></i>
+<div>
+<h4>Infraestrutura de Computadores</h4>
+<p>Redes, sistemas operacionais, arquitetura e infraestrutura de TI.</p>
+</div>
+</div>
+<div class="area-card"><i class="fas fa-robot"></i>
+<div>
+<h4>Rob&oacute;tica</h4>
+<p>Automa&ccedil;&atilde;o, rob&oacute;tica educacional e projetos de extens&atilde;o com rob&oacute;tica.</p>
+</div>
+</div>
+<div class="area-card"><i class="fas fa-laptop-code"></i>
+<div>
+<h4>Tecnologia Educacional</h4>
+<p>Orienta&ccedil;&atilde;o cient&iacute;fica, extens&atilde;o universit&aacute;ria e ensino t&eacute;cnico-superior.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="ensino">
+<h2 class="section-title"><i class="fas fa-chalkboard-teacher"></i> Disciplinas e Atividades</h2>
+<div class="card"><a href="atp-emi.html" class="course-item">
+<div class="course-item-left"><i class="fas fa-code"></i><span class="course-name">ATP &mdash; Algoritmos e T&eacute;cnicas de Programa&ccedil;&atilde;o (EMI)</span></div>
+<div class="course-right"><span class="course-tag">EMI</span><i class="fas fa-chevron-right course-arrow"></i></div>
+</a><a href="ic-graduacao.html" class="course-item">
+<div class="course-item-left"><i class="fas fa-microchip"></i><span class="course-name">IC &mdash; Introdução à Computação (Gradua&ccedil;&atilde;o)</span></div>
+<div class="course-right"><span class="course-tag">Superior</span><i class="fas fa-chevron-right course-arrow"></i></div>
+</a><a href="ensino.html#monitoria" class="course-item">
+<div class="course-item-left"><i class="fas fa-chalkboard-teacher"></i><span class="course-name">Monitoria</span></div>
+<div class="course-right"><span class="course-tag">Extens&atilde;o</span><i class="fas fa-chevron-right course-arrow"></i></div>
+</a><a href="cdr-emi.html" class="course-item">
+<div class="course-item-left"><i class="fas fa-desktop"></i><span class="course-name">CDR EMI</span></div>
+<div class="course-right"><span class="course-tag">EMI</span><i class="fas fa-chevron-right course-arrow"></i></div>
+</a><a href="ensino.html#informatica" class="course-item">
+<div class="course-item-left"><i class="fas fa-laptop"></i><span class="course-name">Inform&aacute;tica</span></div>
+<div class="course-right"><span class="course-tag">T&eacute;cnico</span><i class="fas fa-chevron-right course-arrow"></i></div>
+</a><a href="ferramentas.html" class="course-item">
+<div class="course-item-left"><i class="fas fa-tools"></i><span class="course-name">Ferramentas</span></div>
+<div class="course-right"><span class="course-tag">Programação</span><i class="fas fa-chevron-right course-arrow"></i></div>
+</a></div>
+</section>
+</main>
+<aside>
+<div class="sidebar-card" id="contato">
+<div class="sidebar-title">Contato &amp; Links</div>
+<div class="contact-item"><i class="fas fa-envelope"></i>
+<div>
+<div><a href="mailto:lscotta@iff.edu.br">lscotta@iff.edu.br</a></div>
+<span>E-mail institucional</span></div>
+</div>
+<div class="contact-item"><i class="fas fa-phone"></i>
+<div>
+<div>(22) 3399-1500</div>
+<span>Telefone do Campus</span></div>
+</div>
+<div class="contact-item"><i class="fas fa-map-marker-alt"></i>
+<div>
+<div>Rodovia Amaral Peixoto, km 164</div>
+<span>Imboassica, Maca&eacute; &ndash; RJ, 27932-050</span></div>
+</div>
+<a href="http://lattes.cnpq.br/8272843505564643" target="_blank" class="btn-link" rel="noopener"><i class="fas fa-id-card"></i> Curr&iacute;culo Lattes (CNPq)</a> <a href="https://www.iff.edu.br" target="_blank" class="btn-link accent" style="margin-top: 8px;" rel="noopener"><i class="fas fa-university"></i> IFF Campus Maca&eacute;</a></div>
+<div class="sidebar-card">
+<div class="sidebar-title">Experi&ecirc;ncia</div>
+<div class="facts-grid">
+<div class="fact-item">
+<div class="fact-num">15+</div>
+<div class="fact-label">Anos como Professor</div>
+</div>
+<div class="fact-item">
+<div class="fact-num">2</div>
+<div class="fact-label">Titula&ccedil;&otilde;es</div>
+</div>
+<div class="fact-item">
+<div class="fact-num">3</div>
+<div class="fact-label">&Aacute;reas Principais</div>
+</div>
+<div class="fact-item">
+<div class="fact-num">IFF</div>
+<div class="fact-label">Institui&ccedil;&atilde;o</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<footer>
+<p>&copy; 2026 Prof. Lucas Scotta &middot; Instituto Federal Fluminense &middot; Campus Maca&eacute;</p>
+<p style="margin-top: 6px;">Hospedado no <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a></p>
+</footer>
 </body>
 </html>
