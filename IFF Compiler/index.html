@@ -249,15 +249,17 @@ FIM</pre>
   </div>
 </div>
 
-<script src="compiler.obf.js?v=0.6"></script>
+<script>
+/* ── Tema (claro / escuro) — aplica antes do render para evitar flash ── */
+(function() {
+  const saved = localStorage.getItem('iff-theme') || 'dark';
+  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+})();
+</script>
+
+<script src="compiler.obf.js?v=0.7"></script>
 
 <script>
-/* ── Tema (claro / escuro) ── */
-(function initTheme() {
-  const saved = localStorage.getItem('iff-theme') || 'dark';
-  applyTheme(saved);
-})();
-
 function applyTheme(theme) {
   const root  = document.documentElement;
   const icon  = document.getElementById('theme-icon');
@@ -279,7 +281,6 @@ function toggleTheme() {
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
 
-// Garante que ícone/label do botão são atualizados após o DOM carregar
 document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('iff-theme') || 'dark';
   applyTheme(saved);
