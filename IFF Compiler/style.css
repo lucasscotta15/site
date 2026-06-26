@@ -17,6 +17,24 @@
   --keyword: #cba6f7;
   --font-mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
   --font-ui: 'Segoe UI', system-ui, sans-serif;
+  --font-size-base: 14px;
+}
+
+/* ── Tema Claro ── */
+:root[data-theme="light"] {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface2: #eaeaea;
+  --border: #cccccc;
+  --accent: #5a4fcf;
+  --accent2: #1a8c72;
+  --text: #1a1a2e;
+  --text-dim: #666688;
+  --error: #c0002a;
+  --warn: #b85c00;
+  --ok: #1a7a35;
+  --info: #005f80;
+  --keyword: #7c00cc;
 }
 
 body {
@@ -335,7 +353,7 @@ button:active { transform: scale(.96); }
 
 #console-output {
   flex: 1;
-  background: #12121e;
+  background: var(--bg);
   font-family: var(--font-mono);
   font-size: .86rem;
   line-height: 1.6;
@@ -511,6 +529,66 @@ button:active { transform: scale(.96); }
   padding: 24px 0;
   color: var(--ok);
   font-size: 1rem;
+}
+
+/* ── Controles de Acessibilidade (tema / fonte) ── */
+.a11y-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.a11y-controls .a11y-label {
+  font-size: .72rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.theme-toggle {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: .78rem;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background .15s;
+}
+.theme-toggle:hover { background: var(--border); }
+
+.font-size-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-font {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  justify-content: center;
+  transition: background .15s;
+}
+.btn-font:hover { background: var(--border); }
+
+.font-size-display {
+  font-size: .75rem;
+  color: var(--text-dim);
+  min-width: 30px;
+  text-align: center;
 }
 
 /* ── Responsivo ── */
