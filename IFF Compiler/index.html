@@ -17,7 +17,7 @@
     </svg>
     Compilador Pseudo-C
     <span class="badge">by Scotta</span>
-    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.6</span>
+    <span style="font-size:.6rem;color:var(--text-dim);font-weight:400;letter-spacing:.04em;">v0.7.2</span>
   </div>
   <div class="header-actions">
     <!-- Menu Ajuda -->
@@ -33,6 +33,9 @@
           <button class="help-dropdown-item" onclick="loadExampleMenu(3)"><span class="item-icon">⬆</span> POW (potência)</button>
           <button class="help-dropdown-item" onclick="loadExampleMenu(4)"><span class="item-icon">🔁</span> PARA (loop)</button>
           <button class="help-dropdown-item" onclick="loadExampleMenu(5)"><span class="item-icon">🔄</span> ENQUANTO (loop)</button>
+          <button class="help-dropdown-item" onclick="loadExampleMenu(6)"><span class="item-icon">📦</span> Array (notas)</button>
+          <button class="help-dropdown-item" onclick="loadExampleMenu(7)"><span class="item-icon">🎲</span> ALEATORIO (dado)</button>
+          <button class="help-dropdown-item" onclick="loadExampleMenu(8)"><span class="item-icon">🧩</span> Funções</button>
         </div>
         <div class="sep-line"></div>
         <button class="help-dropdown-item" onclick="showDict(); closeHelpMenu()"><span class="item-icon">📖</span> Dicionário</button>
@@ -116,8 +119,11 @@
     <div class="pane-title">✏ Editor — Pseudo-C</div>
     <div class="editor-wrap">
       <div class="line-numbers" id="line-numbers">1</div>
-      <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-        placeholder="// Digite seu código aqui...&#10;INICIO&#10;  ESCREVER (&quot;Oi, vamos iniciar no mundo da programação!&quot;)&#10;FIM"></textarea>
+      <div class="editor-container">
+        <div id="highlight-layer" aria-hidden="true"></div>
+        <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+          placeholder="// Digite seu código aqui...&#10;INICIO&#10;  ESCREVER (&quot;Oi, vamos iniciar no mundo da programação!&quot;)&#10;FIM"></textarea>
+      </div>
     </div>
     <div class="diagnostics" id="diagnostics">
       <span class="diag-ok">✔ Sem erros de sintaxe</span>
@@ -150,20 +156,29 @@
         <tr><td>LETRA</td><td>Tipo caractere único </td><td>GUARDAR LETRA inicial</td></tr>
         <tr><td>FRASE</td><td>Tipo texto/string </td><td>GUARDAR FRASE nome</td></tr>
         <tr><td>LER</td><td>Lê um valor digitado pelo usuário</td><td>LER (variavel)</td></tr>
-        <tr><td>ESCREVER</td><td>Exibe texto fixo ou texto + variável formatada. Use aspas para separar texto fixo das variáveis (estilo printf do C)</td><td>ESCREVER ("Digite um número: ")<br>ESCREVER ("resultado: %d", x)<br>ESCREVER ("media: %f", m)<br>ESCREVER ("a=%d, b=%f", a, b)</td></tr>
+        <tr><td>ESCREVER</td><td>Exibe texto fixo ou texto + variável formatada. Use aspas para separar texto fixo das variáveis </td><td>ESCREVER ("Digite um número: ")<br>ESCREVER ("resultado: %d", x)<br>ESCREVER ("media: %f", m)<br>ESCREVER ("a=%d, b=%f", a, b)</td></tr>
         <tr><td>%d</td><td>Especificador para INTEIRO</td><td>ESCREVER ("valor: %d", x)</td></tr>
         <tr><td>%f</td><td>Especificador para REAL (decimal)</td><td>ESCREVER ("media: %f", m)</td></tr>
         <tr><td>%s</td><td>Especificador para FRASE (texto)</td><td>ESCREVER ("nome: %s", n)</td></tr>
         <tr><td>%c</td><td>Especificador para LETRA (1 caractere)</td><td>ESCREVER ("letra: %c", c)</td></tr>
-        <tr><td>SE</td><td>Estrutura condicional</td><td>SE (x &gt; 0) { ... }</td></tr>
-        <tr><td>SENAO</td><td>Alternativa do SE</td><td>SENAO { ... }</td></tr>
-        <tr><td>SENAO SE</td><td>Condicional encadeada</td><td>SENAO SE (x == 0) { ... }</td></tr>
+        <tr>
+          <td>SE / SENAO / SENAO SE</td>
+          <td>Estrutura condicional. SE testa a condição; SENAO executa se falso; SENAO SE encadeia nova condição. São partes de um mesmo bloco — não existem separados. Importante, apenas a condição SE tem parâmetro/argumento. Senão possui apenas o { }</td>
+          <td><pre style="margin:0;font-size:.75rem;">SE (x &gt; 0) {
+  ESCREVER ("positivo")
+} SENAO SE (x == 0) {
+  ESCREVER ("zero")
+} SENAO {
+  ESCREVER ("negativo")
+}</pre></td>
+        </tr>
         <tr><td>ENQUANTO</td><td>Repete enquanto condição for verdadeira</td><td>ENQUANTO (i &lt; 10) { ... }</td></tr>
         <tr><td>PARA</td><td>Loop com variável contadora</td><td>PARA (i=1; i&lt;=5; i=i+1) { ... }</td></tr>
         <tr><td>i++</td><td>Incrementa variável em 1 (equivale a i = i + 1)</td><td>PARA (i=1; i&lt;=n; i++) { ... }</td></tr>
         <tr><td>i--</td><td>Decrementa variável em 1 (equivale a i = i - 1)</td><td>i--</td></tr>
         <tr><td>SQRT</td><td>Raiz quadrada</td><td>x = SQRT(valor)</td></tr>
         <tr><td>POW</td><td>Potenciação</td><td>R = POW(2, 3) → R = 8</td></tr>
+        <tr><td>ALEATORIO</td><td>Número inteiro aleatório (inclusivo)</td><td>x = ALEATORIO(1, 6) → dado</td></tr>
         <tr><td>//</td><td>Comentário de linha (ignorado)</td><td>// isso é um comentário</td></tr>
         <tr><td>/* */</td><td>Comentário de bloco (ignorado)</td><td>/* bloco de comentário */</td></tr>
       </tbody>
@@ -176,8 +191,8 @@
         <tr><td>+  -  *  /</td><td>Soma, subtração, multiplicação, divisão</td></tr>
         <tr><td>%</td><td>Resto da divisão inteira (módulo). Ex: 7 % 3 = 1</td></tr>
         <tr><td>==</td><td>Igual a / comparação</td></tr>
-        <tr><td>!=</td><td>Diferente de (!=)</td></tr>
-        <tr><td>&lt;  &gt;  &lt;=  &gt;=</td><td>Comparações</td></tr>
+        <tr><td>!=</td><td>Diferente de. Ex: SE (x != 0) { ... }</td></tr>
+        <tr><td>&lt;  &gt;  &lt;=  &gt;=</td><td>Menor, maior, menor ou igual, maior ou igual</td></tr>
         <tr><td>&amp;&amp;</td><td>E lógico (AND)</td></tr>
         <tr><td>||</td><td>OU lógico (OR)</td></tr>
           <tr><td>!</td><td>Não lógico (NOT)</td></tr>
@@ -257,7 +272,7 @@ FIM</pre>
 })();
 </script>
 
-<script src="compiler.obf.js?v=0.7"></script>
+<script src="compiler.obf.js?v=0.9"></script>
 
 <script>
 function applyTheme(theme) {
@@ -285,29 +300,3 @@ document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('iff-theme') || 'dark';
   applyTheme(saved);
 });
-
-/* ── Tamanho de Fonte ── */
-const FONT_MIN = 11, FONT_MAX = 22, FONT_DEFAULT = 14;
-
-(function initFontSize() {
-  const saved = parseInt(localStorage.getItem('iff-font-size')) || FONT_DEFAULT;
-  applyFontSize(saved);
-})();
-
-function applyFontSize(size) {
-  size = Math.min(FONT_MAX, Math.max(FONT_MIN, size));
-  document.documentElement.style.setProperty('--font-size-base', size + 'px');
-  document.getElementById('editor').style.fontSize = size + 'px';
-  document.getElementById('console-output').style.fontSize = size + 'px';
-  document.getElementById('line-numbers').style.fontSize = size + 'px';
-  document.getElementById('font-size-display').textContent = size + 'px';
-  localStorage.setItem('iff-font-size', size);
-}
-
-function changeFontSize(delta) {
-  const current = parseInt(localStorage.getItem('iff-font-size')) || FONT_DEFAULT;
-  applyFontSize(current + delta);
-}
-</script>
-</body>
-</html>

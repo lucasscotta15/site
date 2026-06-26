@@ -302,10 +302,40 @@ button:active { transform: scale(.96); }
   min-width: 44px;
 }
 
-#editor {
+/* ── Syntax highlight overlay ── */
+.editor-container {
   flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#highlight-layer {
+  position: absolute;
+  inset: 0;
+  font-family: var(--font-mono);
+  font-size: .88rem;
+  line-height: 1.55;
+  padding: 14px 16px;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  tab-size: 4;
+  word-wrap: normal;
+  color: transparent; /* base transparente — só os spans têm cor */
   background: var(--bg);
-  color: var(--text);
+  box-sizing: border-box;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
+#editor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
   font-family: var(--font-mono);
   font-size: .88rem;
   line-height: 1.55;
@@ -315,10 +345,31 @@ button:active { transform: scale(.96); }
   padding: 14px 16px;
   tab-size: 4;
   overflow-y: auto;
-  white-space: pre;
   overflow-x: auto;
-  caret-color: var(--accent);
+  white-space: pre;
+  box-sizing: border-box;
+  z-index: 1;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
+
+/* ── Cores do highlight ── */
+.hl-comment  { color: #6a9955; font-style: italic; }   /* verde — comentários */
+.hl-keyword  { color: var(--keyword); font-weight: 600; } /* roxo — palavras reservadas */
+.hl-type     { color: #4ec9b0; }                         /* verde-água — tipos */
+.hl-string   { color: #ce9178; }                         /* laranja — strings */
+.hl-spec     { color: #d7ba7d; font-weight: 600; }       /* amarelo — %d %f %s %c */
+.hl-number   { color: #b5cea8; }                         /* verde claro — números */
+.hl-plain    { color: var(--text); }                     /* texto normal */
+
+/* Tema claro — ajusta as cores */
+:root[data-theme="light"] .hl-comment  { color: #4a8a2a; }
+:root[data-theme="light"] .hl-keyword  { color: #7c00cc; }
+:root[data-theme="light"] .hl-type     { color: #007080; }
+:root[data-theme="light"] .hl-string   { color: #a31515; }
+:root[data-theme="light"] .hl-spec     { color: #795e26; }
+:root[data-theme="light"] .hl-number   { color: #098658; }
+:root[data-theme="light"] .hl-plain    { color: var(--text); }
 
 /* ── Diagnostics bar ── */
 .diagnostics {
@@ -447,6 +498,11 @@ button:active { transform: scale(.96); }
   font-family: var(--font-mono);
   color: var(--keyword);
   white-space: nowrap;
+}
+
+.modal-box td, .modal-box pre, .modal-box code {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 
 .close-btn { margin-top: 16px; }
