@@ -272,7 +272,7 @@ FIM</pre>
 })();
 </script>
 
-<script src="compiler.obf.js?v=0.9"></script>
+<script src="compiler.obf.js?v=1.0"></script>
 
 <script>
 function applyTheme(theme) {
@@ -300,3 +300,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('iff-theme') || 'dark';
   applyTheme(saved);
 });
+
+let _fontSize = 14;
+
+function changeFontSize(delta) {
+  _fontSize = Math.min(22, Math.max(10, _fontSize + delta));
+  const px = _fontSize + 'px';
+  // Editor, highlight e números de linha devem ter o mesmo tamanho
+  ['editor', 'highlight-layer', 'line-numbers'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.fontSize = px;
+  });
+  const disp = document.getElementById('font-size-display');
+  if (disp) disp.textContent = px;
+  try { localStorage.setItem('iff-font-size', _fontSize); } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = parseInt(localStorage.getItem('iff-font-size'));
+    if (saved && saved >= 10 && saved <= 22) {
+      changeFontSize(saved - _fontSize); // ajusta do padrão (14) para o valor salvo
+    }
+  } catch(e) {}
+});
+</script>
+
+</body>
+</html>
