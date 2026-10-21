@@ -458,15 +458,16 @@ const TOPOS={
   },
   hierarquica:{
     nome:'Hierárquica (física)',
-    info:'<b>Hierárquica:</b> parecida com a estrela estendida, mas em vez de unir switches, o sistema é vinculado a um computador que <b>controla o tráfego</b> da topologia. Há níveis: o <b>nó pai</b> controla, abaixo dele vêm os <b>filhos</b> e, abaixo destes, os demais nós. Implica um ponto central de controle do tráfego.',
-    nodes:[[350,70],[170,190],[530,190],[80,310],[260,310],[620,310]],
-    hub:[350,190],
+    info:'<b>Hierárquica:</b> parecida com a estrela estendida, mas em vez de unir switches, o sistema é vinculado a um computador que <b>controla o tráfego</b> da topologia. Há níveis: o <b>nó pai</b> controla, abaixo dele vêm os <b>filhos</b> e, abaixo destes, os demais nós. O <b>roteador</b> dá acesso à <b>WAN</b> (nuvem) — a internet, rede externa à LAN.',
+    nodes:[[200,190],[350,190],[500,190],[90,300],[260,300],[620,300]],
+    hub:[350,150],
+    wan:[350,45],
     links:[
-      [[350,70],[350,190]],
-      [[170,190],[350,190]],[[530,190],[350,190]],
-      [[80,310],[170,190]],[[260,310],[170,190]],[[620,310],[530,190]]
+      [[350,150],[350,45]],
+      [[200,190],[350,150]],[[500,190],[350,150]],
+      [[90,300],[200,190]],[[260,300],[200,190]],[[620,300],[500,190]]
     ],
-    tipo:'hier', rotulo:'Nó pai no topo controlando os filhos'
+    tipo:'hier', rotulo:'Roteador conectado à WAN · nó pai controlando os filhos'
   },
   malha:{
     nome:'Malha / Rede (física)',
@@ -660,13 +661,21 @@ function drawTopo(t){
   if(T.tipo==='multi') el('text',{x:350,y:372,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Só um nó transmite por vez (CSMA/CD, CSMA/CA, token)';
   if(T.tipo==='ringlogico') el('text',{x:350,y:372,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Token circula no anel lógico';
 
+  // ---- WAN (nuvem) ----
+  if(T.wan){
+    const [wx,wy]=T.wan;
+    svgIcon('nuvem',wx,wy,0.95,SVG);
+    el('text',{x:wx,y:wy+4,'text-anchor':'middle',fill:'#7fb3b0','font-size':10,'font-weight':700},SVG).textContent='WAN';
+    el('text',{x:wx,y:wy+40,'text-anchor':'middle',fill:'#8b949e','font-size':9},SVG).textContent='Internet / rede externa';
+  }
+
   // ---- DISPOSITIVO CENTRAL ----
   if(T.hub){
     const hubs=Array.isArray(T.hub[0])?T.hub:[T.hub];
     hubs.forEach((h,i)=>{
       if(T.tipo==='hier'){
         svgIcon('roteador',h[0],h[1],1.0,SVG);
-        el('text',{x:h[0],y:h[1]+30,'text-anchor':'middle',fill:'#bc8cff','font-size':10,'font-weight':700},SVG).textContent='ROTEADOR';
+        el('text',{x:h[0],y:h[1]-24,'text-anchor':'middle',fill:'#bc8cff','font-size':10,'font-weight':700},SVG).textContent='ROTEADOR';
       } else {
         svgIcon('switch',h[0],h[1],1.0,SVG);
         el('text',{x:h[0],y:h[1]+30,'text-anchor':'middle',fill:'#7fb3b0','font-size':9,'font-weight':700},SVG).textContent='SWITCH';
