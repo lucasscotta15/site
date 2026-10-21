@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topologias de Rede — Jogo Interativo | Prof. Lucas Scotta</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2d3748;
+  --txt:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --accent2:#3fb950;
+  --warn:#d29922; --err:#f85149; --ok:#3fb950; --purple:#bc8cff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--txt); line-height:1.6; padding:16px;
+  min-height:100vh;
+}
+.wrap{max-width:1000px;margin:0 auto}
+header{text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+header h1{font-size:1.6rem;margin-bottom:4px}
+header .sub{color:var(--dim);font-size:.9rem}
+nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0}
+nav button{
+  background:var(--panel);border:1px solid var(--line);color:var(--txt);
+  padding:10px 18px;border-radius:8px;cursor:pointer;font-size:.95rem;
+  transition:.2s;font-weight:500;
+}
+nav button:hover{border-color:var(--accent);background:var(--panel2)}
+nav button.active{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:700}
+section{display:none;animation:fade .3s}
+section.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}
+h2{font-size:1.25rem;margin-bottom:12px;color:var(--accent)}
+h3{font-size:1.05rem;margin:16px 0 8px;color:var(--accent2)}
+p{margin-bottom:10px}
+.hint{color:var(--dim);font-size:.88rem}
+.btn{
+  background:var(--accent);color:#0d1117;border:none;padding:10px 20px;
+  border-radius:8px;cursor:pointer;font-weight:700;font-size:.95rem;transition:.2s;
+}
+.btn:hover{filter:brightness(1.15)}
+.btn.secondary{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+/* ---------- QUIZ ---------- */
+.q-progress{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-bottom:16px}
+.q-progress > div{height:100%;background:var(--accent);width:0;transition:width .3s}
+.q-meta{display:flex;justify-content:space-between;font-size:.85rem;color:var(--dim);margin-bottom:12px}
+.q-text{font-size:1.1rem;font-weight:600;margin-bottom:16px}
+.opt{
+  display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);
+  color:var(--txt);padding:12px 16px;border-radius:8px;margin-bottom:10px;cursor:pointer;
+  font-size:.95rem;transition:.15s;
+}
+.opt:hover:not(:disabled){border-color:var(--accent);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.opt.correct{background:rgba(63,185,80,.18);border-color:var(--ok);color:#7ee787}
+.opt.wrong{background:rgba(248,81,73,.15);border-color:var(--err);color:#ff7b72}
+.feedback{margin-top:12px;padding:12px;border-radius:8px;font-size:.92rem;display:none}
+.feedback.show{display:block}
+.feedback.ok{background:rgba(63,185,80,.12);border-left:4px solid var(--ok)}
+.feedback.no{background:rgba(248,81,73,.12);border-left:4px solid var(--err)}
+.score-big{font-size:3rem;font-weight:800;color:var(--accent);text-align:center;margin:12px 0}
+/* ---------- SIMULAÇÃO ---------- */
+.sim-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.sim-tabs button{
+  background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+  padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;transition:.2s;
+}
+.sim-tabs button.active{background:var(--purple);color:#0d1117;border-color:var(--purple);font-weight:700}
+svg{width:100%;height:auto;background:var(--panel2);border-radius:10px;display:block}
+.sim-info{margin-top:14px;padding:14px;background:var(--panel2);border-radius:8px;border-left:4px solid var(--warn);font-size:.92rem}
+.sim-info b{color:var(--warn)}
+.legend{display:flex;gap:16px;font-size:.8rem;color:var(--dim);margin-top:8px;flex-wrap:wrap}
+.legend span::before{content:"●";margin-right:5px}
+/* ---------- DRAG & DROP ---------- */
+.dnd-area{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:760px){.dnd-area{grid-template-columns:1fr 1fr}}
+.pool{background:var(--panel2);border:2px dashed var(--line);border-radius:10px;padding:12px;min-height:120px}
+.pool h4{font-size:.9rem;color:var(--dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.chip{
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  margin-bottom:8px;cursor:grab;font-size:.88rem;transition:.15s;
+}
+.chip:hover{border-color:var(--accent)}
+.chip.dragging{opacity:.4}
+.chip.placed{cursor:default;border-color:var(--accent)}
+.chip.right{background:rgba(63,185,80,.15);border-color:var(--ok)}
+.chip.wrong{background:rgba(248,81,73,.15);border-color:var(--err)}
+.zone{
+  background:var(--panel2);border:2px dashed var(--line);border-radius:10px;
+  padding:12px;min-height:80px;margin-bottom:10px;transition:.2s;
+}
+.zone.over{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.zone h4{font-size:.9rem;color:var(--accent);margin-bottom:8px}
+.hidden{display:none}
+@media(max-width:600px){header h1{font-size:1.25rem}nav button{padding:8px 12px;font-size:.85rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🌐 Topologias de Rede</h1>
+  <div class="sub">Físicas e Lógicas — Comunicação de Dados e Redes · Prof. Lucas Scotta · IFF</div>
+</header>
+
+<nav>
+  <button class="active" data-tab="quiz">📝 Quiz</button>
+  <button data-tab="sim">🎬 Simulador</button>
+  <button data-tab="dnd">🧩 Arrastar e Soltar</button>
+  <button data-tab="teoria">📖 Revisão</button>
+</nav>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz" class="active">
+  <div class="card" id="quiz-start">
+    <h2>Quiz — 15 perguntas</h2>
+    <p>Perguntas sobre topologias <b>físicas</b> (barramento, anel, estrela, estrela estendida, hierárquica, malha, híbrida) e <b>lógicas</b> (ponto-a-ponto, multi-acesso, anel lógico).</p>
+    <p class="hint">Cada resposta vem com explicação. No fim você recebe seu percentual de acerto.</p>
+    <button class="btn" id="btn-start-quiz">Começar quiz</button>
+  </div>
+
+  <div class="card hidden" id="quiz-play">
+    <div class="q-progress"><div id="q-bar"></div></div>
+    <div class="q-meta"><span id="q-count"></span><span id="q-score"></span></div>
+    <div class="q-text" id="q-text"></div>
+    <div id="q-opts"></div>
+    <div class="feedback" id="q-fb"></div>
+    <button class="btn hidden" id="btn-next" style="margin-top:14px">Próxima →</button>
+  </div>
+
+  <div class="card hidden" id="quiz-end">
+    <h2>Resultado</h2>
+    <div class="score-big" id="q-final"></div>
+    <p id="q-msg" style="text-align:center"></p>
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn" id="btn-restart-quiz">Refazer quiz</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SIMULADOR ============ -->
+<section id="sim">
+  <div class="card">
+    <h2>Simulador de Topologias</h2>
+    <p class="hint">Clique em uma topologia, depois clique em um nó para enviar um pacote. Observe o caminho percorrido e o comportamento da rede.</p>
+    <div class="sim-tabs" id="sim-tabs"></div>
+    <svg id="sim-svg" viewBox="0 0 700 380" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="legend">
+      <span style="color:var(--accent)">Nó</span>
+      <span style="color:var(--purple)">Dispositivo central</span>
+      <span style="color:var(--warn)">Pacote em trânsito</span>
+      <span style="color:var(--err)">Falha</span>
+    </div>
+    <div class="sim-info" id="sim-info"></div>
+  </div>
+</section>
+
+<!-- ============ DRAG & DROP ============ -->
+<section id="dnd">
+  <div class="card">
+    <h2>Arraste e Solte</h2>
+    <p class="hint">Arraste cada cartão para a coluna correta: <b>Topologia Física</b> ou <b>Topologia Lógica</b>. Depois clique em "Verificar".</p>
+    <div class="dnd-area">
+      <div class="pool" id="pool"><h4>Cartões</h4></div>
+      <div>
+        <div class="zone" id="zone-fisica" data-zone="fisica"><h4>Topologia Física</h4></div>
+        <div class="zone" id="zone-logica" data-zone="logica"><h4>Topologia Lógica</h4></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" id="btn-check-dnd">Verificar</button>
+      <button class="btn secondary" id="btn-reset-dnd">Reiniciar</button>
+    </div>
+    <div class="feedback" id="dnd-fb"></div>
+  </div>
+</section>
+
+<!-- ============ TEORIA ============ -->
+<section id="teoria">
+  <div class="card">
+    <h2>Revisão rápida</h2>
+    <h3>O que é topologia?</h3>
+    <p>Do grego <i>topos</i> ("lugar") e <i>logos</i> ("estudo"). A topologia define a estrutura de uma rede: a combinação dos dispositivos (nós) e as interconexões entre eles. Pode ser examinada em dois níveis:</p>
+    <h3>Topologia física</h3>
+    <p>É o <b>layout atual do meio</b> (cabeamento). Representa <i>como o meio é usado</i> para interconectar os dispositivos.</p>
+    <h3>Topologia lógica</h3>
+    <p>Define <b>como os meios são acessados</b> pelos hosts — o mecanismo de controle de acesso ao meio. São conexões <i>virtuais</i> entre os nós, independentemente da disposição física. Influencia o enquadramento de rede e o método de acesso ao meio (CSMA/CD, CSMA/CA, passagem de token).</p>
+    <h3>As 7 topologias físicas</h3>
+    <ul>
+      <li><b>Barramento:</b> um único cabo ao qual todos os hosts se conectam. Todos veem todos os sinais; rompimento do cabo derruba a rede.</li>
+      <li><b>Anel:</b> cada host conecta ao próximo e o último ao primeiro, formando um anel fechado.</li>
+      <li><b>Estrela:</b> todos os cabos vão a um ponto central (hub ou switch).</li>
+      <li><b>Estrela estendida:</b> estrelas individuais unidas por hubs/switches — estende comprimento e tamanho.</li>
+      <li><b>Hierárquica:</b> parecida com a estrela estendida, mas os sistemas são ligados a um computador que controla o tráfego.</li>
+      <li><b>Malha:</b> cada nó ligado a todos os outros. Redundância máxima — usada onde não pode haver interrupção.</li>
+      <li><b>Híbrida:</b> combinação de barramento, estrela e anel.</li>
+    </ul>
+    <h3>As 3 topologias lógicas</h3>
+    <ul>
+      <li><b>Ponto-a-ponto:</b> conecta dois nós diretamente. Pode haver dispositivos intermediários sem alterar a lógica. Forma um circuito virtual.</li>
+      <li><b>Multi-acesso (multi-ponto):</b> vários nós no mesmo meio compartilhado — só um transmite por vez. Usa CSMA/CD, CSMA/CA ou passagem de token.</li>
+      <li><b>Anel lógico:</b> cada nó recebe o quadro em sequência; se não for para ele, repassa ao próximo. Usa passagem de token.</li>
+    </ul>
+    <p class="hint" style="margin-top:16px">Baseado nos slides "Redes Aula 5 — Topologia" (Prof. Lucas Scotta), com correções técnicas pontuais.</p>
+  </div>
+</section>
+</div>
+
+<script>
+/* ================== NAVEGAÇÃO ================== */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('section').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.tab).classList.add('active');
+  };
+});
+
+/* ================== QUIZ ================== */
+const QUESTIONS = [
+  {q:"Qual é a definição de topologia física?",
+   o:["Como os meios são acessados pelos hosts, definindo o controle de acesso ao meio",
+      "O layout atual do meio: a combinação dos nós e as conexões físicas entre eles",
+      "Apenas o tipo de cabo utilizado na rede",
+      "O endereçamento IP atribuído a cada máquina"],
+   c:1,
+   e:"Topologia física é o layout real do meio (cabeamento) — como o meio é usado para interconectar os dispositivos. A alternativa 1 descreve a topologia lógica."},
+
+  {q:"O que a topologia lógica define?",
+   o:["O caminho físico exato do cabo entre dois pontos",
+      "Apenas a velocidade do link",
+      "Como as informações fluem pela rede e como o meio é acessado (onde podem ocorrer colisões)",
+      "A quantidade de portas de um switch"],
+   c:2,
+   e:"A topologia lógica trata das conexões virtuais: como as informações fluem e qual mecanismo gerencia o acesso ao meio (CSMA/CD, CSMA/CA, token)."},
+
+  {q:"Na topologia em barramento, o que acontece quando um cabo do segmento se rompe?",
+   o:["Apenas o host do trecho rompido fica fora da rede",
+      "A rede continua funcionando normalmente por redundância",
+      "O switch isola automaticamente o trecho defeituoso",
+      "Os hosts ficam desconectados uns dos outros"],
+   c:3,
+   e:"No barramento não há redundância nem nó central. O rompimento do cabo interrompe o segmento e desconecta os hosts entre si."},
+
+  {q:"Por que a topologia em barramento é suscetível a colisões?",
+   o:["Porque todos os dispositivos compartilham o mesmo meio e veem todos os sinais",
+      "Porque cada host tem um link dedicado ao nó central",
+      "Porque os dados passam por dentro de cada nó",
+      "Porque usa apenas fibra óptica"],
+   c:0,
+   e:"O barramento é um meio compartilhado: todos veem todos os sinais. Se dois transmitem ao mesmo tempo, ocorre colisão e é preciso reiniciar a transmissão."},
+
+  {q:"Na topologia em estrela, qual é a principal desvantagem?",
+   o:["O custo do cabo é o mais alto entre todas as topologias",
+      "Se o nó central falhar, a rede inteira fica desconectada",
+      "Nenhum nó consegue se comunicar com outro",
+      "É impossível usar par trançado"],
+   c:1,
+   e:"Na estrela todo o fluxo passa pelo nó central. Se ele falhar, todos ficam isolados — mas, por outro lado, um cabo defeituoso afeta apenas o host ligado a ele."},
+
+  {q:"Qual é a diferença entre topologia em estrela estendida e hierárquica?",
+   o:["Não há diferença, são sinônimos",
+      "Na estrela estendida os hubs/switches são interligados; na hierárquica o sistema é vinculado a um computador que controla o tráfego",
+      "A hierárquica usa apenas cabos de fibra",
+      "A estrela estendida não permite mais de 10 nós"],
+   c:1,
+   e:"Ambas se parecem com uma estrela. Na estrela estendida, une-se hubs/switches de estrelas individuais. Na hierárquica, o sistema é vinculado a um computador que controla o tráfego."},
+
+  {q:"Em qual situação a topologia em malha (rede) é a escolha mais indicada?",
+   o:["Quando se quer o menor custo possível de cabeamento",
+      "Quando a rede tem apenas dois computadores",
+      "Quando não pode haver nenhuma interrupção nas comunicações",
+      "Quando não há necessidade de redundância"],
+   c:2,
+   e:"Na malha cada nó se liga a todos os outros, criando caminhos redundantes. É usada onde a interrupção é inaceitável (ex.: sistemas de controle de uma usina). O custo de cabos é a desvantagem."},
+
+  {q:"O que caracteriza a topologia lógica ponto-a-ponto?",
+   o:["Conecta dois nós diretamente, com protocolo de acesso ao meio muito simples",
+      "Todos os nós compartilham o mesmo meio e disputam o acesso",
+      "Um nó central retransmite os dados para todos",
+      "Exige obrigatoriamente cabos em anel"],
+   c:0,
+   e:"Ponto-a-ponto conecta dois nós. Os dados entram por um nó, atravessam o meio e são removidos pelo nó da outra extremidade. Pode haver dispositivos intermediários sem alterar a lógica."},
+
+  {q:"Sobre a topologia ponto-a-ponto, é correto afirmar que:",
+   o:["Os dispositivos intermediários mudam a topologia lógica",
+      "Os dois nós precisam estar fisicamente lado a lado",
+      "A conexão lógica entre os nós pode formar um circuito virtual",
+      "Não é possível conectar nós por longas distâncias"],
+   c:2,
+   e:"Um circuito virtual é uma conexão lógica criada dentro da rede entre dois dispositivos — é um recurso importante de comunicação lógica. Os dispositivos físicos intermediários não alteram a topologia lógica."},
+
+  {q:"Qual método de controle de acesso ao meio é típico da topologia lógica multi-acesso?",
+   o:["Apenas CSMA/CA",
+      "CSMA/CD, CSMA/CA ou passagem de token",
+      "Somente passagem de token",
+      "Não há método de controle definido"],
+   c:1,
+   e:"Multi-acesso admite vários métodos: CSMA/CD, CSMA/CA e também passagem de token."},
+
+  {q:"Por que a topologia multi-acesso precisa de um método de controle de acesso ao meio?",
+   o:["Para aumentar a velocidade da rede",
+      "Para permitir que todos transmitam ao mesmo tempo",
+      "Para regular a transmissão e reduzir as colisões entre sinais",
+      "Para definir os endereços IP dos nós"],
+   c:2,
+   e:"Como vários nós compartilham o mesmo meio, só um pode transmitir por vez. O método de acesso regula isso e reduz colisões."},
+
+  {q:"No anel lógico, o que o nó faz ao receber um quadro que não é endereçado a ele?",
+   o:["Descarta definitivamente o quadro",
+      "Guarda o quadro e encerra o envio na rede",
+      "Envia o quadro de volta para o nó de origem imediatamente",
+      "Examina o endereço e repassa o quadro ao próximo nó"],
+   c:3,
+   e:"Cada nó recebe o quadro em sequência, examina o endereço e o repassa ao próximo. Assim, todos os nós entre origem e destino examinam o quadro."},
+
+  {q:"Qual técnica de controle de acesso ao meio está associada ao anel lógico?",
+   o:["CSMA/CD",
+      "Passagem de token",
+      "DHCP",
+      "NAT"],
+   c:1,
+   e:"O anel lógico usa passagem de token: apenas o nó que possui o token pode enviar (geralmente um quadro por vez)."},
+
+  {q:"Um hub e um switch, ambos no centro de uma estrela, se comportam igual?",
+   o:["Sim, ambos enviam os dados para todas as portas",
+      "Sim, ambos mantêm uma tabela de endereços MAC",
+      "Não: o hub retransmite para todas as portas; o switch encaminha o quadro apenas para a porta de destino",
+      "Não: o switch retransmite para todas as portas e o hub filtra"],
+   c:2,
+   e:"No hub, todos os sinais são repetidos para todas as portas (um único domínio de colisão). No switch, o quadro vai apenas para a porta de destino, com base na tabela MAC."},
+
+  {q:"Uma rede cabeada fisicamente em estrela pode ter topologia lógica diferente da física?",
+   o:["Não, a topologia lógica sempre é igual à física",
+      "Sim: um hub no centro cria uma única rede compartilhada, com comportamento lógico de barramento",
+      "Sim, mas só se houver roteadores",
+      "Não, porque a lógica depende apenas do cabo"],
+   c:1,
+   e:"Essa é a diferença central entre física e lógica. Com hub, a estrela física se comporta como barramento lógico (todos ouvem todos os sinais, um domínio de colisão). Com switch, o encaminhamento é por porta, mudando o comportamento lógico."}
+];
+
+let qi=0, qScore=0, qLocked=false;
+const shuffle=(a)=>{const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[b[i],b[j]]=[b[j],b[i]];}return b;};
+let quizOrder=shuffle(QUESTIONS.map((_,i)=>i));
+
+function startQuiz(){
+  qi=0;qScore=0;
+  quizOrder=shuffle(QUESTIONS.map((_,i)=>i));
+  document.getElementById('quiz-start').classList.add('hidden');
+  document.getElementById('quiz-end').classList.add('hidden');
+  document.getElementById('quiz-play').classList.remove('hidden');
+  renderQ();
+}
+function renderQ(){
+  qLocked=false;
+  const idx=quizOrder[qi], item=QUESTIONS[idx];
+  document.getElementById('q-bar').style.width=((qi)/quizOrder.length*100)+'%';
+  document.getElementById('q-count').textContent=`Pergunta ${qi+1} de ${quizOrder.length}`;
+  document.getElementById('q-score').textContent=`Acertos: ${qScore}`;
+  document.getElementById('q-text').textContent=item.q;
+  const box=document.getElementById('q-opts');box.innerHTML='';
+  const order=shuffle(item.o.map((_,i)=>i));
+  order.forEach(oi=>{
+    const b=document.createElement('button');
+    b.className='opt';b.textContent=item.o[oi];
+    b.dataset.i=oi;
+    b.onclick=()=>answer(oi,b,item,order);
+    box.appendChild(b);
+  });
+  const fb=document.getElementById('q-fb');fb.className='feedback';fb.textContent='';
+  document.getElementById('btn-next').classList.add('hidden');
+}
+function answer(chosen,btn,item,order){
+  if(qLocked)return;
+  qLocked=true;
+  const correct=item.c;
+  document.querySelectorAll('#q-opts .opt').forEach(b=>{
+    b.disabled=true;
+    if(+b.dataset.i===correct)b.classList.add('correct');
+  });
+  const fb=document.getElementById('q-fb');
+  if(chosen===correct){
+    qScore++;
+    fb.className='feedback ok show';
+    fb.innerHTML='<b>✔ Correto!</b> '+item.e;
+  }else{
+    btn.classList.add('wrong');
+    fb.className='feedback no show';
+    fb.innerHTML='<b>✘ Incorreto.</b> '+item.e;
+  }
+  document.getElementById('q-score').textContent=`Acertos: ${qScore}`;
+  const nb=document.getElementById('btn-next');
+  nb.classList.remove('hidden');
+  nb.textContent=(qi===quizOrder.length-1)?'Ver resultado →':'Próxima →';
+}
+document.getElementById('btn-start-quiz').onclick=startQuiz;
+document.getElementById('btn-restart-quiz').onclick=startQuiz;
+document.getElementById('btn-next').onclick=()=>{
+  if(qi===quizOrder.length-1){ endQuiz(); return; }
+  qi++; renderQ();
+};
+function endQuiz(){
+  document.getElementById('quiz-play').classList.add('hidden');
+  document.getElementById('quiz-end').classList.remove('hidden');
+  const pct=Math.round(qScore/quizOrder.length*100);
+  document.getElementById('q-final').textContent=pct+'%';
+  let msg;
+  if(pct===100) msg='Perfeito! Você domina topologias físicas e lógicas. 🎉';
+  else if(pct>=80) msg=`Muito bom! ${qScore} de ${quizOrder.length} corretas. Revise as que errou.`;
+  else if(pct>=60) msg=`Bom começo: ${qScore} de ${quizOrder.length}. Volte à aba Revisão e tente de novo.`;
+  else msg=`${qScore} de ${quizOrder.length}. Revise a aba Revisão com calma — o tema é a base de tudo em redes.`;
+  document.getElementById('q-msg').textContent=msg;
+}
+
+/* ================== SIMULADOR ================== */
+const NS='http://www.w3.org/2000/svg';
+const SVG=document.getElementById('sim-svg');
+const INFO=document.getElementById('sim-info');
+
+const TOPOS={
+  barramento:{
+    nome:'Barramento (física)',
+    info:'<b>Barramento:</b> único cabo compartilhado. Todos os nós veem todos os sinais. Só um transmite por vez — se dois transmitem juntos, ocorre <b>colisão</b>. Se o cabo se romper, a rede se divide e os hosts ficam desconectados entre si.',
+    nodes:[[120,120],[250,120],[380,120],[510,120],[630,120]],
+    links:[[[120,120],[250,120]],[[250,120],[380,120]],[[380,120],[510,120]],[[510,120],[630,120]]],
+    tipo:'bus', rotulo:'Cabo (meio compartilhado)'
+  },
+  estrela:{
+    nome:'Estrela (física)',
+    info:'<b>Estrela:</b> todos os cabos vão a um ponto central (hub ou switch). <b>Vantagem:</b> o problema em um cabo afeta só aquele host. <b>Desvantagem:</b> se o nó central falhar, toda a rede cai. Com <b>hub</b>, o comportamento lógico é de barramento; com <b>switch</b>, o quadro vai só à porta de destino.',
+    nodes:[[350,70],[560,140],[560,250],[350,310],[140,250],[140,140]],
+    hub:[350,190],
+    links:[[[350,70],[350,190]],[[560,140],[350,190]],[[560,250],[350,190]],[[350,310],[350,190]],[[140,250],[350,190]],[[140,140],[350,190]]],
+    tipo:'star', rotulo:'Concentrador central (hub/switch)'
+  },
+  anel:{
+    nome:'Anel (física)',
+    info:'<b>Anel:</b> cada host se conecta ao próximo e o último ao primeiro, formando um anel fechado de cabo. Os sinais passam de estação em estação (há repetição em cada uma). O anel físico pode ter topologia <b>lógica</b> diferente.',
+    nodes:'circle7',
+    links:'ring',
+    tipo:'ring', rotulo:'Anel físico fechado'
+  },
+  estendida:{
+    nome:'Estrela estendida (física)',
+    info:'<b>Estrela estendida:</b> estrelas individuais unidas por hubs/switches. Estende o comprimento e o tamanho da rede, com cabos mais curtos e menos dispositivos por nó central.',
+    nodes:[[120,80],[60,180],[120,280],[480,80],[640,110],[480,280],[640,290]],
+    hub:[[120,180],[330,180],[540,180]],
+    links:[
+      [[120,80],[120,180]],[[60,180],[120,180]],[[120,280],[120,180]],
+      [[120,180],[330,180]],[[330,180],[540,180]],
+      [[480,80],[540,180]],[[640,110],[540,180]],[[480,280],[540,180]],
+      [[540,180],[640,290]]
+    ],
+    tipo:'extended', rotulo:'Hubs/switches interligados'
+  },
+  hierarquica:{
+    nome:'Hierárquica (física)',
+    info:'<b>Hierárquica:</b> parecida com a estrela estendida, mas em vez de unir hubs/switches, o sistema é vinculado a um computador que <b>controla o tráfego</b> da topologia. Implica um ponto central de controle do tráfego.',
+    nodes:[[100,300],[220,300],[340,300],[460,300],[580,300]],
+    hub:[350,150],
+    links:[
+      [[100,300],[350,150]],[[220,300],[350,150]],[[340,300],[350,150]],
+      [[460,300],[350,150]],[[580,300],[350,150]]
+    ],
+    tipo:'hier', rotulo:'Computador que controla o tráfego'
+  },
+  malha:{
+    nome:'Malha / Rede (física)',
+    info:'<b>Malha:</b> cada nó é ligado diretamente a todos os outros. Há <b>redundância</b>: se um link falhar, o tráfego vai por outro caminho. <b>Desvantagem:</b> a quantidade de links e conexões cresce muito rápido (custo de cabeamento).',
+    nodes:[[180,90],[520,90],[600,240],[430,320],[230,320],[100,220]],
+    links:'full',
+    tipo:'mesh', rotulo:'Todos ligados a todos'
+  },
+  pontoponto:{
+    nome:'Ponto-a-ponto (lógica)',
+    info:'<b>Ponto-a-ponto (lógica):</b> conecta dois nós diretamente. Os dados entram por uma extremidade e são removidos na outra. Pode haver dispositivos intermediários — eles <b>não</b> alteram a topologia lógica.',
+    nodes:[[130,190],[600,190]],
+    inter:[[300,190],[440,190]],
+    links:[[[130,190],[300,190]],[[300,190],[440,190]],[[440,190],[600,190]]],
+    tipo:'p2p', rotulo:'Conexão lógica entre dois nós'
+  },
+  multiacesso:{
+    nome:'Multi-acesso (lógica)',
+    info:'<b>Multi-acesso (lógica):</b> vários nós compartilham o mesmo meio e só um transmite por vez. Todos verificam os dados no meio, mas só o destino processa. Usa <b>CSMA/CD</b>, <b>CSMA/CA</b> ou passagem de token para reduzir colisões.',
+    nodes:[[350,80],[560,150],[540,300],[350,330],[160,300],[140,150]],
+    hub:[350,205],
+    links:[[[350,80],[350,205]],[[560,150],[350,205]],[[540,300],[350,205]],[[350,330],[350,205]],[[160,300],[350,205]],[[140,150],[350,205]]],
+    tipo:'multi', rotulo:'Meio compartilhado (um transmite por vez)'
+  },
+  anellogico:{
+    nome:'Anel lógico (lógica)',
+    info:'<b>Anel lógico:</b> cada nó recebe o quadro em sequência, examina o endereço e repassa ao próximo. Usa <b>passagem de token</b>: só o nó com o token transmite. Todos os nós entre origem e destino examinam o quadro.',
+    nodes:'circle6',
+    links:'ring',
+    tipo:'ringlogico', rotulo:'Passagem de token'
+  }
+};
+
+function el(tag,attrs={},parent){
+  const e=document.createElementNS(NS,tag);
+  for(const k in attrs)e.setAttribute(k,attrs[k]);
+  if(parent)parent.appendChild(e);
+  return e;
+}
+function clearSVG(){while(SVG.firstChild)SVG.removeChild(SVG.firstChild);}
+
+let currentTopo='barramento';
+let animTimers=[];
+
+function stopAnim(){animTimers.forEach(t=>clearTimeout(t));animTimers=[];}
+
+function ringLinks(nodes){
+  const out=[];
+  for(let i=0;i<nodes.length;i++){
+    const a=nodes[i], b=nodes[(i+1)%nodes.length];
+    out.push([a,b]);
+  }
+  return out;
+}
+// desenha um anel real (círculo) com os nós distribuídos uniformemente
+function circularNodes(n, cx, cy, r){
+  const out=[];
+  for(let i=0;i<n;i++){
+    const ang=-Math.PI/2 + i*(2*Math.PI/n);
+    out.push([Math.round(cx+r*Math.cos(ang)), Math.round(cy+r*Math.sin(ang))]);
+  }
+  return out;
+}
+function meshLinks(nodes){
+  const out=[];
+  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++)out.push([nodes[i],nodes[j]]);
+  return out;
+}
+
+function drawInfo(t){
+  let extra='';
+  if(TOPOS[t].rotulo) extra='<br><span style="color:var(--dim)">'+TOPOS[t].rotulo+'</span>';
+  INFO.innerHTML=TOPOS[t].info.replaceAll('\\n',' ')+extra;
+}
+
+function drawTopo(t){
+  stopAnim();
+  clearSVG();
+  drawInfo(t);
+  const T=TOPOS[t];
+  if(typeof T.nodes==='string'){
+    const n=T.nodes==='circle7'?7:6;
+    T.nodes=circularNodes(n,350,195,n===7?125:118);
+  }
+  const links = T.links==='ring'?ringLinks(T.nodes):(T.links==='full'?meshLinks(T.nodes):(T.links||[]));
+
+  // links
+  links.forEach(([a,b])=>{
+    el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:'#3d4a5c','stroke-width':4,'stroke-linecap':'round'},SVG);
+  });
+
+  // barramento: desenhar um cabo único
+  if(T.tipo==='bus'){
+    el('line',{x1:80,y1:120,x2:670,y2:120,stroke:'#58a6ff','stroke-width':8,'stroke-linecap':'round',opacity:.55},SVG);
+    el('text',{x:375,y:100,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Barramento — meio único compartilhado';
+  }
+  if(T.tipo==='ring') el('text',{x:350,y:375,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Anel físico fechado (último host volta ao primeiro)';
+  if(T.tipo==='mesh') el('text',{x:350,y:365,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Cada nó ligado a todos os outros (redundância máxima)';
+  if(T.tipo==='extended') el('text',{x:350,y:340,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Estrelas individuais unidas por hubs/switches';
+  if(T.tipo==='hier') el('text',{x:350,y:355,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Estações subordinadas a um computador de controle';
+  if(T.tipo==='p2p') el('text',{x:365,y:150,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Dispositivos intermediários não mudam a lógica';
+  if(T.tipo==='multi') el('text',{x:350,y:365,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Só um nó transmite por vez (CSMA/CD, CSMA/CA, token)';
+  if(T.tipo==='ringlogico') el('text',{x:350,y:375,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Token circula no anel lógico';
+
+  // hubs
+  if(T.hub){
+    const hubs=Array.isArray(T.hub[0])?T.hub:[T.hub];
+    hubs.forEach(h=>{
+      el('rect',{x:h[0]-22,y:h[1]-22,width:44,height:44,rx:8,fill:'#2a1f3d',stroke:'#bc8cff','stroke-width':3},SVG);
+      el('text',{x:h[0],y:h[1]+5,'text-anchor':'middle',fill:'#bc8cff','font-size':11,'font-weight':700},SVG).textContent='HUB';
+    });
+  }
+  if(T.inter){
+    T.inter.forEach((h,i)=>{
+      el('circle',{cx:h[0],cy:h[1],r:16,fill:'#1c2330',stroke:'#8b949e','stroke-width':2,'stroke-dasharray':'4 3'},SVG);
+      el('text',{x:h[0],y:h[1]+4,'text-anchor':'middle',fill:'#8b949e','font-size':10},SVG).textContent='R'+(i+1);
+    });
+  }
+
+  // nós
+  T.nodes.forEach((n,i)=>{
+    const g=el('g',{style:'cursor:pointer'},SVG);
+    el('circle',{cx:n[0],cy:n[1],r:22,fill:'#1f6feb33',stroke:'#58a6ff','stroke-width':3,class:'node'},g);
+    el('text',{x:n[0],y:n[1]+5,'text-anchor':'middle',fill:'#e6edf3','font-size':13,'font-weight':700,'pointer-events':'none'},g).textContent=String.fromCharCode(65+i);
+    g.addEventListener('click',()=>onNodeClick(t,i));
+    g.addEventListener('mouseenter',()=>{const c=g.querySelector('circle');c.setAttribute('fill','#58a6ff44');});
+    g.addEventListener('mouseleave',()=>{const c=g.querySelector('circle');c.setAttribute('fill','#1f6feb33');});
+  });
+}
+
+/* pacote + caminho */
+function packetPath(t,a,b){
+  const T=TOPOS[t];
+  const N=T.nodes;
+  if(T.tipo==='bus'){
+    // do nó até o cabo, percorre o cabo, desce no destino
+    const pa=[N[a][0],120], pb=[N[b][0],120];
+    return [[N[a][0],N[a][1]],[pa[0],pa[1]],[pb[0],pb[1]],[N[b][0],N[b][1]]];
+  }
+  if(T.tipo==='star'||T.tipo==='multi'){
+    return [N[a],T.hub,N[b]];
+  }
+  if(T.tipo==='extended'){
+    // nós 0-2 -> hub esquerdo(0); nó 3 -> hub central(1); nós 4-6 -> hub direito(2); nó 7 -> nada (nó de passagem)
+    const hubOf=(i)=> i<=2 ? T.hub[0] : (i===3 ? T.hub[1] : T.hub[2]);
+    if(a===6) return [N[a],T.hub[2],T.hub[1],T.hub[0],T.hub[1],T.hub[2],N[b]];
+    const ha=hubOf(a), hb=hubOf(b), central=T.hub[1];
+    const pts=[N[a],ha];
+    if(ha!==central)pts.push(central);
+    if(hb!==central)pts.push(hb);
+    pts.push(N[b]);
+    return pts;
+  }
+  if(T.tipo==='hier'){
+    return [N[a],T.hub,N[b]];
+  }
+  if(T.tipo==='p2p'){
+    return [N[a],T.inter[0],T.inter[1],N[b]];
+  }
+  if(T.tipo==='mesh'){
+    // caminho direto (grafo completo)
+    return [N[a],N[b]];
+  }
+  // anel físico e anel lógico: seguir a ordem em um sentido
+  const pts=[];
+  let i=a;
+  pts.push(N[i]);
+  let guard=0;
+  while(i!==b && guard++<20){ i=(i+1)%N.length; pts.push(N[i]); }
+  return pts;
+}
+
+function onNodeClick(t,i){
+  stopAnim();
+  const N=TOPOS[t].nodes;
+  let j=(i+Math.floor(N.length/2)+1)%N.length;
+  if(j===i) j=(i+1)%N.length;
+  const pts=packetPath(t,i,j);
+
+  // destaca caminho
+  const g=el('g',{},SVG);
+  const poly=el('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:'#d29922','stroke-width':3,'stroke-dasharray':'8 6',opacity:.85},g);
+
+  const pkt=el('circle',{cx:pts[0][0],cy:pts[0][1],r:9,fill:'#d29922',stroke:'#0d1117','stroke-width':2},SVG);
+  const pj=pts[pts.length-1];
+  const lbl=el('text',{x:pj[0],y:pj[1]+38,'text-anchor':'middle',fill:'#d29922','font-size':12,'font-weight':700},SVG);
+  lbl.textContent='Nó '+String.fromCharCode(65+i)+' → '+String.fromCharCode(65+j);
+
+  // anima ponto a ponto
+  let seg=0;
+  const SPEED=45; // px por tick
+  function step(){
+    if(seg>=pts.length-1){ return; }
+    const a=pts[seg], b=pts[seg+1];
+    const dx=b[0]-a[0], dy=b[1]-a[1];
+    const dist=Math.hypot(dx,dy)||1;
+    let prog=0;
+    function tick(){
+      prog+=SPEED/dist;
+      if(prog>=1){
+        prog=1;
+        pkt.setAttribute('cx',b[0]);pkt.setAttribute('cy',b[1]);
+        seg++;
+        if(seg<pts.length-1){ animTimers.push(setTimeout(step,10)); }
+        else { animTimers.push(setTimeout(()=>{pkt.setAttribute('fill','#3fb950');lbl.setAttribute('fill','#3fb950');lbl.textContent='Entregue no nó '+String.fromCharCode(65+j);},10)); }
+        return;
+      }
+      pkt.setAttribute('cx',a[0]+dx*prog);
+      pkt.setAttribute('cy',a[1]+dy*prog);
+      animTimers.push(setTimeout(tick,12));
+    }
+    tick();
+  }
+  step();
+
+  // mensagem contextual
+  let msg='';
+  if(t==='barramento') msg='O pacote percorre o <b>cabo compartilhado</b>: todos os nós veem o sinal, mas só o destino o processa. Se outro nó transmitir ao mesmo tempo, há colisão.';
+  else if(t==='estrela') msg='O pacote passa <b>obrigatoriamente pelo nó central</b>. Se o hub/switch falhar, ninguém se comunica. Com hub, todos recebem; com switch, só o destino.';
+  else if(t==='anel') msg='No anel <b>físico</b>, o pacote percorre os hosts na ordem do anel até chegar ao destino.';
+  else if(t==='estendida') msg='O pacote sobe até o hub da estrela local e pode atravessar os hubs interligados até o destino.';
+  else if(t==='hierarquica') msg='Todo o tráfego passa pelo <b>computador de controle</b> — ponto único de decisão da topologia.';
+  else if(t==='malha') msg='Há <b>caminho direto</b> entre os nós. Se um link cair, existe rota alternativa — por isso a malha é usada onde não pode haver interrupção.';
+  else if(t==='pontoponto') msg='O pacote atravessa dispositivos intermediários, mas a <b>topologia lógica continua sendo ponto-a-ponto</b> entre origem e destino.';
+  else if(t==='multiacesso') msg='Só <b>um nó transmite por vez</b> no meio compartilhado. Todos os outros escutam; o controle de acesso (CSMA/CD, CSMA/CA) evita colisões.';
+  else if(t==='anellogico') msg='O quadro é examinado por cada nó em sequência e repassado adiante; só quem tem o <b>token</b> transmite.';
+  let extra=INFO.innerHTML.split('<hr>')[0];
+  INFO.innerHTML=extra+'<hr style="border:none;border-top:1px solid #2d3748;margin:10px 0"><span style="color:#d29922">'+msg+'</span>';
+}
+
+/* abas do simulador */
+const simTabs=document.getElementById('sim-tabs');
+Object.keys(TOPOS).forEach(k=>{
+  const b=document.createElement('button');
+  b.textContent=TOPOS[k].nome;
+  b.onclick=()=>{
+    simTabs.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentTopo=k; drawTopo(k);
+  };
+  if(k===currentTopo)b.classList.add('active');
+  simTabs.appendChild(b);
+});
+drawTopo('barramento');
+
+/* ================== DRAG & DROP ================== */
+const CARDS=[
+  {t:'Barramento — um único cabo ao qual todos os hosts se conectam', z:'fisica'},
+  {t:'Anel — último host conectado ao primeiro, formando um anel de cabo', z:'fisica'},
+  {t:'Estrela — todos os cabos vão a um ponto central (hub/switch)', z:'fisica'},
+  {t:'Estrela estendida — estrelas unidas por hubs/switches', z:'fisica'},
+  {t:'Hierárquica — o sistema é vinculado a um computador que controla o tráfego', z:'fisica'},
+  {t:'Malha — cada nó ligado a todos os outros, com redundância', z:'fisica'},
+  {t:'Híbrida — combinação de barramento, estrela e anel', z:'fisica'},
+  {t:'Ponto-a-ponto — conecta dois nós diretamente (circuito virtual)', z:'logica'},
+  {t:'Multi-acesso — vários nós no mesmo meio, um transmite por vez', z:'logica'},
+  {t:'Anel lógico — cada nó examina e repassa o quadro; usa token', z:'logica'},
+  {t:'Define como o meio é acessado (CSMA/CD, CSMA/CA, token)', z:'logica'},
+  {t:'Descreve o layout do cabeamento e as conexões físicas', z:'fisica'}
+];
+
+const pool=document.getElementById('pool');
+const zF=document.getElementById('zone-fisica');
+const zL=document.getElementById('zone-logica');
+let selected=null;
+
+function clearSel(){
+  if(selected){selected.classList.remove('placed');}
+  selected=null;
+}
+
+function buildDnd(){
+  selected=null;
+  pool.innerHTML='<h4>Cartões</h4>';
+  zF.innerHTML='<h4>Topologia Física</h4>';
+  zL.innerHTML='<h4>Topologia Lógica</h4>';
+  const fb=document.getElementById('dnd-fb');
+  fb.className='feedback';fb.textContent='';
+  const order=shuffle(CARDS.map((_,i)=>i));
+  order.forEach(idx=>{
+    const c=CARDS[idx];
+    const d=document.createElement('div');
+    d.className='chip';d.textContent=c.t;d.dataset.z=c.z;d.draggable=true;
+
+    // --- clique / toque: seleciona o cartão ---
+    d.addEventListener('click',(e)=>{
+      e.preventDefault();e.stopPropagation();
+      if(d.parentElement===pool){
+        clearSel();
+        selected=d;
+        d.classList.add('placed');
+      }else{
+        // cartão numa coluna: volta para o pool
+        if(selected===d){clearSel();}else{pool.appendChild(d);clearSel();}
+      }
+    });
+
+    // --- HTML5 drag and drop (desktop) ---
+    d.addEventListener('dragstart',(e)=>{selected=d;d.classList.add('dragging');try{e.dataTransfer.setData('text/plain','x');e.dataTransfer.effectAllowed='move';}catch(_){}});
+    d.addEventListener('dragend',()=>{d.classList.remove('dragging');});
+
+    pool.appendChild(d);
+  });
+}
+
+// soltar em qualquer área (pool ou colunas)
+[pool,zF,zL].forEach(z=>{
+  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('over');});
+  z.addEventListener('dragleave',()=>z.classList.remove('over'));
+  z.addEventListener('drop',e=>{
+    e.preventDefault();z.classList.remove('over');
+    if(selected){z.appendChild(selected);clearSel();}
+  });
+  z.addEventListener('click',(e)=>{
+    // não interfere no clique do próprio cartão
+    if(e.target.closest('.chip'))return;
+    if(selected){z.appendChild(selected);clearSel();}
+  });
+});
+
+document.getElementById('btn-check-dnd').onclick=()=>{
+  const fb=document.getElementById('dnd-fb');
+  const placed=[...document.querySelectorAll('.chip')].filter(c=>['zone-fisica','zone-logica'].includes(c.parentElement.id));
+  if(placed.length<CARDS.length){
+    fb.className='feedback no show';
+    fb.innerHTML=`Você colocou ${placed.length} de ${CARDS.length} cartões. Faltam cartões para classificar.`;
+    return;
+  }
+  let ok=0;
+  placed.forEach(c=>{
+    c.classList.remove('right','wrong');
+    const got = c.parentElement.id==='zone-fisica'?'fisica':'logica';
+    if(got===c.dataset.z){c.classList.add('right');ok++;}
+    else{c.classList.add('wrong');}
+  });
+  if(ok===CARDS.length){
+    fb.className='feedback ok show';
+    fb.innerHTML='<b>✔ Perfeito!</b> Todos os cartões estão na coluna correta.';
+  }else{
+    fb.className='feedback no show';
+    fb.innerHTML=`<b>${ok} de ${CARDS.length} corretos.</b> Vermelho = classificação errada. Clique no cartão vermelho para devolvê-lo e tente de novo.`;
+  }
+};
+document.getElementById('btn-reset-dnd').onclick=buildDnd;
+buildDnd();
+</script>
+</body>
+</html>
