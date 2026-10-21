@@ -191,8 +191,8 @@ svg{width:100%;height:auto;background:var(--panel2);border-radius:10px;display:b
     <ul>
       <li><b>Barramento:</b> um único cabo ao qual todos os hosts se conectam. Todos veem todos os sinais; rompimento do cabo derruba a rede.</li>
       <li><b>Anel:</b> cada host conecta ao próximo e o último ao primeiro, formando um anel fechado.</li>
-      <li><b>Estrela:</b> todos os cabos vão a um ponto central (hub ou switch).</li>
-      <li><b>Estrela estendida:</b> estrelas individuais unidas por hubs/switches — estende comprimento e tamanho.</li>
+      <li><b>Estrela:</b> todos os cabos vão a um ponto central (switch).</li>
+      <li><b>Estrela estendida:</b> estrelas individuais unidas por switches — estende comprimento e tamanho.</li>
       <li><b>Hierárquica:</b> parecida com a estrela estendida, mas os sistemas são ligados a um computador que controla o tráfego.</li>
       <li><b>Malha:</b> cada nó ligado a todos os outros. Redundância máxima — usada onde não pode haver interrupção.</li>
       <li><b>Híbrida:</b> combinação de barramento, estrela e anel.</li>
@@ -203,7 +203,7 @@ svg{width:100%;height:auto;background:var(--panel2);border-radius:10px;display:b
       <li><b>Multi-acesso (multi-ponto):</b> vários nós no mesmo meio compartilhado — só um transmite por vez. Usa CSMA/CD, CSMA/CA ou passagem de token.</li>
       <li><b>Anel lógico:</b> cada nó recebe o quadro em sequência; se não for para ele, repassa ao próximo. Usa passagem de token.</li>
     </ul>
-    <p class="hint" style="margin-top:16px">Baseado nos slides "Redes Aula 5 — Topologia" (Prof. Lucas Scotta), com correções técnicas pontuais.</p>
+    <p class="hint" style="margin-top:16px">Baseado nos slides "Redes Aula Topologia" (Prof. Lucas Scotta).</p>
   </div>
 </section>
 </div>
@@ -263,11 +263,11 @@ const QUESTIONS = [
 
   {q:"Qual é a diferença entre topologia em estrela estendida e hierárquica?",
    o:["Não há diferença, são sinônimos",
-      "Na estrela estendida os hubs/switches são interligados; na hierárquica o sistema é vinculado a um computador que controla o tráfego",
+      "Na estrela estendida os switches são interligados; na hierárquica o sistema é vinculado a um computador que controla o tráfego",
       "A hierárquica usa apenas cabos de fibra",
       "A estrela estendida não permite mais de 10 nós"],
    c:1,
-   e:"Ambas se parecem com uma estrela. Na estrela estendida, une-se hubs/switches de estrelas individuais. Na hierárquica, o sistema é vinculado a um computador que controla o tráfego."},
+   e:"Ambas se parecem com uma estrela. Na estrela estendida, une-se switches de estrelas individuais. Na hierárquica, o sistema é vinculado a um computador que controla o tráfego."},
 
   {q:"Em qual situação a topologia em malha (rede) é a escolha mais indicada?",
    o:["Quando se quer o menor custo possível de cabeamento",
@@ -325,13 +325,13 @@ const QUESTIONS = [
    c:1,
    e:"O anel lógico usa passagem de token: apenas o nó que possui o token pode enviar (geralmente um quadro por vez)."},
 
-  {q:"Um hub e um switch, ambos no centro de uma estrela, se comportam igual?",
-   o:["Sim, ambos enviam os dados para todas as portas",
-      "Sim, ambos mantêm uma tabela de endereços MAC",
-      "Não: o hub retransmite para todas as portas; o switch encaminha o quadro apenas para a porta de destino",
-      "Não: o switch retransmite para todas as portas e o hub filtra"],
+  {q:"No centro de uma topologia em estrela, qual dispositivo encaminha o quadro apenas para a porta de destino?",
+   o:["O hub",
+      "O roteador",
+      "O switch",
+      "O repetidor"],
    c:2,
-   e:"No hub, todos os sinais são repetidos para todas as portas (um único domínio de colisão). No switch, o quadro vai apenas para a porta de destino, com base na tabela MAC."},
+   e:"O switch mantém uma tabela de endereços MAC e encaminha o quadro somente para a porta de destino. O hub (obsoleto) repetia o sinal para todas as portas, criando um único domínio de colisão."},
 
   {q:"Uma rede cabeada fisicamente em estrela pode ter topologia lógica diferente da física?",
    o:["Não, a topologia lógica sempre é igual à física",
@@ -339,7 +339,7 @@ const QUESTIONS = [
       "Sim, mas só se houver roteadores",
       "Não, porque a lógica depende apenas do cabo"],
    c:1,
-   e:"Essa é a diferença central entre física e lógica. Com hub, a estrela física se comporta como barramento lógico (todos ouvem todos os sinais, um domínio de colisão). Com switch, o encaminhamento é por porta, mudando o comportamento lógico."}
+   e:"Essa é a diferença central entre física e lógica. Com hub (obsoleto), a estrela física se comporta como barramento lógico (todos ouvem todos os sinais, um domínio de colisão). Com switch, o encaminhamento é por porta, mudando o comportamento lógico."}
 ];
 
 let qi=0, qScore=0, qLocked=false;
@@ -424,17 +424,17 @@ const TOPOS={
   barramento:{
     nome:'Barramento (física)',
     info:'<b>Barramento:</b> único cabo compartilhado. Todos os nós veem todos os sinais. Só um transmite por vez — se dois transmitem juntos, ocorre <b>colisão</b>. Se o cabo se romper, a rede se divide e os hosts ficam desconectados entre si.',
-    nodes:[[120,120],[250,120],[380,120],[510,120],[630,120]],
-    links:[[[120,120],[250,120]],[[250,120],[380,120]],[[380,120],[510,120]],[[510,120],[630,120]]],
+    nodes:[[120,105],[250,105],[380,105],[510,105],[630,105]],
+    links:[[[120,105],[250,105]],[[250,105],[380,105]],[[380,105],[510,105]],[[510,105],[630,105]]],
     tipo:'bus', rotulo:'Cabo (meio compartilhado)'
   },
   estrela:{
     nome:'Estrela (física)',
-    info:'<b>Estrela:</b> todos os cabos vão a um ponto central (hub ou switch). <b>Vantagem:</b> o problema em um cabo afeta só aquele host. <b>Desvantagem:</b> se o nó central falhar, toda a rede cai. Com <b>hub</b>, o comportamento lógico é de barramento; com <b>switch</b>, o quadro vai só à porta de destino.',
+    info:'<b>Estrela:</b> todos os cabos vão a um ponto central (switch). <b>Vantagem:</b> o problema em um cabo afeta só aquele host. <b>Desvantagem:</b> se o nó central falhar, toda a rede cai. O switch encaminha o quadro apenas para a porta de destino; o hub (obsoleto) repetia para todas as portas, criando um único domínio de colisão.',
     nodes:[[350,70],[560,140],[560,250],[350,310],[140,250],[140,140]],
     hub:[350,190],
     links:[[[350,70],[350,190]],[[560,140],[350,190]],[[560,250],[350,190]],[[350,310],[350,190]],[[140,250],[350,190]],[[140,140],[350,190]]],
-    tipo:'star', rotulo:'Concentrador central (hub/switch)'
+    tipo:'star', rotulo:'Switch central'
   },
   anel:{
     nome:'Anel (física)',
@@ -445,27 +445,28 @@ const TOPOS={
   },
   estendida:{
     nome:'Estrela estendida (física)',
-    info:'<b>Estrela estendida:</b> estrelas individuais unidas por hubs/switches. Estende o comprimento e o tamanho da rede, com cabos mais curtos e menos dispositivos por nó central.',
-    nodes:[[120,80],[60,180],[120,280],[480,80],[640,110],[480,280],[640,290]],
-    hub:[[120,180],[330,180],[540,180]],
+    info:'<b>Estrela estendida:</b> estrelas individuais unidas por switches. Estende o comprimento e o tamanho da rede, com cabos mais curtos e menos dispositivos por nó central.',
+    nodes:[[130,85],[55,180],[130,275],[500,85],[655,180],[500,275],[655,290]],
+    hub:[[130,180],[330,180],[540,180]],
     links:[
-      [[120,80],[120,180]],[[60,180],[120,180]],[[120,280],[120,180]],
-      [[120,180],[330,180]],[[330,180],[540,180]],
-      [[480,80],[540,180]],[[640,110],[540,180]],[[480,280],[540,180]],
-      [[540,180],[640,290]]
+      [[130,85],[130,180]],[[55,180],[130,180]],[[130,275],[130,180]],
+      [[130,180],[330,180]],[[330,180],[540,180]],
+      [[500,85],[540,180]],[[655,180],[540,180]],[[500,275],[540,180]],
+      [[540,180],[655,290]]
     ],
-    tipo:'extended', rotulo:'Hubs/switches interligados'
+    tipo:'extended', rotulo:'Switches interligados'
   },
   hierarquica:{
     nome:'Hierárquica (física)',
-    info:'<b>Hierárquica:</b> parecida com a estrela estendida, mas em vez de unir hubs/switches, o sistema é vinculado a um computador que <b>controla o tráfego</b> da topologia. Implica um ponto central de controle do tráfego.',
-    nodes:[[100,300],[220,300],[340,300],[460,300],[580,300]],
-    hub:[350,150],
+    info:'<b>Hierárquica:</b> parecida com a estrela estendida, mas em vez de unir switches, o sistema é vinculado a um computador que <b>controla o tráfego</b> da topologia. Há níveis: o <b>nó pai</b> controla, abaixo dele vêm os <b>filhos</b> e, abaixo destes, os demais nós. Implica um ponto central de controle do tráfego.',
+    nodes:[[350,70],[170,190],[530,190],[80,310],[260,310],[620,310]],
+    hub:[350,190],
     links:[
-      [[100,300],[350,150]],[[220,300],[350,150]],[[340,300],[350,150]],
-      [[460,300],[350,150]],[[580,300],[350,150]]
+      [[350,70],[350,190]],
+      [[170,190],[350,190]],[[530,190],[350,190]],
+      [[80,310],[170,190]],[[260,310],[170,190]],[[620,310],[530,190]]
     ],
-    tipo:'hier', rotulo:'Computador que controla o tráfego'
+    tipo:'hier', rotulo:'Nó pai no topo controlando os filhos'
   },
   malha:{
     nome:'Malha / Rede (física)',
@@ -541,6 +542,98 @@ function drawInfo(t){
   INFO.innerHTML=TOPOS[t].info.replaceAll('\\n',' ')+extra;
 }
 
+
+/* ================== BIBLIOTECA DE ÍCONES (símbolos de rede) ================== */
+const ICON_C='#7fb3b0', ICON_D='#5d8f8c', ICON_L='#a8d5d2';
+
+function svgIcon(kind,x,y,scale=1,parent=SVG){
+  const g=el('g',{transform:`translate(${x},${y}) scale(${scale})`,'pointer-events':'none'},parent);
+  const r=(a)=>el('rect',a,g), c=(a)=>el('circle',a,g), pa=(a)=>el('path',a,g), ln=(a)=>el('line',a,g);
+  if(kind==='desktop'){
+    // monitor
+    r({x:-20,y:-26,width:40,height:30,rx:3,fill:ICON_C,stroke:ICON_D,'stroke-width':1.5});
+    r({x:-16,y:-22,width:32,height:21,rx:1,fill:'#0f2a2a'});
+    r({x:-5,y:-4,width:10,height:7,fill:ICON_D});
+    r({x:-13,y:3,width:26,height:4,rx:1.5,fill:ICON_D});
+    // teclado
+    r({x:-22,y:9,width:44,height:9,rx:2,fill:ICON_C,stroke:ICON_D,'stroke-width':1.2});
+    for(let i=0;i<5;i++)ln({x1:-18+i*8,y1:12,x2:-14+i*8,y2:12,stroke:'#0f2a2a','stroke-width':1.2});
+    // mouse
+    r({x:26,y:9,width:6,height:9,rx:3,fill:ICON_C,stroke:ICON_D,'stroke-width':1});
+  } else if(kind==='laptop'){
+    // tela
+    pa({d:'M -22 6 L -18 -20 L 18 -20 L 22 6 Z',fill:ICON_C,stroke:ICON_D,'stroke-width':1.5});
+    pa({d:'M -18 4 L -15 -17 L 15 -17 L 18 4 Z',fill:'#0f2a2a'});
+    // base
+    pa({d:'M -24 6 L 24 6 L 28 13 L -28 13 Z',fill:ICON_L,stroke:ICON_D,'stroke-width':1.4,transform:'rotate(6)'});
+    r({x:-6,y:6,width:12,height:3,rx:1,fill:ICON_D});
+  } else if(kind==='servidor'){
+    r({x:-20,y:-32,width:40,height:62,rx:4,fill:ICON_C,stroke:ICON_D,'stroke-width':1.6});
+    r({x:-14,y:-25,width:22,height:5,rx:1.5,fill:'#f2f7f6'});
+    r({x:-14,y:-15,width:28,height:3,rx:1,fill:ICON_D});
+    r({x:-14,y:-8,width:28,height:3,rx:1,fill:ICON_D});
+    r({x:-14,y:2,width:28,height:3,rx:1,fill:ICON_D});
+    r({x:-14,y:12,width:28,height:3,rx:1,fill:ICON_D});
+    c({cx:-10,cy:24,r:2,fill:'#3fb950'});
+    r({x:-4,y:22,width:16,height:4,rx:1,fill:ICON_D});
+  } else if(kind==='switch'){
+    // caixa isométrica
+    pa({d:'M -26 0 L 0 -12 L 26 0 L 0 12 Z',fill:ICON_L,stroke:ICON_D,'stroke-width':1.5});
+    pa({d:'M -26 0 L 0 12 L 0 22 L -26 10 Z',fill:ICON_C,stroke:ICON_D,'stroke-width':1.5});
+    pa({d:'M 26 0 L 0 12 L 0 22 L 26 10 Z',fill:ICON_D,stroke:ICON_D,'stroke-width':1.5});
+    // setas duplas
+    pa({d:'M -14 -1 L -6 -1 M -9 -3.5 L -6 -1 L -9 1.5',stroke:'#e6edf3','stroke-width':1.6,fill:'none','stroke-linecap':'round'});
+    pa({d:'M 4 -1 L 12 -1 M 9 -3.5 L 12 -1 L 9 1.5',stroke:'#e6edf3','stroke-width':1.6,fill:'none','stroke-linecap':'round'});
+  } else if(kind==='roteador'||kind==='roteador_wifi'){
+    el('ellipse',{cx:0,cy:4,rx:26,ry:11,fill:ICON_C,stroke:ICON_D,'stroke-width':1.5},g);
+    el('ellipse',{cx:0,cy:-4,rx:26,ry:11,fill:ICON_L,stroke:ICON_D,'stroke-width':1.5},g);
+    r({x:-26,y:-4,width:52,height:8,fill:ICON_L,stroke:'none'});
+    // setas
+    pa({d:'M -12 -4 L -4 -4 M -7 -6.5 L -4 -4 L -7 -1.5',stroke:'#0f2a2a','stroke-width':1.8,fill:'none','stroke-linecap':'round'});
+    pa({d:'M 6 -4 L 14 -4 M 11 -6.5 L 14 -4 L 11 -1.5',stroke:'#0f2a2a','stroke-width':1.8,fill:'none','stroke-linecap':'round'});
+    if(kind==='roteador_wifi'){
+      ln({x1:-12,y1:-4,x2:-13,y2:-22,stroke:ICON_D,'stroke-width':2.5});
+      ln({x1:12,y1:-4,x2:13,y2:-22,stroke:ICON_D,'stroke-width':2.5});
+      c({cx:-13,cy:-23,r:2.5,fill:ICON_D});
+      c({cx:13,cy:-23,r:2.5,fill:ICON_D});
+    }
+  } else if(kind==='firewall'){
+    // parede de tijolos
+    r({x:-15,y:-26,width:30,height:52,rx:2,fill:'#a8352c',stroke:'#7a231c','stroke-width':1.5});
+    for(let row=0;row<8;row++){
+      const ty=[-24,-17.5,-11,-4.5,2,8.5,15,21.5][row];
+      ln({x1:-14,y1:ty+1,x2:14,y2:ty+1,stroke:'#7a231c','stroke-width':1.1});
+      const off=(row%2)?3.5:0;
+      for(let cx2=-14+off;cx2<14;cx2+=7)
+        ln({x1:cx2,y1:ty,x2:cx2,y2:ty+1.2,stroke:'#7a231c','stroke-width':1.1});
+    }
+  } else if(kind==='nuvem'){
+    pa({d:'M -24 8 a 12 12 0 0 1 2 -23 a 16 16 0 0 1 30 -6 a 13 13 0 0 1 14 20 a 9 9 0 0 1 -2 9 Z',
+        fill:'none',stroke:'#7fb3b0','stroke-width':2.5,'stroke-linejoin':'round'},g);
+  } else if(kind==='telefone'){
+    r({x:-22,y:-8,width:44,height:22,rx:3,fill:ICON_C,stroke:ICON_D,'stroke-width':1.5});
+    r({x:2,y:-4,width:16,height:8,rx:1,fill:'#0f2a2a'});
+    for(let rr=0;rr<2;rr++)for(let cc2=0;cc2<3;cc2++)
+      c({cx:-16+cc2*6,cy:2+rr*6,r:1.6,fill:'#0f2a2a'});
+  }
+  return g;
+}
+function linkStyle(kind,x1,y1,x2,y2){
+  if(kind==='wireless'){
+    // onda: pequenos arcos
+    const g=el('g',{},SVG);
+    const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy), ux=dx/L, uy=dy/L;
+    const nx=-uy, ny=ux;
+    for(let t=12;t<L-8;t+=11){
+      const px=x1+ux*t, py=y1+uy*t;
+      el('path',{d:`M ${px+nx*5} ${py+ny*5} Q ${px+ux*3} ${py+uy*3} ${px-nx*5} ${py-ny*5}`,
+        fill:'none',stroke:'#58a6ff','stroke-width':1.8,'stroke-linecap':'round'},g);
+    }
+  } else {
+    el('line',{x1,y1,x2,y2,stroke:'#c0392b','stroke-width':3,'stroke-linecap':'round'},SVG);
+  }
+}
+
 function drawTopo(t){
   stopAnim();
   clearSVG();
@@ -552,47 +645,62 @@ function drawTopo(t){
   }
   const links = T.links==='ring'?ringLinks(T.nodes):(T.links==='full'?meshLinks(T.nodes):(T.links||[]));
 
-  // links
-  links.forEach(([a,b])=>{
-    el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:'#3d4a5c','stroke-width':4,'stroke-linecap':'round'},SVG);
-  });
+  // ---- LINKS (meio físico LAN = linha vermelha) ----
+  links.forEach(([a,b])=>linkStyle('lan',a[0],a[1],b[0],b[1]));
 
-  // barramento: desenhar um cabo único
+  // barramento: um cabo único
   if(T.tipo==='bus'){
-    el('line',{x1:80,y1:120,x2:670,y2:120,stroke:'#58a6ff','stroke-width':8,'stroke-linecap':'round',opacity:.55},SVG);
-    el('text',{x:375,y:100,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Barramento — meio único compartilhado';
+    el('line',{x1:70,y1:105,x2:680,y2:105,stroke:'#c0392b','stroke-width':5,'stroke-linecap':'round'},SVG);
+    el('text',{x:375,y:200,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Barramento — meio único compartilhado (LAN)';
   }
-  if(T.tipo==='ring') el('text',{x:350,y:375,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Anel físico fechado (último host volta ao primeiro)';
-  if(T.tipo==='mesh') el('text',{x:350,y:365,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Cada nó ligado a todos os outros (redundância máxima)';
-  if(T.tipo==='extended') el('text',{x:350,y:340,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Estrelas individuais unidas por hubs/switches';
-  if(T.tipo==='hier') el('text',{x:350,y:355,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Estações subordinadas a um computador de controle';
-  if(T.tipo==='p2p') el('text',{x:365,y:150,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Dispositivos intermediários não mudam a lógica';
-  if(T.tipo==='multi') el('text',{x:350,y:365,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Só um nó transmite por vez (CSMA/CD, CSMA/CA, token)';
-  if(T.tipo==='ringlogico') el('text',{x:350,y:375,'text-anchor':'middle',fill:'#8b949e','font-size':13},SVG).textContent='Token circula no anel lógico';
+  if(T.tipo==='ring') el('text',{x:350,y:372,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Anel físico fechado (último host volta ao primeiro)';
+  if(T.tipo==='mesh') el('text',{x:350,y:362,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Cada nó ligado a todos os outros (redundância máxima)';
+  if(T.tipo==='extended') el('text',{x:350,y:352,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Estrelas individuais unidas por switches';
+  if(T.tipo==='p2p') el('text',{x:365,y:146,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Dispositivos intermediários não mudam a lógica';
+  if(T.tipo==='multi') el('text',{x:350,y:372,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Só um nó transmite por vez (CSMA/CD, CSMA/CA, token)';
+  if(T.tipo==='ringlogico') el('text',{x:350,y:372,'text-anchor':'middle',fill:'#8b949e','font-size':12},SVG).textContent='Token circula no anel lógico';
 
-  // hubs
+  // ---- DISPOSITIVO CENTRAL ----
   if(T.hub){
     const hubs=Array.isArray(T.hub[0])?T.hub:[T.hub];
-    hubs.forEach(h=>{
-      el('rect',{x:h[0]-22,y:h[1]-22,width:44,height:44,rx:8,fill:'#2a1f3d',stroke:'#bc8cff','stroke-width':3},SVG);
-      el('text',{x:h[0],y:h[1]+5,'text-anchor':'middle',fill:'#bc8cff','font-size':11,'font-weight':700},SVG).textContent='HUB';
+    hubs.forEach((h,i)=>{
+      if(T.tipo==='hier'){
+        svgIcon('roteador',h[0],h[1],1.0,SVG);
+        el('text',{x:h[0],y:h[1]+30,'text-anchor':'middle',fill:'#bc8cff','font-size':10,'font-weight':700},SVG).textContent='ROTEADOR';
+      } else {
+        svgIcon('switch',h[0],h[1],1.0,SVG);
+        el('text',{x:h[0],y:h[1]+30,'text-anchor':'middle',fill:'#7fb3b0','font-size':9,'font-weight':700},SVG).textContent='SWITCH';
+      }
     });
   }
   if(T.inter){
-    T.inter.forEach((h,i)=>{
-      el('circle',{cx:h[0],cy:h[1],r:16,fill:'#1c2330',stroke:'#8b949e','stroke-width':2,'stroke-dasharray':'4 3'},SVG);
-      el('text',{x:h[0],y:h[1]+4,'text-anchor':'middle',fill:'#8b949e','font-size':10},SVG).textContent='R'+(i+1);
-    });
+    T.inter.forEach((h,i)=>{ svgIcon('roteador',h[0],h[1],0.7,SVG); });
   }
 
-  // nós
+  // ---- NÓS (dispositivos finais) ----
+  const iconFor=(i)=>{
+    if(T.tipo==='hier'){
+      if(i===0) return 'roteador';        // nó pai
+      if(i===1||i===2) return 'switch';   // filhos
+      return i%2? 'desktop':'laptop';
+    }
+    if(T.tipo==='mesh') return i===0?'servidor':(i%2?'desktop':'servidor');
+    if(T.tipo==='extended') return (i===3||i===6)?'switch':(i%2?'laptop':'desktop');
+    if(T.tipo==='p2p') return i===0?'servidor':'desktop';
+    return i%2? 'laptop':'desktop';
+  };
   T.nodes.forEach((n,i)=>{
     const g=el('g',{style:'cursor:pointer'},SVG);
-    el('circle',{cx:n[0],cy:n[1],r:22,fill:'#1f6feb33',stroke:'#58a6ff','stroke-width':3,class:'node'},g);
-    el('text',{x:n[0],y:n[1]+5,'text-anchor':'middle',fill:'#e6edf3','font-size':13,'font-weight':700,'pointer-events':'none'},g).textContent=String.fromCharCode(65+i);
+    // área de clique invisível
+    el('circle',{cx:n[0],cy:n[1],r:26,fill:'transparent',stroke:'none'},g);
+    // destaque
+    const halo=el('circle',{cx:n[0],cy:n[1],r:24,fill:'#58a6ff18',stroke:'#58a6ff55','stroke-width':1.5,'stroke-dasharray':'3 3'},g);
+    svgIcon(iconFor(i),n[0],n[1],0.72,g);
+    const lbl=el('text',{x:n[0],y:n[1]+34,'text-anchor':'middle',fill:'#8b949e','font-size':10,'font-weight':700,'pointer-events':'none'},g);
+    lbl.textContent=String.fromCharCode(65+i)+(T.tipo==='hier'&&i===0?' (pai)':(T.tipo==='hier'&&(i===1||i===2)?' (filho)':''));
     g.addEventListener('click',()=>onNodeClick(t,i));
-    g.addEventListener('mouseenter',()=>{const c=g.querySelector('circle');c.setAttribute('fill','#58a6ff44');});
-    g.addEventListener('mouseleave',()=>{const c=g.querySelector('circle');c.setAttribute('fill','#1f6feb33');});
+    g.addEventListener('mouseenter',()=>{halo.setAttribute('fill','#58a6ff33');halo.setAttribute('stroke','#58a6ff');});
+    g.addEventListener('mouseleave',()=>{halo.setAttribute('fill','#58a6ff18');halo.setAttribute('stroke','#58a6ff55');});
   });
 }
 
@@ -620,7 +728,15 @@ function packetPath(t,a,b){
     return pts;
   }
   if(T.tipo==='hier'){
-    return [N[a],T.hub,N[b]];
+    // topologia: pai(0) -> roteador -> filhos(1,2); netos 3,4 sob o filho 1; neto 5 sob o filho 2
+    const up=(i)=>{
+      if(i===0) return [N[0],T.hub];
+      if(i===1||i===2) return [N[i],T.hub];
+      if(i===3||i===4) return [N[i],N[1],T.hub];
+      return [N[i],N[2],T.hub];
+    };
+    const A=up(a), B=up(b);
+    return A.concat(B.slice().reverse());
   }
   if(T.tipo==='p2p'){
     return [N[a],T.inter[0],T.inter[1],N[b]];
@@ -684,9 +800,9 @@ function onNodeClick(t,i){
   // mensagem contextual
   let msg='';
   if(t==='barramento') msg='O pacote percorre o <b>cabo compartilhado</b>: todos os nós veem o sinal, mas só o destino o processa. Se outro nó transmitir ao mesmo tempo, há colisão.';
-  else if(t==='estrela') msg='O pacote passa <b>obrigatoriamente pelo nó central</b>. Se o hub/switch falhar, ninguém se comunica. Com hub, todos recebem; com switch, só o destino.';
+  else if(t==='estrela') msg='O pacote passa <b>obrigatoriamente pelo nó central</b>. Se o switch falhar, ninguém se comunica. O switch encaminha o quadro só para a porta de destino.';
   else if(t==='anel') msg='No anel <b>físico</b>, o pacote percorre os hosts na ordem do anel até chegar ao destino.';
-  else if(t==='estendida') msg='O pacote sobe até o hub da estrela local e pode atravessar os hubs interligados até o destino.';
+  else if(t==='estendida') msg='O pacote sobe até o switch da estrela local e pode atravessar os switches interligados até o destino.';
   else if(t==='hierarquica') msg='Todo o tráfego passa pelo <b>computador de controle</b> — ponto único de decisão da topologia.';
   else if(t==='malha') msg='Há <b>caminho direto</b> entre os nós. Se um link cair, existe rota alternativa — por isso a malha é usada onde não pode haver interrupção.';
   else if(t==='pontoponto') msg='O pacote atravessa dispositivos intermediários, mas a <b>topologia lógica continua sendo ponto-a-ponto</b> entre origem e destino.';
@@ -715,8 +831,8 @@ drawTopo('barramento');
 const CARDS=[
   {t:'Barramento — um único cabo ao qual todos os hosts se conectam', z:'fisica'},
   {t:'Anel — último host conectado ao primeiro, formando um anel de cabo', z:'fisica'},
-  {t:'Estrela — todos os cabos vão a um ponto central (hub/switch)', z:'fisica'},
-  {t:'Estrela estendida — estrelas unidas por hubs/switches', z:'fisica'},
+  {t:'Estrela — todos os cabos vão a um ponto central (switch)', z:'fisica'},
+  {t:'Estrela estendida — estrelas unidas por switches', z:'fisica'},
   {t:'Hierárquica — o sistema é vinculado a um computador que controla o tráfego', z:'fisica'},
   {t:'Malha — cada nó ligado a todos os outros, com redundância', z:'fisica'},
   {t:'Híbrida — combinação de barramento, estrela e anel', z:'fisica'},
