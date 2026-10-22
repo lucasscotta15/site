@@ -150,6 +150,25 @@
   .logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#22c55e,#15803d);display:grid;place-items:center;margin:0 auto 12px}
   .gbtn{display:flex; justify-content:center; min-height:48px; margin:14px 0 4px}
   .tiny{font-size:12px; color:var(--mut)}
+  /* cronômetro / timer do treino */
+  .timer-card{margin-top:14px}
+  .clock{font-variant-numeric:tabular-nums; font-size:40px; font-weight:800; letter-spacing:.02em; line-height:1.1}
+  .clock.run{color:var(--acc)}
+  .clock.stopped{color:var(--mut)}
+  .clock-lbl{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--mut); font-weight:700}
+  /* checkbox de exercício concluído */
+  .ex-head .chk{width:34px; height:34px; flex:none; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--bg); display:grid; place-items:center; color:transparent; font-size:18px; font-weight:800}
+  .ex-head .chk.on{background:var(--acc2); border-color:var(--acc2); color:#06140b}
+  .ex-card.feito{opacity:.62}
+  .ex-card.feito .ex-head .name{text-decoration:line-through; text-decoration-thickness:2px}
+  .ex-card.feito{background:rgba(34,197,94,.06)}
+  .prog{height:8px; border-radius:99px; background:var(--bg); border:1px solid var(--line); overflow:hidden; margin-top:8px}
+  .prog > i{display:block; height:100%; background:var(--acc2); width:0; transition:width .25s}
+  .metarow{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:12.5px; color:var(--mut)}
+  .metarow b{color:var(--txt)}
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; padding:3px 8px; border-radius:999px;
+    background:var(--bg3); border:1px solid var(--line); color:var(--txt); font-weight:650; white-space:nowrap}
 </style>
 </head>
 <body>
@@ -233,6 +252,42 @@ function stampWeek(iso) {
   return d.toISOString().slice(0, 10);
 }
 
+/* ---------- cronômetro / horários ---------- */
+const pad2 = (n) => String(n).padStart(2, "0");
+/** segundos -> "H:MM:SS" (ou "MM:SS" quando menos de 1h) */
+function fmtClock(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return h ? `${h}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`;
+}
+/** segundos -> "52 min" | "1h05" | "1 min 20 s" (para histórico) */
+function fmtDuracao(seg) {
+  seg = Math.max(0, Math.round(seg || 0));
+  const m = Math.round(seg / 60);
+  if (seg < 60) return "<1 min";
+  if (m < 60) return m + " min";
+  return Math.floor(m / 60) + "h" + pad2(m % 60);
+}
+const fmtHora = (iso) => {
+  if (!iso) return "–";
+  const d = new Date(iso);
+  if (isNaN(d)) return "–";
+  return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+};
+/** segundos desde o início até agora (ou até o fim) */
+function elapsedSec(s) {
+  if (!s || !s.horaInicio) return 0;
+  const ini = new Date(s.horaInicio).getTime();
+  if (!isFinite(ini)) return 0;
+  const fim = s.horaFim ? new Date(s.horaFim).getTime() : Date.now();
+  const total = Math.floor((fim - ini) / 1000);
+  // corrige relógio do aparelho que anda para trás
+  if (s.duracaoMin != null && s.horaFim) return Math.round(s.duracaoMin * 60);
+  return Math.max(0, total);
+}
+function totalEx(s) { return s.exercicios.length; }
+function doneEx(s) { return s.exercicios.filter(x => x.concluido).length; }
+
 /* ============================================================
    Estado
    ============================================================ */
@@ -250,6 +305,7 @@ const state = {
   dirty: false,
   saving: false,
   editTreinoId: null,
+  tickTimer: null,     // setInterval do cronômetro
 };
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -294,19 +350,30 @@ function normalizeData(d) {
   }
   if (!out.treinos.length) out.treinos = clone(TREINOS_PADRAO);
   const sessoes = Array.isArray(d.sessoes) ? d.sessoes : [];
-  for (const s of sessoes) {
+  const fim = Array.isArray(d.sessoes) ? d.sessoes : [];
+  for (const s of fim) {
     if (!s || !s.data) continue;
-    out.sessoes.push({
+    const reg = {
       data: String(s.data).slice(0, 10),
       treinoId: String(s.treinoId || ""),
       exercicios: (Array.isArray(s.exercicios) ? s.exercicios : []).filter(x => x && x.exercicioId).map(x => ({
         exercicioId: String(x.exercicioId),
         nome: String(x.nome || ""),
+        concluido: x.concluido === true,
         series: (Array.isArray(x.series) ? x.series : []).filter(v => v).map(v => ({
           peso: num(v.peso), reps: v.reps === "" || v.reps === undefined || v.reps === null ? null : (num(v.reps)),
         })),
       })),
-    });
+    };
+    // horários e duração (retrocompatível: sessões antigas não têm)
+    const hi = s.horaInicio ? new Date(s.horaInicio) : null;
+    const hf = s.horaFim ? new Date(s.horaFim) : null;
+    if (hi && !isNaN(hi)) reg.horaInicio = hi.toISOString();
+    if (hf && !isNaN(hf)) reg.horaFim = hf.toISOString();
+    let dur = num(s.duracaoMin);
+    if (dur == null && reg.horaInicio && reg.horaFim) dur = Math.round((new Date(reg.horaFim) - new Date(reg.horaInicio)) / 60000);
+    if (dur != null) reg.duracaoMin = dur;
+    out.sessoes.push(reg);
   }
   return out;
 }
@@ -691,7 +758,8 @@ function renderInicio(v) {
     for (const s of lastS) {
       const t = getTreino(s.treinoId);
       const r = el("div", { class: "row", style: "padding:8px 0; border-bottom:1px solid var(--line)" });
-      r.innerHTML = `<span class="badge">${esc(s.treinoId)}</span><span>${esc(t ? t.nome : "Treino")}</span><span class="sp"></span><span class="muted" style="font-size:13px">${fmtBR(s.data)}</span>`;
+      r.innerHTML = `<span class="badge">${esc(s.treinoId)}</span><span>${esc(t ? t.nome : "Treino")}</span><span class="sp"></span>
+        <span class="muted" style="font-size:13px; white-space:nowrap">${s.duracaoMin != null ? "⏱ " + fmtDuracao(s.duracaoMin * 60) + " · " : ""}${fmtBR(s.data)}</span>`;
       box.appendChild(r);
     }
     v.appendChild(box);
@@ -716,6 +784,9 @@ function startSession(treinoId) {
   state.sessao = {
     data: todayISO(),
     treinoId: treinoId,
+    horaInicio: null,      // ISO — preenchido ao tocar em "Iniciar treino"
+    horaFim: null,
+    duracaoMin: null,
     exercicios: t.exercicios.map(ex => {
       const last = lastSeriesFor(ex.id);
       const series = [];
@@ -723,11 +794,12 @@ function startSession(treinoId) {
         const prev = last && last.series[i];
         series.push({ peso: prev && prev.peso != null ? String(prev.peso) : "", reps: ex.tipo === "reps" ? "" : "", prev: prev ? prev.peso : null });
       }
-      return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, series, lastData: last ? last.data : null };
+      return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, concluido: false, series, lastData: last ? last.data : null };
     }),
   };
   state.openEx = {};
   state.tab = "inicio";
+  saveSessaoRascunho();
   render();
 }
 
@@ -766,36 +838,117 @@ function renderSessao(v) {
     inp.style.pointerEvents = "auto"; inp.focus(); inp.click();
   });
 
+  // ---- cronômetro ----
+  v.appendChild(timerCard(s));
+
+  // ---- contador de concluídos ----
+  const prog = el("div", { class: "card", style: "padding:12px 14px" });
+  prog.id = "prog-card";
+  const n = totalEx(s), d = doneEx(s);
+  prog.innerHTML = `<div class="row"><div style="flex:1">
+      <div style="font-size:14px"><b>${d} de ${n}</b> <span class="muted">concluídos</span></div>
+      ${d < n ? `<div class="tiny">Marque ✓ em cada exercício pelo nome para liberar a finalização.</div>` : `<div class="tiny" style="color:var(--acc)">Tudo concluído — pode finalizar!</div>`}
+    </div><span class="chip" style="background:${d === n && n ? "rgba(74,222,128,.16)" : "var(--bg3)"}; color:${d === n && n ? "var(--acc)" : "var(--txt)"}">${d}/${n}</span></div>
+    <div class="prog"><i style="width:${n ? Math.round((d / n) * 100) : 0}%"></i></div>`;
+  v.appendChild(prog);
+
   for (const ex of s.exercicios) {
     v.appendChild(exCard(ex));
   }
 
   const act = el("div");
   act.style.margin = "16px 0 10px";
-  const bSave = el("button", { class: "btn pri block", style: "min-height:58px" }, "✓ Concluir treino");
-  bSave.addEventListener("click", concluirSessao);
+  const bSave = el("button", { class: "btn pri block", style: "min-height:58px" }, "⏱ Finalizar treino");
+  bSave.id = "btn-finish";
+  bSave.addEventListener("click", finalizarTreino);
   act.appendChild(bSave);
   const bCancel = el("button", { class: "btn block danger" }, "Cancelar treino");
   bCancel.addEventListener("click", () => {
-    if (confirm("Descartar este treino em andamento?")) { state.sessao = null; clearRascunho(); render(); }
+    if (confirm("Descartar este treino em andamento?")) { stopTick(); state.sessao = null; clearRascunho(); render(); }
   });
   act.appendChild(bCancel);
   v.appendChild(act);
+
+  startTick();
 }
+
+/* ---------- cronômetro ---------- */
+function iniciarTreino() {
+  const s = state.sessao;
+  if (!s) return;
+  s.horaInicio = new Date().toISOString();
+  saveSessaoRascunho();
+  render();
+  toast("Treino iniciado às " + fmtHora(s.horaInicio));
+}
+
+function timerCard(s) {
+  const c = el("div", { class: "card timer-card" });
+  const iniciado = !!s.horaInicio;
+  const seg = elapsedSec(s);
+  c.innerHTML = `
+    <div class="row">
+      <div style="flex:1; min-width:0">
+        <div class="clock-lbl">${iniciado ? "Tempo de treino" : "Cronômetro"}</div>
+        <div class="clock ${iniciado ? "run" : "stopped"}" id="clock">${iniciado ? fmtClock(seg) : "--:--"}</div>
+      </div>
+      <span class="chip" style="${iniciado ? "border-color:rgba(74,222,128,.45); color:var(--acc)" : ""}">
+        ${iniciado ? `<i class="dot ok" style="animation:blink 1.4s infinite"></i>em andamento` : "não iniciado"}
+      </span>
+    </div>
+    <div class="metarow" style="margin-top:8px">
+      <span>Início: <b>${iniciado ? fmtHora(s.horaInicio) : "—"}</b></span>
+      ${s.horaFim ? `<span>Fim: <b>${fmtHora(s.horaFim)}</b></span>` : ""}
+    </div>`;
+  if (!iniciado) {
+    const b = el("button", { class: "btn pri block", id: "btn-start", style: "min-height:56px; margin-top:10px" }, "▶ Iniciar treino");
+    b.addEventListener("click", iniciarTreino);
+    c.appendChild(b);
+    const hint = el("p", { class: "tiny", style: "margin:8px 0 0" }, "O cronômetro começa a contar na hora em que você tocar aqui.");
+    c.appendChild(hint);
+  }
+  return c;
+}
+
+/** atualiza só o texto do relógio (não re-renderiza a tela) */
+function startTick() {
+  stopTick();
+  if (!state.sessao || !state.sessao.horaInicio) return;
+  state.tickTimer = setInterval(() => {
+    const cl = $("#clock");
+    if (!cl) { stopTick(); return; }
+    if (!state.sessao || !state.sessao.horaInicio) return;
+    cl.textContent = fmtClock(elapsedSec(state.sessao));
+  }, 1000);
+}
+function stopTick() { if (state.tickTimer) { clearInterval(state.tickTimer); state.tickTimer = null; } }
 
 function exCard(ex) {
   const open = !!state.openEx[ex.exercicioId];
-  const c = el("div", { class: "ex-card" + (open ? " open" : "") });
+  const feito = !!ex.concluido;
+  const c = el("div", { class: "ex-card" + (open ? " open" : "") + (feito ? " feito" : "") });
   const last = lastSeriesFor(ex.exercicioId);
   const best = bestWeight(ex.exercicioId);
-  const h = el("button", { class: "ex-head" });
+  const head = el("div", { class: "ex-head", style: "display:flex; align-items:center; gap:10px" });
+  const chk = el("button", {
+    class: "chk" + (feito ? " on" : ""), type: "button",
+    "aria-label": (feito ? "Desmarcar" : "Marcar como concluído") + ": " + ex.nome,
+    "aria-pressed": feito ? "true" : "false", title: feito ? "Concluído — toque para desmarcar" : "Marcar como concluído",
+  }, "✓");
+  chk.dataset.exid = ex.exercicioId;
+  chk.classList.add("toggle-ex");
+  chk.addEventListener("click", (e) => { e.stopPropagation(); toggleConcluido(ex); });
+  head.appendChild(chk);
+
+  const h = el("button", { class: "ex-head", style: "padding:0; flex:1; min-width:0; background:none; border:0; text-align:left" });
   h.innerHTML = `<div style="flex:1">
       <div class="name">${esc(ex.nome)} ${ex.tipo === "tempo" ? '<span class="badge tempo">tempo</span>' : ""}</div>
       <div class="meta">${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}</div>
     </div>
     <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
   h.addEventListener("click", () => { state.openEx[ex.exercicioId] = !open; render(); });
-  c.appendChild(h);
+  head.appendChild(h);
+  c.appendChild(head);
 
   const body = el("div", { class: "ex-body" });
   if (last) {
@@ -865,35 +1018,78 @@ function loadRascunho() {
   return null;
 }
 
-function concluirSessao() {
+function toggleConcluido(ex) {
+  ex.concluido = !ex.concluido;
+  saveSessaoRascunho();
+  render();
   const s = state.sessao;
+  if (s) {
+    const n = totalEx(s), d = doneEx(s);
+    if (ex.concluido) toast(`${d} de ${n} concluídos${d === n ? " — pode finalizar! 🎉" : ""}`);
+  }
+}
+
+/** Finaliza: exige início + todos os exercícios marcados (ou confirmação explícita). */
+function finalizarTreino() {
+  const s = state.sessao;
+  if (!s) return;
+
+  if (!s.horaInicio) { toast("Toque em “Iniciar treino” primeiro"); return; }
+
+  const faltando = s.exercicios.filter(ex => !ex.concluido);
+  if (faltando.length) {
+    const nomes = faltando.map(ex => "• " + ex.nome).join("\n");
+    const total = s.exercicios.length;
+    const aviso = `Atenção: ${faltando.length} de ${total} exercício(s) ainda não foram marcados como concluídos:\n\n${nomes}\n\n` +
+      `Finalizar o treino mesmo assim?\n(Os exercícios não marcados NÃO entram no histórico como feitos.)`;
+    if (!confirm(aviso)) {
+      toast(`${faltando.length} exercício(s) faltando marcar`);
+      return;
+    }
+  }
+  concluirSessao(s, faltando.length > 0);
+}
+
+function concluirSessao(s, forcar) {
   if (!s) return;
   const exercicios = s.exercicios.map(ex => ({
     exercicioId: ex.exercicioId,
     nome: ex.nome,
+    concluido: !!ex.concluido,
     series: ex.series
       .filter(se => se.peso !== "" || se.reps !== "")
       .map(se => ({ peso: num(se.peso), reps: se.reps === "" ? null : num(se.reps) })),
-  })).filter(ex => ex.series.length);
+  })).filter(ex => ex.series.length || ex.concluido);
 
-  if (!exercicios.length) { toast("Registre pelo menos uma série"); return; }
+  if (!exercicios.length) { toast(forcar ? "Nada para salvar" : "Registre o peso de pelo menos um exercício"); return; }
+
+  // grava horários e duração
+  if (!s.horaFim) s.horaFim = new Date().toISOString();
+  const seg = Math.max(0, Math.round((new Date(s.horaFim) - new Date(s.horaInicio)) / 1000));
+  s.duracaoMin = Math.round((seg / 60) * 10) / 10;  // em minutos, 1 casa decimal (ex.: 52.4); nunca 0
 
   // substitui sessão do mesmo treino no mesmo dia (evita duplicar ao corrigir)
   const idx = state.data.sessoes.findIndex(x => x.data === s.data && x.treinoId === s.treinoId);
-  const reg = { data: s.data, treinoId: s.treinoId, exercicios };
+  const reg = {
+    data: s.data, treinoId: s.treinoId,
+    horaInicio: s.horaInicio, horaFim: s.horaFim, duracaoMin: s.duracaoMin,
+    exercicios,
+  };
   if (idx >= 0) state.data.sessoes[idx] = reg;
   else state.data.sessoes.push(reg);
   state.data.sessoes.sort((a, b) => a.data.localeCompare(b.data));
 
+  stopTick();
   saveLocal();
   state.sessao = null;
   clearRascunho();
-  state.tab = "inicio";
+  state.tab = "historico";
   const canSync = hasToken();
   scheduleSync();
   if (!canSync) setSync("local", "local");
   render();
-  toast("Treino salvo! 💪");
+  const feitos = exercicios.filter(x => x.concluido).length;
+  toast(`Treino salvo! ${fmtDuracao(seg)} · ${feitos}/${exercicios.length} exercícios 💪`);
 }
 
 /* ============================================================
@@ -1032,7 +1228,8 @@ function renderGraficos(v) {
    Histórico
    ============================================================ */
 function renderHistorico(v) {
-  const sess = [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data));
+  stopTick();
+  const sess = [...state.data.sessoes].sort((a, b) => (b.data + (b.horaInicio || "")).localeCompare(a.data + (a.horaInicio || "")));
   if (!sess.length) {
     v.innerHTML = `<div class="card muted" style="margin-top:14px">Nenhum treino registrado ainda. Escolha uma ficha na aba Treino.</div>`;
     if (!state.logged) v.appendChild(loginPromptCard());
@@ -1041,9 +1238,14 @@ function renderHistorico(v) {
   // resumo semanal
   const wk = stampWeek(todayISO());
   const thisWeek = sess.filter(s => stampWeek(s.data) === wk).length;
+  const comDur = sess.filter(s => s.duracaoMin != null && s.duracaoMin > 0);
+  const somaMin = comDur.reduce((a, s) => a + s.duracaoMin, 0);
+  const mediaMin = comDur.length ? Math.round(somaMin / comDur.length) : null;
   const sum = el("div", { class: "card", style: "margin-top:14px" });
   sum.innerHTML = `<div class="row"><div><div class="tiny">Esta semana</div><b style="font-size:24px">${thisWeek}</b><span class="muted"> treino(s)</span></div>
-    <span class="sp"></span><div style="text-align:right"><div class="tiny">Total</div><b style="font-size:24px">${sess.length}</b></div></div>`;
+    <span class="sp"></span><div style="text-align:center"><div class="tiny">Total</div><b style="font-size:24px">${sess.length}</b></div>
+    <span class="sp"></span><div style="text-align:right"><div class="tiny">${mediaMin != null ? "Média por treino" : "Duração"}</div><b style="font-size:20px">${mediaMin != null ? mediaMin + " min" : "–"}</b></div></div>
+    ${somaMin ? `<div class="tiny" style="margin-top:8px">Tempo total registrado: <b style="color:var(--txt)">${fmtDuracao(somaMin * 60)}</b></div>` : ""}`;
   v.appendChild(sum);
 
   let curMonth = null;
@@ -1059,10 +1261,18 @@ function renderHistorico(v) {
     const b = el("button", { class: "hist" });
     const totalSets = s.exercicios.reduce((a, e) => a + e.series.length, 0);
     const vol = s.exercicios.reduce((a, e) => a + e.series.reduce((q, x) => q + (x.peso || 0) * (x.reps || 0), 0), 0);
-    b.innerHTML = `<span class="letter badge" style="font-size:14px; padding:7px 10px">${esc(s.treinoId)}</span>
+    const feitos = s.exercicios.filter(x => x.concluido).length;
+    const temDur = s.duracaoMin != null && s.duracaoMin > 0;
+    const temHora = !!s.horaInicio;
+    b.innerHTML = `<span class="letter badge" style="font-size:14px; padding:7px 10px; align-self:flex-start">${esc(s.treinoId)}</span>
       <div style="flex:1; min-width:0"><div class="d">${esc(t ? t.nome : "Treino " + s.treinoId)}</div>
-      <div class="tiny">${fmtBR(s.data)} · ${s.exercicios.length} exercícios · ${totalSets} séries${vol ? " · vol. " + Math.round(vol) + " kg" : ""}</div></div>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b98ab" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>`;
+      <div class="metarow" style="margin-top:3px">
+        <span>${fmtBR(s.data)}</span>
+        ${temDur ? `<span class="chip" style="font-size:11px; padding:1px 7px; color:var(--acc); border-color:rgba(74,222,128,.35)">⏱ ${fmtDuracao(s.duracaoMin * 60)}</span>` : ""}
+        ${temHora ? `<span>${fmtHora(s.horaInicio)} → ${fmtHora(s.horaFim)}</span>` : ""}
+      </div>
+      <div class="tiny" style="margin-top:2px">${feitos ? `${feitos}/${s.exercicios.length} exercícios feitos` : `${s.exercicios.length} exercícios`}${totalSets ? " · " + totalSets + " séries" : ""}${vol ? " · vol. " + Math.round(vol) + " kg" : ""}</div></div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b98ab" stroke-width="2.5" style="flex:none"><path d="M9 6l6 6-6 6"/></svg>`;
     b.addEventListener("click", () => showSessionDetail(s));
     v.appendChild(b);
   }
@@ -1073,11 +1283,18 @@ function showSessionDetail(s) {
   let html = `<div class="row"><div><h2 style="font-size:18px">${esc(t ? t.nome : "Treino")}</h2>
     <div class="tiny">Treino ${esc(s.treinoId)} · ${fmtBR(s.data)}</div></div><span class="sp"></span>
     <button class="iconbtn" id="x-close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="stat" style="margin-top:12px">
+      <div><b>${s.duracaoMin != null ? fmtDuracao(s.duracaoMin * 60) : "–"}</b><span>duração</span></div>
+      <div><b>${fmtHora(s.horaInicio)}</b><span>início</span></div>
+      <div><b>${fmtHora(s.horaFim)}</b><span>fim</span></div>
+    </div>
+    <div class="tiny" style="margin-top:8px">${s.exercicios.filter(x => x.concluido).length || 0} de ${s.exercicios.length} exercícios concluídos</div>
     <div style="margin-top:10px">`;
   for (const ex of s.exercicios) {
-    html += `<div style="padding:9px 0; border-bottom:1px solid var(--line)">
-      <div style="font-weight:650; font-size:14.5px">${esc(ex.nome)}</div>
-      <div class="tiny">${ex.series.map((v, i) => `${i + 1}ª ${v.peso ?? "–"}kg${v.reps ? "×" + v.reps : ""}`).join(" · ")}</div></div>`;
+    html += `<div style="padding:9px 0; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start">
+      <span style="flex:none; font-weight:800; color:${ex.concluido ? "var(--acc)" : "var(--mut)"}; width:18px">${ex.concluido ? "✓" : "·"}</span>
+      <div style="min-width:0"><div style="font-weight:650; font-size:14.5px${ex.concluido ? "" : "; opacity:.7"}">${esc(ex.nome)}</div>
+      <div class="tiny">${ex.series.length ? ex.series.map((v, i) => `${i + 1}ª ${v.peso ?? "–"}kg${v.reps ? "×" + v.reps : ""}`).join(" · ") : "sem séries registradas"}</div></div></div>`;
   }
   html += `</div>
     <button class="btn block" id="x-repeat">Repetir este treino com esses pesos</button>
@@ -1090,11 +1307,12 @@ function showSessionDetail(s) {
     if (!tr) return toast("Ficha não existe mais");
     state.sessao = {
       data: todayISO(), treinoId: s.treinoId,
+      horaInicio: null, horaFim: null, duracaoMin: null,
       exercicios: tr.exercicios.map(ex => {
         const prev = s.exercicios.find(x => x.exercicioId === ex.id);
         const def = blankSeries(ex.series, ex.tipo);
         if (prev) prev.series.forEach((v, i) => { if (def[i]) { def[i].peso = v.peso ?? ""; def[i].prev = v.peso; } });
-        return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, series: def, lastData: s.data };
+        return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, concluido: false, series: def, lastData: s.data };
       }),
     };
     state.openEx = {};
@@ -1327,11 +1545,14 @@ if ("serviceWorker" in navigator) {
 function seedDemo() {
   const mk = (treinoId, datas) => {
     const t = getTreino(treinoId);
-    datas.forEach(([data, base]) => {
+    datas.forEach(([data, base, dur]) => {
+      const ini = new Date(data + "T07:10:00");
+      const fim = new Date(ini.getTime() + (dur || 52) * 60000);
       state.data.sessoes.push({
         data, treinoId,
+        horaInicio: ini.toISOString(), horaFim: fim.toISOString(), duracaoMin: dur || 52,
         exercicios: t.exercicios.map((ex, k) => ({
-          exercicioId: ex.id, nome: ex.nome,
+          exercicioId: ex.id, nome: ex.nome, concluido: true,
           series: Array.from({ length: ex.series }, (_, i) => ({ peso: Math.round((base + k * 2 - i * 1.5) * 2) / 2, reps: 10 })),
         })),
       });
