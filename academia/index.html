@@ -169,6 +169,25 @@
   .metarow b{color:var(--txt)}
   .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; padding:3px 8px; border-radius:999px;
     background:var(--bg3); border:1px solid var(--line); color:var(--txt); font-weight:650; white-space:nowrap}
+  /* observações por exercício */
+  .obs-wrap{margin-top:12px}
+  .obs-wrap label{display:block; font-size:10.5px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:4px}
+  .obs-wrap textarea{width:100%; min-height:54px; resize:vertical; background:var(--bg); border:1px solid var(--line);
+    border-radius:10px; padding:9px 11px; font-size:15px; font-weight:500; line-height:1.4; color:var(--txt);
+    font-family:inherit; -webkit-appearance:none}
+  .obs-wrap textarea:focus{outline:2px solid rgba(74,222,128,.5); border-color:var(--acc2)}
+  .obs-line{font-size:12.5px; color:#cbd5e1; margin-top:4px; padding-left:9px; border-left:2px solid rgba(96,165,250,.45); white-space:pre-wrap; word-break:break-word}
+  .obs-hist{margin-top:10px}
+  .obs-hist .oh{display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; align-items:flex-start}
+  .obs-hist .oh:last-child{border-bottom:0}
+  .obs-hist .oh time{flex:none; color:var(--mut); font-variant-numeric:tabular-nums; font-size:12.5px; padding-top:1px}
+  /* aviso de estagnação de carga */
+  .load-warn{margin-top:8px; font-size:12px; line-height:1.4; padding:7px 10px; border-radius:10px;
+    background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.32); color:#fde68a;
+    display:flex; gap:6px; align-items:flex-start}
+  .load-warn b{color:#fbbf24; font-weight:700}
+  .mini-warn{display:inline-block; margin-top:3px; font-size:11px; padding:1px 6px; border-radius:6px;
+    background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.3); color:#fde68a; font-weight:650}
 </style>
 </head>
 <body>
@@ -360,6 +379,7 @@ function normalizeData(d) {
         exercicioId: String(x.exercicioId),
         nome: String(x.nome || ""),
         concluido: x.concluido === true,
+        obs: typeof x.obs === "string" ? x.obs : "",   // retrocompatível: sessões antigas não têm
         series: (Array.isArray(x.series) ? x.series : []).filter(v => v).map(v => ({
           peso: num(v.peso), reps: v.reps === "" || v.reps === undefined || v.reps === null ? null : (num(v.reps)),
         })),
@@ -680,6 +700,64 @@ function seriesForChart(exId) {
   return pts;
 }
 
+/* ---------- observações ---------- */
+/** histórico cronológico (mais recente primeiro) das observações de um exercício */
+function obsHistoryFor(exId) {
+  const out = [];
+  for (const s of [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data))) {
+    const ex = s.exercicios.find(x => x.exercicioId === exId);
+    const o = ex && typeof ex.obs === "string" ? ex.obs.trim() : "";
+    if (o) out.push({ data: s.data, obs: o });
+  }
+  return out;
+}
+
+/* ---------- estagnação de carga ---------- */
+const MS_DIA = 86400000;
+/** dias inteiros entre duas datas ISO (yyyy-mm-dd), independente de fuso */
+function diasEntre(isoA, isoB) {
+  const a = new Date(isoA + "T12:00:00").getTime();
+  const b = new Date(isoB + "T12:00:00").getTime();
+  if (!isFinite(a) || !isFinite(b)) return 0;
+  return Math.round((b - a) / MS_DIA);
+}
+/**
+ * Sugestão de aumento de carga.
+ * Regra: peso máximo (métrica `max`) igual há >= 15 dias, com pelo menos 2 registros.
+ * - `atRef` (opcional) = data de referência (yyyy-mm-dd); se informado, só conta sessões até ela
+ *   (usado na tela de treino para não contar o próprio treino sendo feito).
+ * Retorna { dias, peso, desde, ate, registros } ou null.
+ */
+function loadStagnation(exId, atRef) {
+  if (!exId) return null;
+  const ref = atRef || todayISO();
+  const pts = [];
+  for (const s of state.data.sessoes) {
+    if (s.data > ref) continue;
+    const ex = s.exercicios.find(x => x.exercicioId === exId);
+    if (!ex || !ex.series || !ex.series.length) continue;
+    const ws = ex.series.map(v => v.peso).filter(v => v != null);
+    if (!ws.length) continue;
+    pts.push({ data: s.data, max: Math.max(...ws) });
+  }
+  if (pts.length < 2) return null;
+  // ordena e faz um ponto por dia (mantém o maior peso do dia)
+  const porDia = new Map();
+  for (const p of pts) { const cur = porDia.get(p.data); if (cur == null || p.max > cur) porDia.set(p.data, p.max); }
+  const serie = [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([data, max]) => ({ data, max }));
+  const ultimo = serie[serie.length - 1];
+  // assume o peso atual = última sessão registrada (sem treino em andamento nesta data)
+  const pesoAtual = ultimo.max;
+  // início da sequência atual: primeira sessão em que o peso atual aparece, sem alteração depois
+  let inicioSeq = serie.length - 1;
+  for (let i = serie.length - 2; i >= 0; i--) { if (serie[i].max !== pesoAtual) break; inicioSeq = i; }
+  const registros = serie.length - inicioSeq;          // qtde de sessões com esse mesmo peso
+  if (registros < 2) return null;
+  const dias = diasEntre(serie[inicioSeq].data, ref);
+  if (dias < 15) return null;
+  return { dias, peso: pesoAtual, desde: serie[inicioSeq].data, ate: ultimo.data, registros };
+}
+
 /* ============================================================
    Render — shell
    ============================================================ */
@@ -794,7 +872,7 @@ function startSession(treinoId) {
         const prev = last && last.series[i];
         series.push({ peso: prev && prev.peso != null ? String(prev.peso) : "", reps: ex.tipo === "reps" ? "" : "", prev: prev ? prev.peso : null });
       }
-      return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, concluido: false, series, lastData: last ? last.data : null };
+      return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, concluido: false, obs: "", series, lastData: last ? last.data : null };
     }),
   };
   state.openEx = {};
@@ -929,6 +1007,8 @@ function exCard(ex) {
   const c = el("div", { class: "ex-card" + (open ? " open" : "") + (feito ? " feito" : "") });
   const last = lastSeriesFor(ex.exercicioId);
   const best = bestWeight(ex.exercicioId);
+  const stag = loadStagnation(ex.exercicioId, state.sessao ? state.sessao.data : todayISO());
+  const obsPrev = obsHistoryFor(ex.exercicioId);
   const head = el("div", { class: "ex-head", style: "display:flex; align-items:center; gap:10px" });
   const chk = el("button", {
     class: "chk" + (feito ? " on" : ""), type: "button",
@@ -944,6 +1024,7 @@ function exCard(ex) {
   h.innerHTML = `<div style="flex:1">
       <div class="name">${esc(ex.nome)} ${ex.tipo === "tempo" ? '<span class="badge tempo">tempo</span>' : ""}</div>
       <div class="meta">${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}</div>
+      ${stag ? `<span class="mini-warn" title="Mesmo peso desde ${fmtBR(stag.desde)}">⚠ Considere aumentar a carga</span>` : ""}
     </div>
     <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
   h.addEventListener("click", () => { state.openEx[ex.exercicioId] = !open; render(); });
@@ -956,6 +1037,12 @@ function exCard(ex) {
     l.innerHTML = `Última vez (${fmtBR(last.data)}): <b>${last.series.map(v => (v.peso ?? "–") + (v.reps ? "×" + v.reps : "")).join(" · ")}</b>
       ${best != null ? ` &nbsp;|&nbsp; recorde: <b>${best} kg</b>` : ""}`;
     body.appendChild(l);
+  }
+  if (stag) {
+    const w = el("div", { class: "load-warn" });
+    w.innerHTML = `<span aria-hidden="true">⚠</span><div><b>Considere aumentar a carga.</b> Mesmo peso há ${stag.dias} dias
+      (${stag.peso} kg desde ${fmtBR(stag.desde)} · ${stag.registros} registros).</div>`;
+    body.appendChild(w);
   }
   // cabeçalho
   const hdr = el("div", { class: "setrow", style: "margin-top:10px" });
@@ -997,6 +1084,30 @@ function exCard(ex) {
   });
   acts.appendChild(bAdd);
   body.appendChild(acts);
+
+  // ---- observações (opcional) ----
+  const obsBox = el("div", { class: "obs-wrap" });
+  const obsId = "obs-" + ex.exercicioId;
+  obsBox.innerHTML = `<label for="${esc(obsId)}">Observações <span style="text-transform:none; letter-spacing:0; font-weight:500">(opcional)</span></label>`;
+  const ta = el("textarea", { id: obsId, rows: "2", maxlength: "500", placeholder: "Ex.: subi 5 kg, pegada melhor, dor no ombro…", "aria-label": "Observações de " + ex.nome });
+  ta.value = typeof ex.obs === "string" ? ex.obs : "";
+  ta.addEventListener("input", () => { ex.obs = ta.value; saveSessaoRascunho(); });
+  obsBox.appendChild(ta);
+  if (obsPrev.length) {
+    const det = el("details", { class: "obs-hist" });
+    const summ = el("summary", { class: "tiny", style: "cursor:pointer; margin-top:8px" },
+      `Observações anteriores (${obsPrev.length})`);
+    det.appendChild(summ);
+    const inner = el("div");
+    for (const o of obsPrev.slice(0, 8)) {
+      const line = el("div", { class: "oh" });
+      line.innerHTML = `<time>${fmtBR(o.data)}</time><div>${esc(o.obs)}</div>`;
+      inner.appendChild(line);
+    }
+    det.appendChild(inner);
+    obsBox.appendChild(det);
+  }
+  body.appendChild(obsBox);
 
   c.appendChild(body);
   return c;
@@ -1056,6 +1167,7 @@ function concluirSessao(s, forcar) {
     exercicioId: ex.exercicioId,
     nome: ex.nome,
     concluido: !!ex.concluido,
+    obs: typeof ex.obs === "string" ? ex.obs.trim() : "",
     series: ex.series
       .filter(se => se.peso !== "" || se.reps !== "")
       .map(se => ({ peso: num(se.peso), reps: se.reps === "" ? null : num(se.reps) })),
@@ -1205,18 +1317,37 @@ function renderGraficos(v) {
   }
   v.appendChild(card);
 
+  // observações do exercício selecionado (lista cronológica)
+  const obsAll = obsHistoryFor(sel.id);
+  const oc = el("div", { class: "card" });
+  oc.innerHTML = `<h3 style="font-size:15px">Observações · ${esc(sel.nome)}</h3>`;
+  if (!obsAll.length) {
+    oc.innerHTML += `<p class="tiny" style="margin:6px 0 0">Nenhuma observação registrada para este exercício.</p>`;
+  } else {
+    const inner = el("div", { class: "obs-hist", style: "margin-top:4px" });
+    for (const o of obsAll) {
+      const line = el("div", { class: "oh" });
+      line.innerHTML = `<time>${fmtBR(o.data)}</time><div>${esc(o.obs)}</div>`;
+      inner.appendChild(line);
+    }
+    oc.appendChild(inner);
+  }
+  v.appendChild(oc);
+
   // todos os exercícios com mini resumo
   const list = el("div", { class: "card" });
   list.innerHTML = `<h3 style="font-size:15px; margin-bottom:6px">Todos os exercícios</h3>`;
   for (const ex of exs) {
     const p = seriesForChart(ex.id);
+    const stag = loadStagnation(ex.id);
     const r = el("div", { class: "row", style: "padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer" });
     const lastP = p.length ? p[p.length - 1].max : null;
     const prevP = p.length > 1 ? p[p.length - 2].max : null;
     let arrow = "";
     if (lastP != null && prevP != null) arrow = lastP > prevP ? '<span style="color:var(--acc)">▲</span>' : lastP < prevP ? '<span style="color:var(--err)">▼</span>' : "";
     r.innerHTML = `<div style="flex:1; min-width:0"><div style="font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(ex.nome)}</div>
-      <div class="tiny">Treino ${esc(ex.treinoId)} · ${p.length} sessão(ões)</div></div>
+      <div class="tiny">Treino ${esc(ex.treinoId)} · ${p.length} sessão(ões)</div>
+      ${stag ? `<span class="mini-warn">⚠ Considere aumentar a carga · ${stag.dias} dias</span>` : ""}</div>
       <div style="text-align:right"><b>${lastP != null ? lastP + " kg" : "–"}</b> ${arrow}</div>`;
     r.addEventListener("click", () => { state.chartEx.sel = ex.id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
     list.appendChild(r);
@@ -1264,12 +1395,14 @@ function renderHistorico(v) {
     const feitos = s.exercicios.filter(x => x.concluido).length;
     const temDur = s.duracaoMin != null && s.duracaoMin > 0;
     const temHora = !!s.horaInicio;
+    const nObs = s.exercicios.filter(x => x.obs && x.obs.trim()).length;
     b.innerHTML = `<span class="letter badge" style="font-size:14px; padding:7px 10px; align-self:flex-start">${esc(s.treinoId)}</span>
       <div style="flex:1; min-width:0"><div class="d">${esc(t ? t.nome : "Treino " + s.treinoId)}</div>
       <div class="metarow" style="margin-top:3px">
         <span>${fmtBR(s.data)}</span>
         ${temDur ? `<span class="chip" style="font-size:11px; padding:1px 7px; color:var(--acc); border-color:rgba(74,222,128,.35)">⏱ ${fmtDuracao(s.duracaoMin * 60)}</span>` : ""}
         ${temHora ? `<span>${fmtHora(s.horaInicio)} → ${fmtHora(s.horaFim)}</span>` : ""}
+        ${nObs ? `<span title="Com observações">📝 ${nObs}</span>` : ""}
       </div>
       <div class="tiny" style="margin-top:2px">${feitos ? `${feitos}/${s.exercicios.length} exercícios feitos` : `${s.exercicios.length} exercícios`}${totalSets ? " · " + totalSets + " séries" : ""}${vol ? " · vol. " + Math.round(vol) + " kg" : ""}</div></div>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b98ab" stroke-width="2.5" style="flex:none"><path d="M9 6l6 6-6 6"/></svg>`;
@@ -1293,8 +1426,9 @@ function showSessionDetail(s) {
   for (const ex of s.exercicios) {
     html += `<div style="padding:9px 0; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start">
       <span style="flex:none; font-weight:800; color:${ex.concluido ? "var(--acc)" : "var(--mut)"}; width:18px">${ex.concluido ? "✓" : "·"}</span>
-      <div style="min-width:0"><div style="font-weight:650; font-size:14.5px${ex.concluido ? "" : "; opacity:.7"}">${esc(ex.nome)}</div>
-      <div class="tiny">${ex.series.length ? ex.series.map((v, i) => `${i + 1}ª ${v.peso ?? "–"}kg${v.reps ? "×" + v.reps : ""}`).join(" · ") : "sem séries registradas"}</div></div></div>`;
+      <div style="min-width:0; flex:1"><div style="font-weight:650; font-size:14.5px${ex.concluido ? "" : "; opacity:.7"}">${esc(ex.nome)}</div>
+      <div class="tiny">${ex.series.length ? ex.series.map((v, i) => `${i + 1}ª ${v.peso ?? "–"}kg${v.reps ? "×" + v.reps : ""}`).join(" · ") : "sem séries registradas"}</div>
+      ${ex.obs && ex.obs.trim() ? `<div class="obs-line">📝 ${esc(ex.obs.trim())}</div>` : ""}</div></div>`;
   }
   html += `</div>
     <button class="btn block" id="x-repeat">Repetir este treino com esses pesos</button>
@@ -1312,7 +1446,7 @@ function showSessionDetail(s) {
         const prev = s.exercicios.find(x => x.exercicioId === ex.id);
         const def = blankSeries(ex.series, ex.tipo);
         if (prev) prev.series.forEach((v, i) => { if (def[i]) { def[i].peso = v.peso ?? ""; def[i].prev = v.peso; } });
-        return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, concluido: false, series: def, lastData: s.data };
+        return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, concluido: false, obs: "", series: def, lastData: s.data };
       }),
     };
     state.openEx = {};
