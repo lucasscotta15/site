@@ -1244,7 +1244,7 @@ function renderHistorico(v) {
   const sum = el("div", { class: "card", style: "margin-top:14px" });
   sum.innerHTML = `<div class="row"><div><div class="tiny">Esta semana</div><b style="font-size:24px">${thisWeek}</b><span class="muted"> treino(s)</span></div>
     <span class="sp"></span><div style="text-align:center"><div class="tiny">Total</div><b style="font-size:24px">${sess.length}</b></div>
-    <span class="sp"></span><div style="text-align:right"><div class="tiny">${mediaMin != null ? "Média por treino" : "Duração"}</div><b style="font-size:20px">${mediaMin != null ? mediaMin + " min" : "–"}</b></div></div>
+    <span class="sp"></span><div style="text-align:right"><div class="tiny">${mediaMin != null ? "Média por treino" : "Duração"}</div><b style="font-size:20px">${mediaMin != null ? fmtDuracao(mediaMin * 60) : "–"}</b></div></div>
     ${somaMin ? `<div class="tiny" style="margin-top:8px">Tempo total registrado: <b style="color:var(--txt)">${fmtDuracao(somaMin * 60)}</b></div>` : ""}`;
   v.appendChild(sum);
 
