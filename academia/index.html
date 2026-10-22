@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="description" content="Acompanhamento de treino de academia — pesos, séries e evolução.">
+<title>Academia — Treinos</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0f1115; --bg2:#161a21; --bg3:#1e242e; --line:#2a3240;
+    --txt:#e9edf4; --mut:#8b98ab; --acc:#4ade80; --acc2:#22c55e;
+    --warn:#fbbf24; --err:#f87171; --blue:#60a5fa;
+    --r:14px; --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:16px; line-height:1.45; min-height:100dvh;
+    padding-bottom:calc(76px + var(--safe-b));
+  }
+  button,input,select{font-family:inherit; font-size:inherit; color:inherit}
+  button{cursor:pointer}
+  h1,h2,h3{margin:0; font-weight:700; letter-spacing:-.01em}
+  .wrap{max-width:680px; margin:0 auto; padding:0 14px}
+  /* header */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(15,17,21,.92); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .hd{display:flex; align-items:center; gap:10px; height:58px}
+  .hd h1{font-size:18px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .sync{display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:5px 9px;
+    border-radius:999px; border:1px solid var(--line); background:var(--bg2); white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}
+  .dot.ok{background:var(--acc)} .dot.save{background:var(--warn)}
+  .dot.err{background:var(--err)} .dot.off{background:var(--mut)}
+  @keyframes blink{50%{opacity:.25}}
+  .dot.save{animation:blink 1s infinite}
+  .avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+  /* cards */
+  .card{background:var(--bg2); border:1px solid var(--line); border-radius:var(--r); padding:14px; margin:12px 0}
+  .muted{color:var(--mut)}
+  .row{display:flex; align-items:center; gap:10px}
+  .sp{flex:1}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:52px; padding:0 18px; border-radius:12px; border:1px solid var(--line);
+    background:var(--bg3); font-weight:600; font-size:16px; transition:transform .08s ease;
+  }
+  .btn:active{transform:scale(.975)}
+  .btn.pri{background:var(--acc2); border-color:var(--acc2); color:#06140b}
+  .btn.block{width:100%; margin-top:10px}
+  .btn.sm{min-height:40px; font-size:14px; padding:0 12px; border-radius:10px}
+  .btn.danger{color:var(--err); border-color:#4a2731}
+  .btn:disabled{opacity:.5; pointer-events:none}
+  /* treinos list */
+  .treino-btn{display:block; width:100%; text-align:left; margin-top:10px;
+    min-height:64px; padding:12px 14px; border-radius:14px;
+    background:var(--bg3); border:1px solid var(--line)}
+  .treino-btn .letter{display:inline-flex; align-items:center; justify-content:center;
+    width:34px;height:34px;border-radius:10px;background:var(--acc2);color:#06140b;
+    font-weight:800; margin-right:10px; vertical-align:middle}
+  .treino-btn .n{font-weight:650}
+  .treino-btn .sub{font-size:13px; color:var(--mut); margin-left:44px; margin-top:-4px}
+  /* tabs / nav */
+  nav.tabs{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    display:flex; background:rgba(22,26,33,.98); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); padding-bottom:var(--safe-b);
+  }
+  nav.tabs button{
+    flex:1; background:none; border:0; color:var(--mut); padding:10px 2px 9px;
+    display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; font-weight:600;
+  }
+  nav.tabs button.on{color:var(--acc)}
+  nav.tabs svg{width:22px;height:22px}
+  /* series grid */
+  .ex-card{background:var(--bg2); border:1px solid var(--line); border-radius:var(--r); margin:10px 0; overflow:hidden}
+  .ex-head{display:flex; align-items:center; gap:10px; padding:13px 14px; background:none; border:0; width:100%; text-align:left}
+  .ex-head .name{font-weight:650; flex:1}
+  .ex-head .meta{font-size:12px; color:var(--mut)}
+  .badge{font-size:11px; padding:3px 7px; border-radius:6px; background:rgba(74,222,128,.13); color:var(--acc); font-weight:700}
+  .badge.tempo{background:rgba(96,165,250,.14); color:var(--blue)}
+  .chev{transition:transform .2s; color:var(--mut)}
+  .ex-card.open .chev{transform:rotate(180deg)}
+  .ex-body{display:none; padding:0 12px 12px}
+  .ex-card.open .ex-body{display:block}
+  .setrow{display:grid; grid-template-columns:34px 1fr 1fr; gap:8px; align-items:center; margin-top:8px}
+  .setrow .idx{font-size:13px; color:var(--mut); text-align:center; font-weight:700}
+  label.f field{display:block; font-size:10.5px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px}
+  input[type=number],input[type=text],input[type=date],select{
+    width:100%; min-height:52px; background:var(--bg); border:1px solid var(--line);
+    border-radius:10px; padding:0 12px; font-size:18px; font-weight:600;
+    -moz-appearance:textfield;
+  }
+  input[type=number]{text-align:center}
+  input:focus,select:focus{outline:2px solid rgba(74,222,128,.5); outline-offset:0; border-color:var(--acc2)}
+  .last{font-size:12px; color:var(--mut); margin-top:2px}
+  .last b{color:var(--acc); white-space:nowrap}
+  .last{line-height:1.5}
+  .done{background:rgba(74,222,128,.06)}
+  /* charts */
+  .chart{width:100%; height:220px; display:block; margin-top:6px; touch-action:pan-y}
+  .seg{display:flex; gap:6px; overflow-x:auto; padding:2px 0 4px; scrollbar-width:none}
+  .seg::-webkit-scrollbar{display:none}
+  .seg button{flex:none; min-height:38px; padding:0 12px; border-radius:20px; border:1px solid var(--line);
+    background:var(--bg2); font-size:13px; font-weight:600; color:var(--mut)}
+  .seg button.on{background:var(--acc); color:#06140b; border-color:var(--acc)}
+  /* history */
+  .hist{display:flex; align-items:center; gap:12px; width:100%; background:var(--bg2); border:1px solid var(--line);
+    border-radius:var(--r); padding:13px 14px; margin:9px 0; text-align:left}
+  .hist .d{font-weight:700}
+  .stat{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; text-align:center; margin-top:10px}
+  .stat div{background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 4px}
+  .stat b{display:block; font-size:19px}
+  .stat span{font-size:11px; color:var(--mut)}
+  /* editor */
+  .editrow{background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:10px; margin:8px 0; display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:end}
+  .editrow input[type=text]{min-height:46px; font-size:15px; font-weight:500; min-width:0}
+  .editrow input[type=number]{min-height:46px; font-size:15px; width:62px; padding:0 6px}
+  .editrow .name{grid-column:1 / -1}
+  .editrow .fieldhint{font-size:10px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:2px}
+  .iconbtn{width:42px;height:42px;flex:none;border-radius:10px;border:1px solid var(--line);background:var(--bg);display:grid;place-items:center}
+  /* dialog */
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:50; display:none;
+    align-items:flex-end; justify-content:center; padding:0}
+  .overlay.show{display:flex}
+  .sheet{background:var(--bg2); width:100%; max-width:680px; border-radius:18px 18px 0 0;
+    padding:16px 14px calc(18px + var(--safe-b)); border-top:1px solid var(--line); max-height:90dvh; overflow:auto}
+  .field{margin:10px 0}
+  .field label{display:block; font-size:12.5px; color:var(--mut); margin-bottom:5px; font-weight:600}
+  .hidden{display:none !important}
+  .center{text-align:center}
+  .banner{display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; padding:10px 12px; border-radius:12px;
+    background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3); color:#fde68a; font-size:13.5px; margin:10px 0}
+  .banner > div:first-child{flex:1 1 200px; min-width:0}
+  .banner b{white-space:normal}
+  .banner.info{background:rgba(96,165,250,.1); border-color:rgba(96,165,250,.3); color:#bfdbfe}
+  .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(88px + var(--safe-b));
+    background:#0b0e13; border:1px solid var(--line); color:var(--txt); padding:10px 16px; border-radius:12px;
+    font-size:14px; z-index:60; box-shadow:0 8px 30px rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:opacity .2s}
+  .toast.show{opacity:1}
+  .logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#22c55e,#15803d);display:grid;place-items:center;margin:0 auto 12px}
+  .gbtn{display:flex; justify-content:center; min-height:48px; margin:14px 0 4px}
+  .tiny{font-size:12px; color:var(--mut)}
+</style>
+</head>
+<body>
+
+<header id="topbar" class="hidden">
+  <div class="wrap hd">
+    <h1 id="hdTitle">Academia</h1>
+    <span class="sync" id="syncPill" title="Estado da sincronização"><i class="dot off" id="syncDot"></i><span id="syncTxt">local</span></span>
+    <img class="avatar hidden" id="avatar" alt="">
+  </div>
+</header>
+
+<main class="wrap" id="view"></main>
+
+<nav class="tabs hidden" id="tabs">
+  <button data-tab="inicio" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>
+    Treino
+  </button>
+  <button data-tab="graficos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+    Evolução
+  </button>
+  <button data-tab="historico">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+    Histórico
+  </button>
+  <button data-tab="treinos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    Fichas
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Configuração
+   ============================================================ */
+const CLIENT_ID = "997311758403-aibd1qii1ligtq7r0877fh5vrtt610f8.apps.googleusercontent.com";
+const SCOPES = "https://www.googleapis.com/auth/drive.file";
+const DRIVE_FILE_NAME = "academia-dados.json";
+const LS_DATA = "academia.data.v1";
+const LS_TOKEN = "academia.token.v1";
+const LS_USER = "academia.user.v1";
+const LS_MODE = "academia.mode.v1";
+
+const TREINOS_PADRAO = [{"id": "A", "nome": "Pernas e Glúteos", "exercicios": [{"id": "a1", "nome": "Agachamento livre", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "a2", "nome": "Leg press 45 graus", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "a3", "nome": "Cadeira extensora", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "a4", "nome": "Stiff", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "a5", "nome": "Abdominal supra", "series": 3, "reps": "20 a 30", "tipo": "reps"}, {"id": "a6", "nome": "Panturrilha em pé", "series": 3, "reps": "8 a 12", "tipo": "reps"}]}, {"id": "B", "nome": "Peito, Tríceps e Ombros", "exercicios": [{"id": "b1", "nome": "Supino reto na máquina", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "b2", "nome": "Supino 45º na máquina", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "b3", "nome": "Elevação lateral", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "b4", "nome": "Tríceps pulley barra", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "b5", "nome": "Tríceps pulley corda", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "b6", "nome": "Elevação frontal", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "b7", "nome": "Rotação interna na polia", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "b8", "nome": "Rotação externa na polia", "series": 3, "reps": "8 a 12", "tipo": "reps"}]}, {"id": "C", "nome": "Pernas e Abdominais", "exercicios": [{"id": "c1", "nome": "Agachamento sumô", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "c2", "nome": "Afundo com halteres", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "c3", "nome": "Mesa flexora", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "c4", "nome": "Cadeira adutora", "series": 3, "reps": "8 a 10", "tipo": "reps"}, {"id": "c5", "nome": "Cadeira abdutora", "series": 3, "reps": "8 a 10", "tipo": "reps"}, {"id": "c6", "nome": "Abdominal infra", "series": 3, "reps": "20 a 30", "tipo": "reps"}, {"id": "c7", "nome": "Prancha isométrica", "series": 3, "reps": "30 s", "tipo": "tempo"}]}, {"id": "D", "nome": "Costas e Bíceps", "exercicios": [{"id": "d1", "nome": "Puxada alta", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "d2", "nome": "Remada baixa", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "d3", "nome": "Crucifixo invertido na máquina", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "d4", "nome": "Rosca direta no cross", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "d5", "nome": "Rosca martelo", "series": 3, "reps": "8 a 12", "tipo": "reps"}, {"id": "d6", "nome": "Rosca Scott", "series": 3, "reps": "8 a 12", "tipo": "reps"}]}];
+
+/* ============================================================
+   Utilidades
+   ============================================================ */
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, html) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  if (html !== undefined) n.innerHTML = html;
+  return n;
+};
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const fmtBR = (iso) => { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
+const fmtBRshort = (iso) => { const [, m, d] = iso.split("-"); return `${d}/${m}`; };
+const uid = (p = "x") => p + Math.random().toString(36).slice(2, 9);
+const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : null; };
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function stampWeek(iso) {
+  const d = new Date(iso + "T12:00:00");
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day);
+  return d.toISOString().slice(0, 10);
+}
+
+/* ============================================================
+   Estado
+   ============================================================ */
+const state = {
+  data: null,          // {treinos, sessoes}
+  tab: "inicio",
+  sessao: null,        // sessão em edição {localId,data,treinoId,exercicios}
+  openEx: {},          // exercício aberto por id
+  chartEx: {},         // exercício selecionado no gráfico por treino
+  token: null,
+  user: null,
+  logged: false,
+  mode: "welcome",     // "welcome" | "app"
+  gisReady: false,
+  dirty: false,
+  saving: false,
+  editTreinoId: null,
+};
+
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [] }; }
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LS_DATA);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && Array.isArray(d.treinos) && Array.isArray(d.sessoes)) return d;
+    }
+  } catch (e) { console.warn("localStorage corrompido", e); }
+  return null;
+}
+function saveLocal() {
+  try {
+    localStorage.setItem(LS_DATA, JSON.stringify(state.data));
+    return true;
+  } catch (e) { console.error("falha ao salvar local", e); return false; }
+}
+
+/* normaliza estruturas vindas do Drive (defensivo) */
+function normalizeData(d) {
+  const out = { treinos: [], sessoes: [] };
+  if (!d || typeof d !== "object") return defaultData();
+  const treinos = Array.isArray(d.treinos) ? d.treinos : [];
+  for (const t of treinos) {
+    if (!t || typeof t !== "object") continue;
+    const exs = Array.isArray(t.exercicios) ? t.exercicios : [];
+    out.treinos.push({
+      id: String(t.id || uid("t")),
+      nome: String(t.nome || "Treino"),
+      exercicios: exs.filter(x => x && x.nome).map(x => ({
+        id: String(x.id || uid("e")),
+        nome: String(x.nome),
+        series: Math.max(1, Math.min(20, parseInt(x.series, 10) || 3)),
+        reps: String(x.reps ?? "8 a 12"),
+        tipo: x.tipo === "tempo" ? "tempo" : "reps",
+      })),
+    });
+  }
+  if (!out.treinos.length) out.treinos = clone(TREINOS_PADRAO);
+  const sessoes = Array.isArray(d.sessoes) ? d.sessoes : [];
+  for (const s of sessoes) {
+    if (!s || !s.data) continue;
+    out.sessoes.push({
+      data: String(s.data).slice(0, 10),
+      treinoId: String(s.treinoId || ""),
+      exercicios: (Array.isArray(s.exercicios) ? s.exercicios : []).filter(x => x && x.exercicioId).map(x => ({
+        exercicioId: String(x.exercicioId),
+        nome: String(x.nome || ""),
+        series: (Array.isArray(x.series) ? x.series : []).filter(v => v).map(v => ({
+          peso: num(v.peso), reps: v.reps === "" || v.reps === undefined || v.reps === null ? null : (num(v.reps)),
+        })),
+      })),
+    });
+  }
+  return out;
+}
+
+/* ============================================================
+   Google Identity Services (carregado sob demanda, tolerante a offline)
+   ============================================================ */
+let gisPromise = null;
+function loadGIS() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve(true);
+  if (gisPromise) return gisPromise;
+  gisPromise = new Promise((res) => {
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true; s.defer = true;
+    s.onload = () => res(true);
+    s.onerror = () => { console.warn("GIS indisponível (offline?)"); gisPromise = null; res(false); };
+    document.head.appendChild(s);
+    setTimeout(() => { if (!window.google?.accounts?.oauth2) res(false); }, 8000);
+  });
+  return gisPromise;
+}
+
+function setToken(token, expiresIn) {
+  state.token = token;
+  state.logged = true;
+  try {
+    sessionStorage.setItem(LS_TOKEN, JSON.stringify({ token, exp: Date.now() + (expiresIn - 60) * 1000 }));
+  } catch (e) {}
+}
+function loadToken() {
+  try {
+    const raw = sessionStorage.getItem(LS_TOKEN);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (o && o.token && o.exp > Date.now()) return o.token;
+  } catch (e) {}
+  return null;
+}
+function clearToken() {
+  state.token = null; state.logged = false;
+  try { sessionStorage.removeItem(LS_TOKEN); sessionStorage.removeItem(LS_USER); } catch (e) {}
+}
+
+function requestToken(prompt) {
+  return new Promise(async (res) => {
+    const ok = await loadGIS();
+    if (!ok || !window.google?.accounts?.oauth2) { res(false); return; }
+    try {
+      const tc = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID, scope: SCOPES, prompt: prompt || "",
+        callback: (resp) => {
+          if (resp && resp.access_token) { setToken(resp.access_token, resp.expires_in || 3500); res(true); }
+          else { console.warn("GIS resp", resp?.error || resp); res(false); }
+        },
+        error_callback: (err) => { console.warn("GIS err", err); res(false); },
+      });
+      tc.requestAccessToken(prompt ? { prompt } : {});
+    } catch (e) { console.warn(e); res(false); }
+  });
+}
+
+/* ============================================================
+   Drive API v3
+   ============================================================ */
+let fileId = null;
+
+async function driveFetch(url, opts = {}) {
+  const token = state.token || loadToken();
+  if (!token) throw new Error("NO_TOKEN");
+  state.token = token;
+  const headers = Object.assign({}, opts.headers || {}, { Authorization: "Bearer " + token });
+  const r = await fetch(url, { ...opts, headers });
+  if (r.status === 401) { clearToken(); throw new Error("AUTH"); }
+  if (!r.ok) {
+    let msg = "HTTP " + r.status;
+    try { const j = await r.json(); msg = j.error?.message || msg; } catch (e) {}
+    const err = new Error(msg); err.status = r.status; throw err;
+  }
+  return r;
+}
+
+async function findFile() {
+  const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and trashed=false`);
+  const r = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,name,modifiedTime)&pageSize=10`);
+  const j = await r.json();
+  const f = (j.files || [])[0];
+  return f ? f.id : null;
+}
+
+async function createFile(payload) {
+  const boundary = "academia_" + Date.now().toString(36);
+  const meta = { name: DRIVE_FILE_NAME, mimeType: "application/json" };
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${payload}\r\n--${boundary}--`;
+  const r = await driveFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+    method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}` }, body,
+  });
+  const j = await r.json();
+  return j.id;
+}
+
+async function updateFile(id, payload) {
+  await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media&fields=id`, {
+    method: "PATCH", headers: { "Content-Type": "application/json; charset=UTF-8" }, body: payload,
+  });
+}
+
+async function downloadFile(id) {
+  const r = await driveFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+  return await r.json();
+}
+
+/* estado de sincronização */
+const sync = { state: "local", retry: 0, timer: null };
+function setSync(s, label) {
+  sync.state = s;
+  const dot = $("#syncDot"), txt = $("#syncTxt");
+  if (!dot) return;
+  dot.className = "dot " + ({ saved: "ok", saving: "save", error: "err", local: "off", offline: "off" }[s] || "off");
+  txt.textContent = label || ({ saved: "salvo", saving: "salvando", error: "erro", local: "local", offline: "offline" }[s]) || s;
+}
+
+function hasToken() { return !!(state.token || loadToken()); }
+
+function scheduleSync(delay = 900) {
+  state.dirty = true;
+  if (!hasToken()) { setSync("local", "local"); return; }
+  if (!navigator.onLine) { setSync("offline"); return; }
+  clearTimeout(sync.timer);
+  sync.timer = setTimeout(doSync, delay);
+}
+
+async function doSync() {
+  if (!hasToken()) { setSync("local", "local"); return; }
+  if (state.saving) return;
+  state.saving = true;
+  setSync("saving");
+  const snapshot = JSON.stringify(state.data);
+  try {
+    if (!fileId) fileId = await findFile();
+    if (fileId) await updateFile(fileId, snapshot);
+    else fileId = await createFile(snapshot);
+    state.dirty = false;
+    sync.retry = 0;
+    setSync("saved");
+  } catch (e) {
+    console.warn("sync falhou", e);
+    if (e.message === "AUTH") { clearToken(); setSync("needlogin"); }
+    else if (e.message === "NO_TOKEN") setSync("local", "local");
+    else if (!navigator.onLine) setSync("offline");
+    else setSync("error");
+    // retry com backoff
+    if (sync.retry < 5 && navigator.onLine && e.message !== "AUTH") {
+      const d = Math.min(30000, 1500 * Math.pow(2, sync.retry++));
+      clearTimeout(sync.timer);
+      sync.timer = setTimeout(doSync, d);
+    }
+  } finally {
+    state.saving = false;
+  }
+}
+
+async function pullFromDrive() {
+  setSync("saving", "baixando");
+  try {
+    fileId = await findFile();
+    if (!fileId) {
+      // primeiro uso: envia os dados locais (ou padrão) para o Drive
+      await doSync();
+      return;
+    }
+    const remote = normalizeData(await downloadFile(fileId));
+    const local = state.data;
+    const remoteCount = remote.sessoes.length, localCount = local ? local.sessoes.length : 0;
+    if (local && localCount > remoteCount) {
+      // local tem mais dados (por exemplo, treinos feitos offline) → mantém local e envia
+      toast("Enviando treinos offline para o Drive…");
+      await doSync();
+    } else {
+      state.data = remote;
+      saveLocal();
+      setSync("saved");
+    }
+    render();
+  } catch (e) {
+    console.warn("pull falhou", e);
+    setSync("error");
+    toast("Não foi possível ler o Drive: " + e.message);
+  }
+}
+
+/* ============================================================
+   Login
+   ============================================================ */
+async function onSignedIn() {
+  state.logged = true;
+  state.mode = "app";
+  try { localStorage.setItem(LS_MODE, "1"); } catch (e) {}
+  try { sessionStorage.setItem(LS_USER, "1"); } catch (e) {}
+  render();
+  await pullFromDrive();
+}
+
+function showLoginSheet() {
+  openSheet(`
+    <div class="center">
+      <div class="logo"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#06140b" stroke-width="2.2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg></div>
+      <h2 style="font-size:20px">Entrar com Google</h2>
+      <p class="tiny" style="margin:6px 0 0">Seus treinos são salvos no Drive como<br><b>academia-dados.json</b><br>Acesso apenas a este arquivo criado pelo app.</p>
+    </div>
+    <div class="gbtn" id="gbtn-slot"></div>
+    <button class="btn block" id="btn-offline" style="background:none; border-color:transparent; color:var(--mut); font-size:15px">Continuar sem login (só neste aparelho)</button>
+    <p class="tiny center" style="margin-top:10px">Sem login, os dados ficam no navegador e podem ser enviados ao Drive depois.</p>
+  `);
+  const slot = $("#gbtn-slot");
+  loadGIS().then((ok) => {
+    if (!ok) {
+      slot.innerHTML = `<div class="banner">Sem conexão com o Google. Você pode usar offline e entrar depois.</div>`;
+      return;
+    }
+    // Botão oficial GIS
+    try {
+      google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: () => {}, // não usamos o fluxo de ID token
+        use_fedcm_for_prompt: false,
+      });
+      const btn = el("button", { class: "btn pri block", style: "min-height:50px" });
+      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:8px; flex:none"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-2.8-.4-4H24v7.3h12.1c-.2 2-1.6 5-4.5 7l-.1.4 6.5 5 .5.1c4.1-3.8 6.6-9.4 6.6-15.8"/><path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7-5.4c-1.9 1.3-4.4 2.2-7.6 2.2-5.8 0-10.7-3.8-12.5-9.1l-.4.1-6.8 5.2-.2.4C7.8 41 15.3 46 24 46"/><path fill="#FBBC05" d="M11.5 28.3c-.5-1.4-.8-2.8-.8-4.3s.3-3 .8-4.3v-.5L4.6 14l-.3.3A22 22 0 0 0 2 24c0 3.5.9 6.8 2.3 9.7z"/><path fill="#EA4335" d="M24 9.6c4.1 0 6.9 1.8 8.5 3.3l6.2-6C34.9 3.5 30 2 24 2 15.3 2 7.8 7 4.3 14.3l7.3 5.6c1.8-5.3 6.7-9.1 12.4-9.1"/></svg>Entrar com Google`;
+  btn.style.color = "#e9edf4";
+  btn.style.background = "#1e242e";
+  btn.style.borderColor = "#3a4453";
+      btn.addEventListener("click", async () => {
+        const ok2 = await requestToken();
+        if (ok2) { hideOverlay(); onSignedIn(); }
+        else toast("Login não concluído");
+      });
+      slot.appendChild(btn);
+    } catch (e) { console.warn(e); }
+  });
+  $("#btn-offline").addEventListener("click", () => { hideOverlay(); enterLocalMode(); });
+}
+
+/* Entra no app sem login: usa os dados locais. */
+function enterLocalMode() {
+  state.logged = false;          // sem token => sem sync no Drive
+  state.mode = "app";            // mas o app está em uso
+  try { localStorage.setItem(LS_MODE, "1"); } catch (e) {}
+  state.tab = "inicio";
+  setSync("local", "local");
+  render();
+}
+
+function signOut() {
+  try { if (window.google?.accounts?.oauth2 && state.token) google.accounts.oauth2.revoke(state.token, () => {}); } catch (e) {}
+  clearToken(); fileId = null;
+  state.mode = "welcome";
+  try { localStorage.removeItem(LS_MODE); } catch (e) {}
+  setSync("local", "local");
+  render();
+  toast("Desconectado. Dados permanecem neste aparelho.");
+}
+
+/* ============================================================
+   Overlay / sheet
+   ============================================================ */
+function openSheet(html) { $("#sheet").innerHTML = html; $("#overlay").classList.add("show"); }
+function hideOverlay() { $("#overlay").classList.remove("show"); }
+$("#overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") hideOverlay(); });
+
+/* ============================================================
+   Consultas de dados
+   ============================================================ */
+const getTreino = (id) => state.data.treinos.find(t => t.id === id);
+
+function lastSeriesFor(exId) {
+  const sess = [...state.data.sessoes].sort((a, b) => a.data.localeCompare(b.data));
+  for (let i = sess.length - 1; i >= 0; i--) {
+    const ex = sess[i].exercicios.find(x => x.exercicioId === exId);
+    if (ex && ex.series && ex.series.length) return { data: sess[i].data, series: ex.series };
+  }
+  return null;
+}
+function bestWeight(exId) {
+  let best = null;
+  for (const s of state.data.sessoes) {
+    const ex = s.exercicios.find(x => x.exercicioId === exId);
+    if (!ex) continue;
+    for (const se of ex.series) if (se.peso != null && (best == null || se.peso > best)) best = se.peso;
+  }
+  return best;
+}
+function seriesForChart(exId) {
+  const pts = [];
+  for (const s of [...state.data.sessoes].sort((a, b) => a.data.localeCompare(b.data))) {
+    const ex = s.exercicios.find(x => x.exercicioId === exId);
+    if (!ex || !ex.series.length) continue;
+    const ws = ex.series.map(v => v.peso).filter(v => v != null);
+    if (!ws.length) continue;
+    pts.push({ data: s.data, max: Math.max(...ws), avg: ws.reduce((a, b) => a + b, 0) / ws.length });
+  }
+  return pts;
+}
+
+/* ============================================================
+   Render — shell
+   ============================================================ */
+function render() {
+  const top = $("#topbar"), tabs = $("#tabs");
+  if (state.mode !== "app") {
+    top.classList.add("hidden"); tabs.classList.add("hidden");
+    renderWelcome();
+    return;
+  }
+  top.classList.remove("hidden"); tabs.classList.remove("hidden");
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === state.tab));
+  const titles = { inicio: "Academia", graficos: "Evolução", historico: "Histórico", treinos: "Minhas fichas" };
+  $("#hdTitle").textContent = titles[state.tab] || "Academia";
+  const v = $("#view");
+  v.innerHTML = "";
+  if (state.tab === "inicio") renderInicio(v);
+  else if (state.tab === "graficos") renderGraficos(v);
+  else if (state.tab === "historico") renderHistorico(v);
+  else if (state.tab === "treinos") renderFichas(v);
+  setSync(sync.state);
+}
+
+function renderWelcome() {
+  const v = $("#view");
+  v.innerHTML = "";
+  const c = el("div", { class: "card center", style: "margin-top:40px; padding:24px 16px" });
+  c.innerHTML = `
+    <div class="logo"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#06140b" stroke-width="2.2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg></div>
+    <h2 style="font-size:22px">Treino pronto</h2>
+    <p class="muted" style="font-size:14px; margin:8px 0 0">Registre o peso de cada série e acompanhe sua evolução.</p>`;
+  v.appendChild(c);
+  const b1 = el("button", { class: "btn pri block" }, "Entrar com Google");
+  b1.addEventListener("click", showLoginSheet);
+  v.appendChild(b1);
+  const b2 = el("button", { class: "btn block" }, "Usar só neste aparelho");
+  b2.addEventListener("click", enterLocalMode);
+  v.appendChild(b2);
+  const info = el("div", { class: "banner info", style: "margin-top:16px" });
+  info.innerHTML = `<div>Ao entrar com Google, seus dados são salvos no seu Drive (<b>academia-dados.json</b>) e ficam disponíveis em qualquer aparelho. Funciona offline.</div>`;
+  v.appendChild(info);
+}
+
+/* ============================================================
+   Treino do dia
+   ============================================================ */
+function lastSessionsForTreino(trId, n = 3) {
+  return state.data.sessoes.filter(s => s.treinoId === trId).sort((a, b) => b.data.localeCompare(a.data)).slice(0, n);
+}
+
+function renderInicio(v) {
+  if (state.sessao) return renderSessao(v);
+  const h = el("div", { class: "card" });
+  h.style.marginTop = "14px";
+  h.innerHTML = `<h2 style="font-size:17px">Novo treino</h2>
+    <p class="muted" style="font-size:13.5px; margin:4px 0 0">Escolha a ficha de hoje. O peso da última vez já vem preenchido.</p>`;
+  v.appendChild(h);
+
+  // últimas sessões como sugestão
+  const ult = [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data))[0];
+  for (const t of state.data.treinos) {
+    const b = el("button", { class: "treino-btn" });
+    const ls = lastSessionsForTreino(t.id, 1)[0];
+    b.innerHTML = `<span class="letter">${esc(t.id)}</span><span class="n">${esc(t.nome)}</span>
+      <div class="sub">${t.exercicios.length} exercícios${ls ? " · último dia " + fmtBR(ls.data) : " · ainda não feito"}</div>`;
+    if (ult && ult.treinoId === t.id) b.style.borderColor = "var(--acc2)";
+    b.addEventListener("click", () => startSession(t.id));
+    v.appendChild(b);
+  }
+
+  if (state.data.sessoes.length) {
+    const box = el("div", { class: "card" });
+    const lastS = [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
+    box.innerHTML = `<div class="row"><h3 style="font-size:15px">Últimos treinos</h3><span class="sp"></span>
+      <button class="btn sm" id="go-hist">Ver tudo</button></div>`;
+    for (const s of lastS) {
+      const t = getTreino(s.treinoId);
+      const r = el("div", { class: "row", style: "padding:8px 0; border-bottom:1px solid var(--line)" });
+      r.innerHTML = `<span class="badge">${esc(s.treinoId)}</span><span>${esc(t ? t.nome : "Treino")}</span><span class="sp"></span><span class="muted" style="font-size:13px">${fmtBR(s.data)}</span>`;
+      box.appendChild(r);
+    }
+    v.appendChild(box);
+    $("#go-hist", box).addEventListener("click", () => { state.tab = "historico"; render(); });
+  }
+
+  if (!state.logged) v.appendChild(loginPromptCard());
+}
+
+function loginPromptCard() {
+  const c = el("div", { class: "banner" });
+  c.innerHTML = `<div>Você está no modo local. <b>Entre com Google</b> para salvar no Drive e usar em outro aparelho.</div>`;
+  const b = el("button", { class: "btn sm", style: "flex:none" }, "Entrar");
+  b.addEventListener("click", showLoginSheet);
+  c.appendChild(b);
+  return c;
+}
+
+function startSession(treinoId) {
+  const t = getTreino(treinoId);
+  if (!t) return;
+  state.sessao = {
+    data: todayISO(),
+    treinoId: treinoId,
+    exercicios: t.exercicios.map(ex => {
+      const last = lastSeriesFor(ex.id);
+      const series = [];
+      for (let i = 0; i < ex.series; i++) {
+        const prev = last && last.series[i];
+        series.push({ peso: prev && prev.peso != null ? String(prev.peso) : "", reps: ex.tipo === "reps" ? "" : "", prev: prev ? prev.peso : null });
+      }
+      return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, series, lastData: last ? last.data : null };
+    }),
+  };
+  state.openEx = {};
+  state.tab = "inicio";
+  render();
+}
+
+function blankSeries(n, tipo) {
+  return Array.from({ length: n }, () => ({ peso: "", reps: tipo === "reps" ? "" : "", prev: null }));
+}
+
+function renderSessao(v) {
+  const s = state.sessao;
+  const t = getTreino(s.treinoId);
+  const head = el("div", { class: "card", style: "margin-top:14px" });
+  head.innerHTML = `
+    <div class="row">
+      <span class="badge" style="font-size:13px; padding:5px 9px">${esc(s.treinoId)}</span>
+      <div><div style="font-weight:700">${esc(t ? t.nome : "Treino")}</div>
+      <div class="tiny">${t ? t.exercicios.length : s.exercicios.length} exercícios</div></div>
+      <span class="sp"></span>
+      <div style="position:relative; text-align:right">
+        <button class="btn sm" id="date-btn" style="min-height:38px; font-size:13px; padding:0 10px" aria-label="Mudar data do treino">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+          ${fmtBR(s.data)}
+        </button>
+        <input type="date" id="sess-date" value="${s.data}" aria-label="Data do treino"
+          style="position:absolute; inset:0; width:100%; height:100%; opacity:0; pointer-events:none">
+      </div>
+    </div>`;
+  v.appendChild(head);
+  $("#sess-date", head).addEventListener("change", (e) => {
+    s.data = e.target.value || todayISO();
+    saveSessaoRascunho();
+    render();
+  });
+  $("#date-btn", head).addEventListener("click", () => {
+    const inp = $("#sess-date", head);
+    if (inp.showPicker) { try { inp.showPicker(); return; } catch (e) {} }
+    inp.style.pointerEvents = "auto"; inp.focus(); inp.click();
+  });
+
+  for (const ex of s.exercicios) {
+    v.appendChild(exCard(ex));
+  }
+
+  const act = el("div");
+  act.style.margin = "16px 0 10px";
+  const bSave = el("button", { class: "btn pri block", style: "min-height:58px" }, "✓ Concluir treino");
+  bSave.addEventListener("click", concluirSessao);
+  act.appendChild(bSave);
+  const bCancel = el("button", { class: "btn block danger" }, "Cancelar treino");
+  bCancel.addEventListener("click", () => {
+    if (confirm("Descartar este treino em andamento?")) { state.sessao = null; clearRascunho(); render(); }
+  });
+  act.appendChild(bCancel);
+  v.appendChild(act);
+}
+
+function exCard(ex) {
+  const open = !!state.openEx[ex.exercicioId];
+  const c = el("div", { class: "ex-card" + (open ? " open" : "") });
+  const last = lastSeriesFor(ex.exercicioId);
+  const best = bestWeight(ex.exercicioId);
+  const h = el("button", { class: "ex-head" });
+  h.innerHTML = `<div style="flex:1">
+      <div class="name">${esc(ex.nome)} ${ex.tipo === "tempo" ? '<span class="badge tempo">tempo</span>' : ""}</div>
+      <div class="meta">${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}</div>
+    </div>
+    <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
+  h.addEventListener("click", () => { state.openEx[ex.exercicioId] = !open; render(); });
+  c.appendChild(h);
+
+  const body = el("div", { class: "ex-body" });
+  if (last) {
+    const l = el("div", { class: "last" });
+    l.innerHTML = `Última vez (${fmtBR(last.data)}): <b>${last.series.map(v => (v.peso ?? "–") + (v.reps ? "×" + v.reps : "")).join(" · ")}</b>
+      ${best != null ? ` &nbsp;|&nbsp; recorde: <b>${best} kg</b>` : ""}`;
+    body.appendChild(l);
+  }
+  // cabeçalho
+  const hdr = el("div", { class: "setrow", style: "margin-top:10px" });
+  hdr.innerHTML = `<span class="idx"></span><label class="f"><field>Peso (kg)</field></label><label class="f"><field>${ex.tipo === "tempo" ? "Segundos" : "Reps"}</field></label>`;
+  body.appendChild(hdr);
+
+  ex.series.forEach((se, i) => {
+    const r = el("div", { class: "setrow" });
+    r.innerHTML = `<span class="idx">${i + 1}ª</span>`;
+    const ip = el("input", { type: "number", inputmode: "decimal", step: "0.5", min: "0", placeholder: se.prev != null ? String(se.prev) : "0", value: se.peso, "aria-label": `Peso série ${i + 1}` });
+    ip.addEventListener("input", () => { se.peso = ip.value; saveSessaoRascunho(); });
+    ip.addEventListener("change", () => { const p = num(ip.value); if (p != null) ip.value = p; });
+    const ir = el("input", { type: "number", inputmode: "numeric", step: "1", min: "0", placeholder: String(ex.repsAlvo).replace(/\s*a\s*/g, "–") || "–", value: se.reps, "aria-label": `Reps série ${i + 1}` });
+    ir.addEventListener("input", () => { se.reps = ir.value; saveSessaoRascunho(); });
+    r.appendChild(ip); r.appendChild(ir);
+    body.appendChild(r);
+  });
+
+  // copiar 1ª série
+  const acts = el("div", { class: "row", style: "margin-top:10px" });
+  const bCopy = el("button", { class: "btn sm" }, "Copiar 1ª para todas");
+  bCopy.addEventListener("click", () => {
+    const first = ex.series[0];
+    if (first.peso === "") return toast("Preencha a 1ª série");
+    ex.series.forEach(x => { x.peso = first.peso; if (first.reps !== "") x.reps = first.reps; });
+    saveSessaoRascunho(); render();
+  });
+  acts.appendChild(bCopy);
+  if (ex.series.length > 1) {
+    const bRm = el("button", { class: "btn sm" }, "− série");
+    bRm.addEventListener("click", () => { ex.series.pop(); saveSessaoRascunho(); render(); });
+    acts.appendChild(bRm);
+  }
+  const bAdd = el("button", { class: "btn sm" }, "+ série");
+  bAdd.addEventListener("click", () => {
+    const lastS = ex.series[ex.series.length - 1];
+    ex.series.push({ peso: lastS ? lastS.peso : "", reps: "", prev: lastS ? lastS.prev : null });
+    saveSessaoRascunho(); render();
+  });
+  acts.appendChild(bAdd);
+  body.appendChild(acts);
+
+  c.appendChild(body);
+  return c;
+}
+
+/* rascunho da sessão corrente — sobrevive a reload */
+const LS_DRAFT = "academia.draft.v1";
+function saveSessaoRascunho() {
+  try { localStorage.setItem(LS_DRAFT, JSON.stringify(state.sessao)); } catch (e) {}
+}
+function clearRascunho() { try { localStorage.removeItem(LS_DRAFT); } catch (e) {} }
+function loadRascunho() {
+  try {
+    const raw = localStorage.getItem(LS_DRAFT);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (d && d.treinoId && Array.isArray(d.exercicios) && d.exercicios.length) return d;
+  } catch (e) {}
+  return null;
+}
+
+function concluirSessao() {
+  const s = state.sessao;
+  if (!s) return;
+  const exercicios = s.exercicios.map(ex => ({
+    exercicioId: ex.exercicioId,
+    nome: ex.nome,
+    series: ex.series
+      .filter(se => se.peso !== "" || se.reps !== "")
+      .map(se => ({ peso: num(se.peso), reps: se.reps === "" ? null : num(se.reps) })),
+  })).filter(ex => ex.series.length);
+
+  if (!exercicios.length) { toast("Registre pelo menos uma série"); return; }
+
+  // substitui sessão do mesmo treino no mesmo dia (evita duplicar ao corrigir)
+  const idx = state.data.sessoes.findIndex(x => x.data === s.data && x.treinoId === s.treinoId);
+  const reg = { data: s.data, treinoId: s.treinoId, exercicios };
+  if (idx >= 0) state.data.sessoes[idx] = reg;
+  else state.data.sessoes.push(reg);
+  state.data.sessoes.sort((a, b) => a.data.localeCompare(b.data));
+
+  saveLocal();
+  state.sessao = null;
+  clearRascunho();
+  state.tab = "inicio";
+  const canSync = hasToken();
+  scheduleSync();
+  if (!canSync) setSync("local", "local");
+  render();
+  toast("Treino salvo! 💪");
+}
+
+/* ============================================================
+   Gráficos — SVG puro
+   ============================================================ */
+function svgChart(points, { w = 420, h = 220, metric = "max" } = {}) {
+  const padL = 40, padR = 14, padT = 16, padB = 30;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const vals = points.map(p => p[metric]);
+  let min = Math.min(...vals), max = Math.max(...vals);
+  if (min === max) { min -= 2.5; max += 2.5; }
+  else { const pad = (max - min) * 0.15; min -= pad; max += pad; }
+  if (min < 0) min = 0;
+  const x = (i) => padL + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
+  const y = (v) => padT + ih - ((v - min) / (max - min)) * ih;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.setAttribute("class", "chart");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute("role", "img");
+  const mk = (tag, attrs, txt) => {
+    const n = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (txt !== undefined) n.textContent = txt;
+    svg.appendChild(n);
+    return n;
+  };
+  // linhas de grade
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const v = min + (max - min) * (i / steps);
+    const yy = y(v);
+    mk("line", { x1: padL, x2: w - padR, y1: yy, y2: yy, stroke: "#2a3240", "stroke-width": 1 });
+    mk("text", { x: padL - 8, y: yy + 4, fill: "#8b98ab", "font-size": 11, "text-anchor": "end" }, Math.round(v * 10) / 10);
+  }
+  // área + linha
+  if (points.length > 1) {
+    const d = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[metric]).toFixed(1)}`).join(" ");
+    mk("path", { d: `${d} L${x(points.length - 1)},${padT + ih} L${x(0)},${padT + ih} Z`, fill: "rgba(74,222,128,.12)" });
+    mk("path", { d, fill: "none", stroke: "#4ade80", "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" });
+  }
+  // pontos
+  points.forEach((p, i) => {
+    mk("circle", { cx: x(i), cy: y(p[metric]), r: 4.5, fill: "#0f1115", stroke: "#4ade80", "stroke-width": 2.5 });
+    mk("title", {}, `${fmtBR(p.data)}: ${p.max} kg (média ${p.avg.toFixed(1)})`);
+  });
+  // rótulos eixo x (máx ~5)
+  const stepX = Math.max(1, Math.ceil(points.length / 5));
+  points.forEach((p, i) => {
+    if (i % stepX !== 0 && i !== points.length - 1) return;
+    mk("text", { x: x(i), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(p.data));
+  });
+  if (!points.length) mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados");
+  return svg;
+}
+
+function exerciseList() {
+  const out = [];
+  const seen = new Set();
+  for (const t of state.data.treinos) for (const ex of t.exercicios) {
+    if (seen.has(ex.id)) continue;
+    seen.add(ex.id);
+    out.push({ ...ex, treinoId: t.id });
+  }
+  return out;
+}
+
+function renderGraficos(v) {
+  const exs = exerciseList();
+  if (!exs.length) { v.innerHTML = `<div class="card muted">Nenhum exercício na ficha.</div>`; return; }
+  const withData = exs.filter(ex => seriesForChart(ex.id).length);
+  const selId = state.chartEx.sel || (withData[0] || exs[0]).id;
+  const sel = exs.find(e => e.id === selId) || exs[0];
+
+  const cust = el("div", { class: "card", style: "margin-top:14px" });
+  cust.innerHTML = `<label class="tiny" style="font-weight:600">Exercício</label>`;
+  const selEl = el("select", { id: "sel-ex", style: "margin-top:6px" });
+  let groupT = null;
+  for (const ex of exs) {
+    if (ex.treinoId !== groupT) {
+      groupT = ex.treinoId;
+      const g = el("optgroup", { label: "Treino " + groupT });
+      selEl.appendChild(g);
+      for (const e of exs.filter(x => x.treinoId === groupT)) {
+        const o = el("option", { value: e.id }, e.nome);
+        if (e.id === selId) o.selected = true;
+        g.appendChild(o);
+      }
+    }
+  }
+  cust.appendChild(selEl);
+  selEl.addEventListener("change", () => { state.chartEx.sel = selEl.value; render(); });
+  v.appendChild(cust);
+
+  const pts = seriesForChart(sel.id);
+  const card = el("div", { class: "card" });
+  card.innerHTML = `<div class="row"><h3 style="font-size:16px">${esc(sel.nome)}</h3><span class="sp"></span>
+    <span class="tiny">Treino ${esc(sel.treinoId)}</span></div>`;
+  if (!pts.length) {
+    card.innerHTML += `<p class="muted" style="font-size:14px">Ainda sem registros para este exercício. Faça um treino e o gráfico aparece aqui.</p>`;
+  } else {
+    const maxW = Math.max(...pts.map(p => p.max));
+    const first = pts[0].max, last = pts[pts.length - 1].max;
+    const diff = last - first;
+    card.appendChild(svgChart(pts, { metric: "max" }));
+    const st = el("div", { class: "stat" });
+    st.innerHTML = `<div><b>${maxW}</b><span>recorde (kg)</span></div>
+      <div><b style="color:${diff > 0 ? "var(--acc)" : diff < 0 ? "var(--err)" : "var(--txt)"}">${diff > 0 ? "+" : ""}${diff}</b><span>desde o início</span></div>
+      <div><b>${pts.length}</b><span>sessões</span></div>`;
+    card.appendChild(st);
+  }
+  v.appendChild(card);
+
+  // todos os exercícios com mini resumo
+  const list = el("div", { class: "card" });
+  list.innerHTML = `<h3 style="font-size:15px; margin-bottom:6px">Todos os exercícios</h3>`;
+  for (const ex of exs) {
+    const p = seriesForChart(ex.id);
+    const r = el("div", { class: "row", style: "padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer" });
+    const lastP = p.length ? p[p.length - 1].max : null;
+    const prevP = p.length > 1 ? p[p.length - 2].max : null;
+    let arrow = "";
+    if (lastP != null && prevP != null) arrow = lastP > prevP ? '<span style="color:var(--acc)">▲</span>' : lastP < prevP ? '<span style="color:var(--err)">▼</span>' : "";
+    r.innerHTML = `<div style="flex:1; min-width:0"><div style="font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(ex.nome)}</div>
+      <div class="tiny">Treino ${esc(ex.treinoId)} · ${p.length} sessão(ões)</div></div>
+      <div style="text-align:right"><b>${lastP != null ? lastP + " kg" : "–"}</b> ${arrow}</div>`;
+    r.addEventListener("click", () => { state.chartEx.sel = ex.id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+    list.appendChild(r);
+  }
+  v.appendChild(list);
+}
+
+/* ============================================================
+   Histórico
+   ============================================================ */
+function renderHistorico(v) {
+  const sess = [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data));
+  if (!sess.length) {
+    v.innerHTML = `<div class="card muted" style="margin-top:14px">Nenhum treino registrado ainda. Escolha uma ficha na aba Treino.</div>`;
+    if (!state.logged) v.appendChild(loginPromptCard());
+    return;
+  }
+  // resumo semanal
+  const wk = stampWeek(todayISO());
+  const thisWeek = sess.filter(s => stampWeek(s.data) === wk).length;
+  const sum = el("div", { class: "card", style: "margin-top:14px" });
+  sum.innerHTML = `<div class="row"><div><div class="tiny">Esta semana</div><b style="font-size:24px">${thisWeek}</b><span class="muted"> treino(s)</span></div>
+    <span class="sp"></span><div style="text-align:right"><div class="tiny">Total</div><b style="font-size:24px">${sess.length}</b></div></div>`;
+  v.appendChild(sum);
+
+  let curMonth = null;
+  for (const s of sess) {
+    const m = s.data.slice(0, 7);
+    if (m !== curMonth) {
+      curMonth = m;
+      const [y, mm] = m.split("-");
+      const names = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+      v.appendChild(el("h3", { style: "font-size:13px; color:var(--mut); text-transform:capitalize; margin:16px 2px 2px" }, `${names[+mm - 1]} ${y}`));
+    }
+    const t = getTreino(s.treinoId);
+    const b = el("button", { class: "hist" });
+    const totalSets = s.exercicios.reduce((a, e) => a + e.series.length, 0);
+    const vol = s.exercicios.reduce((a, e) => a + e.series.reduce((q, x) => q + (x.peso || 0) * (x.reps || 0), 0), 0);
+    b.innerHTML = `<span class="letter badge" style="font-size:14px; padding:7px 10px">${esc(s.treinoId)}</span>
+      <div style="flex:1; min-width:0"><div class="d">${esc(t ? t.nome : "Treino " + s.treinoId)}</div>
+      <div class="tiny">${fmtBR(s.data)} · ${s.exercicios.length} exercícios · ${totalSets} séries${vol ? " · vol. " + Math.round(vol) + " kg" : ""}</div></div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b98ab" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>`;
+    b.addEventListener("click", () => showSessionDetail(s));
+    v.appendChild(b);
+  }
+}
+
+function showSessionDetail(s) {
+  const t = getTreino(s.treinoId);
+  let html = `<div class="row"><div><h2 style="font-size:18px">${esc(t ? t.nome : "Treino")}</h2>
+    <div class="tiny">Treino ${esc(s.treinoId)} · ${fmtBR(s.data)}</div></div><span class="sp"></span>
+    <button class="iconbtn" id="x-close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div style="margin-top:10px">`;
+  for (const ex of s.exercicios) {
+    html += `<div style="padding:9px 0; border-bottom:1px solid var(--line)">
+      <div style="font-weight:650; font-size:14.5px">${esc(ex.nome)}</div>
+      <div class="tiny">${ex.series.map((v, i) => `${i + 1}ª ${v.peso ?? "–"}kg${v.reps ? "×" + v.reps : ""}`).join(" · ")}</div></div>`;
+  }
+  html += `</div>
+    <button class="btn block" id="x-repeat">Repetir este treino com esses pesos</button>
+    <button class="btn block danger" id="x-del">Excluir esta sessão</button>`;
+  openSheet(html);
+  $("#x-close").addEventListener("click", hideOverlay);
+  $("#x-repeat").addEventListener("click", () => {
+    hideOverlay();
+    const tr = getTreino(s.treinoId);
+    if (!tr) return toast("Ficha não existe mais");
+    state.sessao = {
+      data: todayISO(), treinoId: s.treinoId,
+      exercicios: tr.exercicios.map(ex => {
+        const prev = s.exercicios.find(x => x.exercicioId === ex.id);
+        const def = blankSeries(ex.series, ex.tipo);
+        if (prev) prev.series.forEach((v, i) => { if (def[i]) { def[i].peso = v.peso ?? ""; def[i].prev = v.peso; } });
+        return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, series: def, lastData: s.data };
+      }),
+    };
+    state.openEx = {};
+    state.tab = "inicio";
+    saveSessaoRascunho();
+    render();
+  });
+  $("#x-del").addEventListener("click", () => {
+    if (!confirm("Excluir o treino de " + fmtBR(s.data) + "? Não pode ser desfeito.")) return;
+    const i = state.data.sessoes.findIndex(x => x === s);
+    if (i >= 0) state.data.sessoes.splice(i, 1);
+    saveLocal(); scheduleSync(); hideOverlay(); render(); toast("Sessão excluída");
+  });
+}
+
+/* ============================================================
+   Fichas (editar treinos)
+   ============================================================ */
+function renderFichas(v) {
+  if (state.editTreinoId) return renderEditor(v);
+  const acc = el("div", { class: "card" });
+  acc.innerHTML = `<div class="row"><div><div style="font-weight:700; font-size:15px">${state.logged ? "Sincronizado" : "Só neste aparelho"}</div>
+    <div class="tiny">${state.logged ? "Dados salvos no Google Drive" : "Entre para salvar no Drive"}</div></div>
+    <span class="sp"></span><span class="sync" style="padding:6px 10px"><i class="dot ${state.logged ? "ok" : "off"}"></i>${state.logged ? "Drive" : "local"}</span></div>`;
+  v.appendChild(acc);
+
+  for (const t of state.data.treinos) {
+    const c = el("div", { class: "card" });
+    c.innerHTML = `<div class="row"><span class="letter badge" style="font-size:14px; padding:7px 10px">${esc(t.id)}</span>
+      <div style="flex:1"><div style="font-weight:700">${esc(t.nome)}</div><div class="tiny">${t.exercicios.length} exercícios</div></div>
+      <button class="btn sm" id="ed-${esc(t.id)}">Editar</button></div>`;
+    v.appendChild(c);
+    $(`#ed-${CSS.escape(t.id)}`, c).addEventListener("click", () => { state.editTreinoId = t.id; render(); });
+  }
+
+  const btns = el("div");
+  const bAdd = el("button", { class: "btn block" }, "+ Adicionar ficha");
+  bAdd.addEventListener("click", addTreino);
+  btns.appendChild(bAdd);
+  v.appendChild(btns);
+
+  const acct = el("div", { class: "card", style: "margin-top:16px" });
+  acct.innerHTML = `<h3 style="font-size:15px; margin-bottom:8px">Conta</h3>`;
+  if (state.logged) {
+    const bSync = el("button", { class: "btn block sm", style: "margin-top:0" }, "Sincronizar agora");
+    bSync.addEventListener("click", async () => { if (!fileId) fileId = await findFile().catch(() => null); doSync(); toast("Sincronizando…"); });
+    acct.appendChild(bSync);
+    const bOut = el("button", { class: "btn block sm danger" }, "Sair / trocar conta");
+    bOut.addEventListener("click", signOut);
+    acct.appendChild(bOut);
+  } else {
+    const bIn = el("button", { class: "btn block sm pri", style: "margin-top:0" }, "Entrar com Google");
+    bIn.addEventListener("click", showLoginSheet);
+    acct.appendChild(bIn);
+  }
+  const bExp = el("button", { class: "btn block sm" }, "Exportar backup (JSON)");
+  bExp.addEventListener("click", exportBackup);
+  acct.appendChild(bExp);
+  const bImp = el("button", { class: "btn block sm" }, "Importar backup (JSON)");
+  bImp.addEventListener("click", importBackup);
+  acct.appendChild(bImp);
+  v.appendChild(acct);
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Academia v1.0 · dados no seu Drive"));
+}
+
+function renderEditor(v) {
+  const t = getTreino(state.editTreinoId);
+  if (!t) { state.editTreinoId = null; return renderFichas(v); }
+  const head = el("div", { class: "card", style: "margin-top:14px" });
+  head.innerHTML = `<button class="btn sm" id="back">← Voltar</button>
+    <div class="field"><label>Letra / código</label><input type="text" id="t-id" value="${esc(t.id)}" maxlength="3" style="text-transform:uppercase"></div>
+    <div class="field"><label>Nome da ficha</label><input type="text" id="t-nome" value="${esc(t.nome)}"></div>`;
+  v.appendChild(head);
+  $("#back", head).addEventListener("click", () => { state.editTreinoId = null; render(); });
+  $("#t-nome", head).addEventListener("input", (e) => { t.nome = e.target.value; saveLocal(); scheduleSync(); });
+  $("#t-id", head).addEventListener("input", (e) => { t.id = e.target.value.toUpperCase().slice(0, 3) || t.id; saveLocal(); scheduleSync(); });
+
+  const list = el("div", { class: "card" });
+  list.innerHTML = `<h3 style="font-size:15px">Exercícios</h3>
+    <div class="tiny" style="margin-bottom:4px">Toque no nome para editar. Use ↑ para reordenar.</div>`;
+  t.exercicios.forEach((ex, i) => {
+    const r = el("div", { class: "editrow" });
+    const name = el("input", { type: "text", class: "name", value: ex.nome, "aria-label": "Nome do exercício" });
+    name.addEventListener("input", () => { ex.nome = name.value; saveLocal(); scheduleSync(); });
+    const sets = el("input", { type: "number", min: "1", max: "20", value: ex.series, "aria-label": "Séries" });
+    sets.addEventListener("change", () => { ex.series = Math.max(1, Math.min(20, parseInt(sets.value, 10) || 3)); sets.value = ex.series; saveLocal(); scheduleSync(); });
+    const reps = el("input", { type: "text", style: "width:80px", value: ex.reps, "aria-label": "Repetições" });
+    reps.addEventListener("input", () => { ex.reps = reps.value; saveLocal(); scheduleSync(); });
+    const del = el("button", { class: "iconbtn", "aria-label": "Remover" },
+      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>`);
+    del.addEventListener("click", () => {
+      if (!confirm("Remover “" + ex.nome + "” da ficha?\n(Os registros antigos continuam no histórico.)")) return;
+      t.exercicios.splice(i, 1); saveLocal(); scheduleSync(); render();
+    });
+    // mover
+    const up = el("button", { class: "iconbtn", "aria-label": "Subir" },
+      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b98ab" stroke-width="2.5"><path d="M6 15l6-6 6 6"/></svg>`);
+    up.addEventListener("click", () => { if (i === 0) return; [t.exercicios[i - 1], t.exercicios[i]] = [t.exercicios[i], t.exercicios[i - 1]]; saveLocal(); scheduleSync(); render(); });
+    const wrapSets = el("label");
+    wrapSets.innerHTML = `<span class="fieldhint">Séries</span>`;
+    wrapSets.appendChild(sets);
+    const wrapReps = el("label");
+    wrapReps.innerHTML = `<span class="fieldhint">Reps</span>`;
+    wrapReps.appendChild(reps);
+    const wrapBtns = el("div", { class: "row", style: "gap:6px" });
+    wrapBtns.append(up, del);
+    r.append(name, wrapSets, wrapReps, wrapBtns);
+    list.appendChild(r);
+  });
+  const add = el("button", { class: "btn block", style: "margin-top:12px" }, "+ Adicionar exercício");
+  add.addEventListener("click", () => {
+    const nome = prompt("Nome do exercício:");
+    if (!nome || !nome.trim()) return;
+    t.exercicios.push({ id: uid("x"), nome: nome.trim(), series: 3, reps: "8 a 12", tipo: "reps" });
+    saveLocal(); scheduleSync(); render();
+  });
+  list.appendChild(add);
+  v.appendChild(list);
+
+  if (state.data.treinos.length > 1) {
+    const bd = el("button", { class: "btn block danger" }, "Excluir ficha");
+    bd.addEventListener("click", () => {
+      if (!confirm("Excluir a ficha “" + t.nome + "”?")) return;
+      state.data.treinos = state.data.treinos.filter(x => x !== t);
+      state.editTreinoId = null; saveLocal(); scheduleSync(); render();
+    });
+    v.appendChild(bd);
+  }
+}
+
+function addTreino() {
+  const letra = prompt("Letra/código da nova ficha (ex: E):", String.fromCharCode(65 + state.data.treinos.length));
+  if (!letra) return;
+  const nome = prompt("Nome da ficha:", "Nova ficha");
+  if (!nome) return;
+  if (state.data.treinos.some(t => t.id === letra.toUpperCase())) return toast("Já existe uma ficha com esse código");
+  const t = { id: letra.toUpperCase().slice(0, 3), nome: nome, exercicios: [] };
+  state.data.treinos.push(t);
+  state.editTreinoId = t.id;
+  saveLocal(); scheduleSync(); render();
+}
+
+/* ============================================================
+   Backup
+   ============================================================ */
+function exportBackup() {
+  const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: "application/json" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: "academia-dados.json" });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function importBackup() {
+  const inp = el("input", { type: "file", accept: "application/json,.json", class: "hidden" });
+  document.body.appendChild(inp);
+  inp.addEventListener("change", async () => {
+    const f = inp.files[0]; if (!f) return;
+    try {
+      const d = normalizeData(JSON.parse(await f.text()));
+      if (!confirm(`Importar ${d.sessoes.length} sessão(ões) e ${d.treinos.length} ficha(s)? Os dados atuais serão substituídos.`)) return;
+      state.data = d; saveLocal(); scheduleSync(); render(); toast("Backup importado");
+    } catch (e) { toast("Arquivo inválido"); }
+    inp.remove();
+  });
+  inp.click();
+}
+
+/* ============================================================
+   Navegação
+   ============================================================ */
+document.querySelectorAll("#tabs button").forEach(b => {
+  b.addEventListener("click", () => {
+    if (state.sessao && state.tab === "inicio") { /* mantém sessão mas troca de aba */ }
+    state.tab = b.dataset.tab;
+    state.editTreinoId = null;
+    window.scrollTo({ top: 0 });
+    render();
+  });
+});
+
+window.addEventListener("online", () => {
+  toast("Online — sincronizando");
+  if (state.dirty && hasToken()) scheduleSync(200);
+  else setSync(hasToken() ? "saved" : "local");
+});
+window.addEventListener("offline", () => setSync("offline"));
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.dirty && hasToken() && navigator.onLine) scheduleSync(300);
+});
+
+/* service worker */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("SW:", e)));
+}
+
+/* ============================================================
+   Boot
+   ============================================================ */
+(function boot() {
+  state.data = normalizeData(loadLocal() || defaultData());
+  if (!loadLocal()) saveLocal();
+  let savedMode = false;
+  try { savedMode = localStorage.getItem(LS_MODE) === "1"; } catch (e) {}
+  if (savedMode) state.mode = "app";
+  const tk = loadToken();
+  if (tk) {
+    state.token = tk; state.logged = true;
+    setSync("saved", "salvo");
+    if (state.dirty) scheduleSync(400);
+  } else {
+    state.logged = false;
+    setSync("local", "local");
+  }
+  // sessão em andamento
+  const dr = loadRascunho();
+  if (dr) { state.sessao = dr; }
+  // dados de demonstração só em modo dev (query ?demo=1)
+  if (new URLSearchParams(location.search).has("demo") && !state.data.sessoes.length) {
+    seedDemo();
+  }
+  render();
+  if (state.logged) {
+    // valida token em background
+    findFile().then(id => { fileId = id; }).catch(e => {
+      if (e.message === "AUTH") { clearToken(); setSync("local", "local"); render(); }
+    });
+  }
+})();
+
+/* Dados de exemplo — usados em testes (?demo=1) e no primeiro uso vazio apenas para preview */
+function seedDemo() {
+  const mk = (treinoId, datas) => {
+    const t = getTreino(treinoId);
+    datas.forEach(([data, base]) => {
+      state.data.sessoes.push({
+        data, treinoId,
+        exercicios: t.exercicios.map((ex, k) => ({
+          exercicioId: ex.id, nome: ex.nome,
+          series: Array.from({ length: ex.series }, (_, i) => ({ peso: Math.round((base + k * 2 - i * 1.5) * 2) / 2, reps: 10 })),
+        })),
+      });
+    });
+  };
+  mk("A", [["2026-09-22", 40], ["2026-09-29", 42.5], ["2026-10-06", 45], ["2026-10-15", 47.5]]);
+  mk("B", [["2026-09-24", 25], ["2026-10-01", 27.5], ["2026-10-08", 30]]);
+  mk("C", [["2026-09-26", 30], ["2026-10-03", 32.5], ["2026-10-10", 35]]);
+  mk("D", [["2026-10-02", 35], ["2026-10-09", 37.5], ["2026-10-20", 40]]);
+  state.data.sessoes.sort((a, b) => a.data.localeCompare(b.data));
+  saveLocal();
+}
+</script>
+</body>
+</html>
