@@ -207,6 +207,28 @@
   .load-warn b{color:#fbbf24; font-weight:700}
   .mini-warn{display:inline-block; margin-top:3px; font-size:11px; padding:1px 6px; border-radius:6px;
     background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.3); color:#fde68a; font-weight:650}
+  /* resumo do mês (home) */
+  .mes-card{padding:12px 14px}
+  .mes-head{display:flex; align-items:baseline; gap:8px; min-width:0}
+  .mes-head h3{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .mes-head .cap{font-size:11.5px; color:var(--mut); font-weight:700; white-space:nowrap}
+  .mes-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:9px}
+  .mes-grid > div{background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 4px; text-align:center; min-width:0}
+  .mes-grid b{display:block; font-size:20px; line-height:1.15; font-variant-numeric:tabular-nums; font-weight:800; letter-spacing:-.02em}
+  .mes-grid span{display:block; font-size:10.5px; color:var(--mut); margin-top:1px; white-space:nowrap}
+  .mes-var{display:block; font-size:10.5px; font-weight:700; margin-top:2px; line-height:1.25; white-space:normal; word-break:break-word}
+  .up{color:var(--acc)} .down{color:var(--err)} .flat{color:var(--mut)}
+  .mes-empty{font-size:12px; color:var(--mut); margin-top:8px}
+  /* evolução: quebra por ficha */
+  .fichas-mes .fh{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--line)}
+  .fichas-mes .fh:last-child{border-bottom:0}
+  .fichas-mes .lt{width:28px; height:28px; flex:none; border-radius:9px; background:var(--bg3); border:1px solid var(--line);
+    display:grid; place-items:center; font-weight:800; font-size:13px}
+  .fichas-mes .fx{flex:1; min-width:0}
+  .fichas-mes .fn{font-size:14px; font-weight:650; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .fichas-mes .fd{font-size:12px; color:var(--mut); margin-top:2px}
+  .fichas-mes .fd b{color:var(--txt); font-weight:700; font-variant-numeric:tabular-nums}
+  .fichas-mes .fd .var{font-weight:800; white-space:nowrap}
 </style>
 </head>
 <body>
@@ -294,6 +316,60 @@ function stampWeek(iso) {
   const day = (d.getDay() + 6) % 7;
   d.setDate(d.getDate() - day);
   return d.toISOString().slice(0, 10);
+}
+
+/* ---------- resumo mensal ---------- */
+const MESES_PT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+/** {ano, mes} do mês real do aparelho (fuso local) */
+function mesAtual() { const d = new Date(); return { ano: d.getFullYear(), mes: d.getMonth() }; }
+/** desloca um {ano,mes} em n meses (n pode ser negativo) */
+function somaMes(m, n) {
+  const total = m.ano * 12 + m.mes + n;
+  return { ano: Math.floor(total / 12), mes: ((total % 12) + 12) % 12 };
+}
+/** comparação por string "YYYY-MM" — nunca converte para UTC */
+const mesKey = (m) => `${m.ano}-${pad2(m.mes + 1)}`;
+const nomeMes = (m) => MESES_PT[m.mes];
+/** métricas de um mês: treinos, exercícios concluídos, minutos, por ficha */
+function resumoMes(m) {
+  const k = mesKey(m);
+  const out = { key: k, nome: nomeMes(m), treinos: 0, exConcluidos: 0, minutos: 0, porFicha: {} };
+  const arr = Array.isArray(state.data && state.data.sessoes) ? state.data.sessoes : [];
+  for (const s of arr) {
+    if (!s || !s.data) continue;
+    if (String(s.data).slice(0, 7) !== k) continue;
+    out.treinos++;
+    const fid = String(s.treinoId || "").trim().toUpperCase();
+    if (fid) out.porFicha[fid] = (out.porFicha[fid] || 0) + 1;
+    const exs = Array.isArray(s.exercicios) ? s.exercicios : [];
+    out.exConcluidos += exs.filter(x => x && x.concluido === true).length;
+    const d = num(s.duracaoMin);
+    if (d != null && isFinite(d)) out.minutos += d;
+  }
+  out.minutos = Math.round(out.minutos);
+  return out;
+}
+/** texto da variação: "↑2 vs setembro" | "↓1 vs setembro" | "= igual a setembro" | "sem dados de setembro" */
+function varMes(atual, anterior) {
+  // sem treino no mês anterior: nada de divisão por zero nem "↑9" falso
+  if (!anterior.treinos) {
+    return { txt: `sem dados de ${anterior.nome}`, cls: "flat", delta: null };
+  }
+  const d = atual.treinos - anterior.treinos;
+  if (d > 0) return { txt: `↑${d} vs ${anterior.nome}`, cls: "up", delta: d };
+  if (d < 0) return { txt: `↓${Math.abs(d)} vs ${anterior.nome}`, cls: "down", delta: d };
+  return { txt: `= igual a ${anterior.nome}`, cls: "flat", delta: 0 };
+}
+/** "3× em outubro · 2× em setembro (↑1)" */
+function linhaFichaMes(agora, ant, fid) {
+  const a = agora.porFicha[fid] || 0;
+  const b = ant.porFicha[fid] || 0;
+  let varTxt = "";
+  if (!b) varTxt = `<span class="var flat">sem dados de ${ant.nome}</span>`;
+  else if (a > b) varTxt = `<span class="var up">↑${a - b}</span>`;
+  else if (a < b) varTxt = `<span class="var down">↓${b - a}</span>`;
+  else varTxt = `<span class="var flat">=</span>`;
+  return `<b>${a}×</b> em ${agora.nome} · <b>${b}×</b> em ${ant.nome} (${varTxt})`;
 }
 
 /* ---------- cronômetro / horários ---------- */
@@ -883,6 +959,27 @@ function estadoFichas() {
   return map;
 }
 
+/** Card compacto de resumo do mês (home), com comparativo ao mês anterior */
+function cardMes() {
+  const mA = mesAtual();
+  const agora = resumoMes(mA);   // sempre relido de new Date() a cada render
+  const ant = resumoMes(somaMes(mA, -1));
+  const v = varMes(agora, ant);
+  const c = el("div", { class: "card mes-card", id: "card-mes" });
+  c.dataset.mes = agora.key;
+  const temDados = state.data.sessoes.length > 0;
+  c.innerHTML = `<div class="mes-head"><h3>Resumo do mês</h3><span class="sp"></span><span class="cap" id="mes-nome">${esc(agora.nome)}</span></div>
+    <div class="mes-grid">
+      <div><b id="mes-treinos">${agora.treinos}</b><span>treinos</span><i class="mes-var ${v.cls}" id="mes-var">${v.txt}</i></div>
+      <div><b id="mes-ex">${agora.exConcluidos}</b><span>exercícios</span></div>
+      <div><b id="mes-min">${agora.minutos}</b><span>minutos</span></div>
+    </div>`;
+  if (!temDados) {
+    c.insertAdjacentHTML("beforeend", `<div class="mes-empty" id="mes-vazio">Comece seu primeiro treino</div>`);
+  }
+  return c;
+}
+
 function renderInicio(v) {
   if (state.sessao) return renderSessao(v);
   const h = el("div", { class: "card" });
@@ -904,6 +1001,8 @@ function renderInicio(v) {
     b.addEventListener("click", () => startSession(t.id));
     v.appendChild(b);
   }
+
+  v.appendChild(cardMes());
 
   if (state.data.sessoes.length) {
     const box = el("div", { class: "card" });
@@ -1354,6 +1453,32 @@ function renderGraficos(v) {
   const withData = exs.filter(ex => seriesForChart(ex.id).length);
   const selId = state.chartEx.sel || (withData[0] || exs[0]).id;
   const sel = exs.find(e => e.id === selId) || exs[0];
+
+  // resumo do mês por ficha (atual vs anterior)
+  const mA = mesAtual();
+  const agora = resumoMes(mA);
+  const ant = resumoMes(somaMes(mA, -1));
+  const fichas = (state.data.treinos || []).filter(t => (agora.porFicha[String(t.id).trim().toUpperCase()] || 0) > 0
+    || (ant.porFicha[String(t.id).trim().toUpperCase()] || 0) > 0);
+  const mes = el("div", { class: "card fichas-mes", id: "ev-mes", style: "margin-top:14px" });
+  mes.innerHTML = `<div class="row"><h3 style="font-size:16px">Por ficha</h3><span class="sp"></span>
+    <span class="tiny" id="ev-mes-cap" style="text-align:right; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(agora.nome)} vs ${esc(ant.nome)}</span></div>`;
+  if (!fichas.length) {
+    mes.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:8px 0 0">${state.data.sessoes.length
+      ? `Nenhum treino em ${esc(agora.nome)} nem em ${esc(ant.nome)}.`
+      : "Comece seu primeiro treino"}</p>`);
+  } else {
+    for (const t of fichas) {
+      const fid = String(t.id).trim().toUpperCase();
+      const r = el("div", { class: "fh" });
+      r.dataset.ficha = fid;
+      r.innerHTML = `<div class="lt">${esc(t.id)}</div><div class="fx">
+        <div class="fn">${esc(t.nome)}</div>
+        <div class="fd">${linhaFichaMes(agora, ant, fid)}</div></div>`;
+      mes.appendChild(r);
+    }
+  }
+  v.appendChild(mes);
 
   const cust = el("div", { class: "card", style: "margin-top:14px" });
   cust.innerHTML = `<label class="tiny" style="font-weight:600">Exercício</label>`;

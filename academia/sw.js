@@ -1,5 +1,5 @@
 /* Gusto PWA — service worker */
-const CACHE = "academia-v10";
+const CACHE = "academia-v11";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
