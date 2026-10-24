@@ -1,10 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#22c55e"/><stop offset="1" stop-color="#15803d"/></linearGradient></defs>
-  <rect width="512" height="512" rx="96" fill="url(#g)"/>
-  <g fill="none" stroke="#06140b" stroke-width="26" stroke-linecap="round">
-    <path d="M160 160v192M352 160v192"/>
-    <path d="M96 208v96M416 208v96"/>
-    <path d="M160 256h192"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Gusto">
+  <!-- Gusto — G-Pulse: squircle grafite + G laranja (arco que lembra anilha/haltere) -->
+  <rect width="512" height="512" rx="116" ry="116" fill="#121214"/>
+  <g fill="none" stroke="#FF5500" stroke-linecap="round" stroke-linejoin="round">
+    <!-- corpo do G: arco aberto no eixo da barra -->
+    <path d="M338 186 A104 104 0 1 0 360 292" stroke-width="54"/>
+    <!-- barra do G: haste horizontal terminando em anilha -->
+    <path d="M264 292 H384" stroke-width="54"/>
   </g>
+  <!-- anilha de haltere na ponta da barra -->
+  <path d="M352 258 H396 A34 34 0 0 1 396 326 H352 Z" fill="#FF5500"/>
+  <!-- furo central da anilha -->
+  <circle cx="378" cy="292" r="11" fill="#121214"/>
 </svg>

@@ -1,13 +1,13 @@
 {
-  "name": "Academia — Treinos",
-  "short_name": "Academia",
-  "description": "Registro de pesos e evolução dos treinos de academia.",
+  "name": "Gusto",
+  "short_name": "Gusto",
+  "description": "Seu diário e controle de treinos.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0f1115",
-  "theme_color": "#0f1115",
+  "background_color": "#121214",
+  "theme_color": "#121214",
   "lang": "pt-BR",
   "icons": [
     {

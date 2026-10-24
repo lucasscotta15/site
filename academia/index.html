@@ -3,18 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f1115">
-<meta name="description" content="Acompanhamento de treino de academia — pesos, séries e evolução.">
-<title>Academia — Treinos</title>
+<meta name="theme-color" content="#121214">
+<meta name="description" content="Gusto — seu diário e controle de treinos. Sinta o gosto da evolução.">
+<title>Gusto</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
-    --bg:#0f1115; --bg2:#161a21; --bg3:#1e242e; --line:#2a3240;
-    --txt:#e9edf4; --mut:#8b98ab; --acc:#4ade80; --acc2:#22c55e;
+    --bg:#121214; --bg2:#27272A; --bg3:#333338; --line:#3F3F46;
+    --txt:#FFFFFF; --mut:#A1A1AA; --acc:#22C55E; --acc2:#22C55E;
+    --brand:#FF5500; --brand-dim:rgba(255,85,0,.14); --brand-ink:#121214;
     --warn:#fbbf24; --err:#f87171; --blue:#60a5fa;
-    --aman:#fbbf24; --aman2:#f5b301;
+    --aman:#FF5500; --aman2:#e64d00;
     --r:14px; --safe-b: env(safe-area-inset-bottom, 0px);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
@@ -32,11 +33,15 @@
   /* header */
   header{
     position:sticky; top:0; z-index:20;
-    background:rgba(15,17,21,.92); backdrop-filter:blur(10px);
+    background:rgba(18,18,20,.92); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--line);
   }
   .hd{display:flex; align-items:center; gap:10px; height:58px}
   .hd h1{font-size:18px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .brandname{display:flex; flex-direction:column; justify-content:center; min-width:0; flex:1; line-height:1.05}
+  .brandname .nm{font-size:20px; font-weight:800; letter-spacing:-.02em; color:var(--txt)}
+  .brandname .tag{font-size:10.5px; font-weight:600; color:var(--mut); letter-spacing:.02em; margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .sync{display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:5px 9px;
     border-radius:999px; border:1px solid var(--line); background:var(--bg2); white-space:nowrap}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}
@@ -56,7 +61,7 @@
     background:var(--bg3); font-weight:600; font-size:16px; transition:transform .08s ease;
   }
   .btn:active{transform:scale(.975)}
-  .btn.pri{background:var(--acc2); border-color:var(--acc2); color:#06140b}
+  .btn.pri{background:var(--brand); border-color:var(--brand); color:#121214}
   .btn.block{width:100%; margin-top:10px}
   .btn.sm{min-height:40px; font-size:14px; padding:0 12px; border-radius:10px}
   .btn.danger{color:var(--err); border-color:#4a2731}
@@ -66,7 +71,7 @@
     min-height:64px; padding:12px 14px; border-radius:14px;
     background:var(--bg3); border:1px solid var(--line)}
   .treino-btn .letter{display:inline-flex; align-items:center; justify-content:center;
-    width:34px;height:34px;border-radius:10px;background:var(--acc2);color:#06140b;
+    width:34px;height:34px;border-radius:10px;background:var(--brand);color:#121214;
     font-weight:800; margin-right:10px; vertical-align:middle}
   .treino-btn .n{font-weight:650}
   .treino-btn .sub{font-size:13px; color:var(--mut); margin-left:44px; margin-top:-4px}
@@ -75,16 +80,16 @@
   .treino-btn .letterwrap .letter{margin-right:0}
   .tag-prox{display:inline-flex; align-items:center; font-size:11px; font-weight:800; letter-spacing:.01em;
     padding:3px 8px; border-radius:999px; white-space:nowrap;
-    color:#1a1204; background:var(--aman); border:1px solid var(--aman)}
+    color:#121214; background:var(--brand); border:1px solid var(--brand); font-weight:900}
   .treino-btn.st-ult{background:rgba(34,197,94,.07)}
-  .treino-btn.st-ult .letter{background:var(--acc2); color:#06140b}
-  .treino-btn.st-prox{border:1.5px solid var(--aman); background:rgba(251,191,36,.08)}
-  .treino-btn.st-prox .letter{background:var(--aman); color:#1a1204}
-  .treino-btn.st-prox .sub{color:#e8c877}
+  .treino-btn.st-ult .letter{background:var(--acc); color:#121214}
+  .treino-btn.st-prox{border:1.5px solid var(--brand); background:rgba(255,85,0,.10)}
+  .treino-btn.st-prox .letter{background:var(--brand); color:#121214}
+  .treino-btn.st-prox .sub{color:#FFB38A}
   /* tabs / nav */
   nav.tabs{
     position:fixed; left:0; right:0; bottom:0; z-index:30;
-    display:flex; background:rgba(22,26,33,.98); backdrop-filter:blur(10px);
+    display:flex; background:rgba(39,39,42,.98); backdrop-filter:blur(10px);
     border-top:1px solid var(--line); padding-bottom:var(--safe-b);
   }
   nav.tabs button{
@@ -113,7 +118,7 @@
     -moz-appearance:textfield;
   }
   input[type=number]{text-align:center}
-  input:focus,select:focus{outline:2px solid rgba(74,222,128,.5); outline-offset:0; border-color:var(--acc2)}
+  input:focus,select:focus{outline:2px solid rgba(255,85,0,.55); outline-offset:0; border-color:var(--brand)}
   .last{font-size:12px; color:var(--mut); margin-top:2px}
   .last b{color:var(--acc); white-space:nowrap}
   .last{line-height:1.5}
@@ -124,7 +129,7 @@
   .seg::-webkit-scrollbar{display:none}
   .seg button{flex:none; min-height:38px; padding:0 12px; border-radius:20px; border:1px solid var(--line);
     background:var(--bg2); font-size:13px; font-weight:600; color:var(--mut)}
-  .seg button.on{background:var(--acc); color:#06140b; border-color:var(--acc)}
+  .seg button.on{background:var(--brand); color:#121214; border-color:var(--brand)}
   /* history */
   .hist{display:flex; align-items:center; gap:12px; width:100%; background:var(--bg2); border:1px solid var(--line);
     border-radius:var(--r); padding:13px 14px; margin:9px 0; text-align:left}
@@ -156,10 +161,10 @@
   .banner b{white-space:normal}
   .banner.info{background:rgba(96,165,250,.1); border-color:rgba(96,165,250,.3); color:#bfdbfe}
   .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(88px + var(--safe-b));
-    background:#0b0e13; border:1px solid var(--line); color:var(--txt); padding:10px 16px; border-radius:12px;
+    background:#1A1A1D; border:1px solid var(--line); color:var(--txt); padding:10px 16px; border-radius:12px;
     font-size:14px; z-index:60; box-shadow:0 8px 30px rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:opacity .2s}
   .toast.show{opacity:1}
-  .logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#22c55e,#15803d);display:grid;place-items:center;margin:0 auto 12px}
+  .logo{width:64px;height:64px;border-radius:18px;background:var(--bg);display:grid;place-items:center;margin:0 auto 12px;box-shadow:0 0 0 1px var(--line)}
   .gbtn{display:flex; justify-content:center; min-height:48px; margin:14px 0 4px}
   .tiny{font-size:12px; color:var(--mut)}
   /* cronômetro / timer do treino */
@@ -171,12 +176,12 @@
   /* checkbox de exercício concluído */
   .ex-head .chk{width:34px; height:34px; flex:none; border-radius:10px; border:1.5px solid var(--line);
     background:var(--bg); display:grid; place-items:center; color:transparent; font-size:18px; font-weight:800}
-  .ex-head .chk.on{background:var(--acc2); border-color:var(--acc2); color:#06140b}
+  .ex-head .chk.on{background:var(--acc); border-color:var(--acc); color:#121214}
   .ex-card.feito{opacity:.62}
   .ex-card.feito .ex-head .name{text-decoration:line-through; text-decoration-thickness:2px}
   .ex-card.feito{background:rgba(34,197,94,.06)}
   .prog{height:8px; border-radius:99px; background:var(--bg); border:1px solid var(--line); overflow:hidden; margin-top:8px}
-  .prog > i{display:block; height:100%; background:var(--acc2); width:0; transition:width .25s}
+  .prog > i{display:block; height:100%; background:var(--brand); width:0; transition:width .25s}
   .metarow{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:12.5px; color:var(--mut)}
   .metarow b{color:var(--txt)}
   .chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; padding:3px 8px; border-radius:999px;
@@ -187,8 +192,8 @@
   .obs-wrap textarea{width:100%; min-height:54px; resize:vertical; background:var(--bg); border:1px solid var(--line);
     border-radius:10px; padding:9px 11px; font-size:15px; font-weight:500; line-height:1.4; color:var(--txt);
     font-family:inherit; -webkit-appearance:none}
-  .obs-wrap textarea:focus{outline:2px solid rgba(74,222,128,.5); border-color:var(--acc2)}
-  .obs-line{font-size:12.5px; color:#cbd5e1; margin-top:4px; padding-left:9px; border-left:2px solid rgba(96,165,250,.45); white-space:pre-wrap; word-break:break-word}
+  .obs-wrap textarea:focus{outline:2px solid rgba(255,85,0,.55); border-color:var(--brand)}
+  .obs-line{font-size:12.5px; color:#D4D4D8; margin-top:4px; padding-left:9px; border-left:2px solid rgba(96,165,250,.45); white-space:pre-wrap; word-break:break-word}
   .obs-hist{margin-top:10px}
   .obs-hist .oh{display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; align-items:flex-start}
   .obs-hist .oh:last-child{border-bottom:0}
@@ -206,7 +211,10 @@
 
 <header id="topbar" class="hidden">
   <div class="wrap hd">
-    <h1 id="hdTitle">Academia</h1>
+    <div class="brandname">
+      <h1 id="hdTitle" class="nm">Gusto</h1>
+      <span class="tag" id="hdTag">Sinta o gosto da evolução.</span>
+    </div>
     <span class="sync" id="syncPill" title="Estado da sincronização"><i class="dot off" id="syncDot"></i><span id="syncTxt">local</span></span>
     <img class="avatar hidden" id="avatar" alt="">
   </div>
@@ -614,7 +622,7 @@ async function onSignedIn() {
 function showLoginSheet() {
   openSheet(`
     <div class="center">
-      <div class="logo"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#06140b" stroke-width="2.2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg></div>
+      <div class="logo"><img src="icon.svg" alt="" width="64" height="64" style="display:block;border-radius:18px"></div>
       <h2 style="font-size:20px">Entrar com Google</h2>
       <p class="tiny" style="margin:6px 0 0">Seus treinos são salvos no Drive como<br><b>academia-dados.json</b><br>Acesso apenas a este arquivo criado pelo app.</p>
     </div>
@@ -637,7 +645,7 @@ function showLoginSheet() {
       });
       const btn = el("button", { class: "btn pri block", style: "min-height:50px" });
       btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:8px; flex:none"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-2.8-.4-4H24v7.3h12.1c-.2 2-1.6 5-4.5 7l-.1.4 6.5 5 .5.1c4.1-3.8 6.6-9.4 6.6-15.8"/><path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7-5.4c-1.9 1.3-4.4 2.2-7.6 2.2-5.8 0-10.7-3.8-12.5-9.1l-.4.1-6.8 5.2-.2.4C7.8 41 15.3 46 24 46"/><path fill="#FBBC05" d="M11.5 28.3c-.5-1.4-.8-2.8-.8-4.3s.3-3 .8-4.3v-.5L4.6 14l-.3.3A22 22 0 0 0 2 24c0 3.5.9 6.8 2.3 9.7z"/><path fill="#EA4335" d="M24 9.6c4.1 0 6.9 1.8 8.5 3.3l6.2-6C34.9 3.5 30 2 24 2 15.3 2 7.8 7 4.3 14.3l7.3 5.6c1.8-5.3 6.7-9.1 12.4-9.1"/></svg>Entrar com Google`;
-  btn.style.color = "#e9edf4";
+  btn.style.color = "#FFFFFF";
   btn.style.background = "#1e242e";
   btn.style.borderColor = "#3a4453";
       btn.addEventListener("click", async () => {
@@ -782,8 +790,8 @@ function render() {
   }
   top.classList.remove("hidden"); tabs.classList.remove("hidden");
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === state.tab));
-  const titles = { inicio: "Academia", graficos: "Evolução", historico: "Histórico", treinos: "Minhas fichas" };
-  $("#hdTitle").textContent = titles[state.tab] || "Academia";
+  const titles = { inicio: "Gusto", graficos: "Evolução", historico: "Histórico", treinos: "Minhas fichas" };
+  $("#hdTitle").textContent = titles[state.tab] || "Gusto";
   const v = $("#view");
   v.innerHTML = "";
   if (state.tab === "inicio") renderInicio(v);
@@ -798,8 +806,9 @@ function renderWelcome() {
   v.innerHTML = "";
   const c = el("div", { class: "card center", style: "margin-top:40px; padding:24px 16px" });
   c.innerHTML = `
-    <div class="logo"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#06140b" stroke-width="2.2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg></div>
-    <h2 style="font-size:22px">Treino pronto</h2>
+    <div class="logo"><img src="icon.svg" alt="" width="64" height="64" style="display:block;border-radius:18px"></div>
+    <h2 style="font-size:24px; letter-spacing:-.02em">Gusto</h2>
+    <p style="font-size:14px; margin:6px 0 0; color:var(--brand); font-weight:700">Sinta o gosto da evolução.</p>
     <p class="muted" style="font-size:14px; margin:8px 0 0">Registre o peso de cada série e acompanhe sua evolução.</p>`;
   v.appendChild(c);
   const b1 = el("button", { class: "btn pri block" }, "Entrar com Google");
@@ -1305,12 +1314,12 @@ function svgChart(points, { w = 420, h = 220, metric = "max" } = {}) {
   // área + linha
   if (points.length > 1) {
     const d = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[metric]).toFixed(1)}`).join(" ");
-    mk("path", { d: `${d} L${x(points.length - 1)},${padT + ih} L${x(0)},${padT + ih} Z`, fill: "rgba(74,222,128,.12)" });
+    mk("path", { d: `${d} L${x(points.length - 1)},${padT + ih} L${x(0)},${padT + ih} Z`, fill: "rgba(255,85,0,.13)" });
     mk("path", { d, fill: "none", stroke: "#4ade80", "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" });
   }
   // pontos
   points.forEach((p, i) => {
-    mk("circle", { cx: x(i), cy: y(p[metric]), r: 4.5, fill: "#0f1115", stroke: "#4ade80", "stroke-width": 2.5 });
+    mk("circle", { cx: x(i), cy: y(p[metric]), r: 4.5, fill: "#121214", stroke: "#FF5500", "stroke-width": 2.5 });
     mk("title", {}, `${fmtBR(p.data)}: ${p.max} kg (média ${p.avg.toFixed(1)})`);
   });
   // rótulos eixo x (máx ~5)
@@ -1572,7 +1581,7 @@ function renderFichas(v) {
   bImp.addEventListener("click", importBackup);
   acct.appendChild(bImp);
   v.appendChild(acct);
-  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Academia v1.0 · dados no seu Drive"));
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.0 · dados no seu Drive"));
 }
 
 function renderEditor(v) {
