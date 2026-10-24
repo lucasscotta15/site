@@ -229,6 +229,40 @@
   .fichas-mes .fd{font-size:12px; color:var(--mut); margin-top:2px}
   .fichas-mes .fd b{color:var(--txt); font-weight:700; font-variant-numeric:tabular-nums}
   .fichas-mes .fd .var{font-weight:800; white-space:nowrap}
+  /* exercício de cardio (esteira / bicicleta) */
+  .badge.cardio{background:rgba(96,165,250,.16); color:#93c5fd}
+  .cblock{display:grid; grid-template-columns:26px minmax(0,1fr); gap:8px; align-items:start; margin-top:10px;
+    padding-top:10px; border-top:1px solid rgba(42,50,64,.7)}
+  .cblock:first-of-type{border-top:0}
+  .cblock .cidx{font-size:13px; color:var(--mut); text-align:center; font-weight:800; padding-top:26px}
+  .cgrid2{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px 8px; min-width:0}
+  .ccell{min-width:0}
+  .ccell .lb{display:block; font-size:10px; color:var(--mut); text-transform:uppercase; letter-spacing:.05em;
+    font-weight:700; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ccell .lb i{font-style:normal; text-transform:none; letter-spacing:0; font-weight:600; opacity:.65; font-size:9.5px}
+  .ccell input{min-height:46px !important; font-size:16px !important; padding:0 8px !important; border-radius:9px}
+  .reqdot{color:var(--acc); font-weight:900}
+  input.req-empty{border-color:rgba(251,191,36,.6) !important; background:rgba(251,191,36,.05)}
+  .csec{display:flex; align-items:center; gap:6px; margin:10px 0 0; font-size:10.5px; color:var(--mut);
+    text-transform:uppercase; letter-spacing:.06em; font-weight:700}
+  .csec b{color:var(--acc); font-weight:900}
+  .ckpi{display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:10px}
+  .ckpi > div{background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:7px 4px; text-align:center; min-width:0}
+  .ckpi b{display:block; font-size:15px; font-variant-numeric:tabular-nums; font-weight:800; white-space:nowrap}
+  .ckpi span{display:block; font-size:9.5px; color:var(--mut); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .cseg{display:inline-flex; padding:3px; border-radius:10px; background:var(--bg); border:1px solid var(--line); gap:3px}
+  .cseg button{min-height:32px; padding:0 9px; border-radius:8px; border:1px solid transparent; background:none;
+    color:var(--mut); font-size:12px; font-weight:700}
+  .cseg button.on{background:var(--brand); color:#121214; border-color:var(--brand)}
+  .chart-wrap{position:relative}
+  .chart-legend{display:flex; gap:14px; font-size:11.5px; color:var(--mut); margin-top:2px; flex-wrap:wrap}
+  .chart-legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px}
+  /* seletor de tipo no editor de ficha */
+  .tipo-seg{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:3px}
+  .tipo-seg button{min-height:42px; border-radius:10px; border:1px solid var(--line); background:var(--bg);
+    color:var(--mut); font-size:12.5px; font-weight:700; padding:0 4px; display:flex; align-items:center; justify-content:center; gap:4px}
+  .tipo-seg button.on{background:rgba(74,222,128,.16); border-color:var(--acc); color:var(--acc)}
+  .tipo-seg button.blue.on{background:rgba(96,165,250,.16); border-color:#60a5fa; color:#93c5fd}
 </style>
 </head>
 <body>
@@ -298,7 +332,11 @@ const el = (tag, attrs = {}, html) => {
     else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
     else n.setAttribute(k, v);
   }
-  if (html !== undefined) n.innerHTML = html;
+  if (html !== undefined) {
+    // nunca stringificar um nó: isso removeria o elemento do DOM (bug de re-render)
+    if (html instanceof Node) n.appendChild(html);
+    else n.innerHTML = html;
+  }
   return n;
 };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -349,6 +387,25 @@ function resumoMes(m) {
   out.minutos = Math.round(out.minutos);
   return out;
 }
+/** minutos e km de cardio feitos no mês (só exercícios do tipo cardio) */
+function resumoCardioMes(m) {
+  const k = mesKey(m);
+  const out = { key: k, minutos: 0, km: 0, sessoes: 0 };
+  const arr = Array.isArray(state.data && state.data.sessoes) ? state.data.sessoes : [];
+  for (const s of arr) {
+    if (!s || !s.data || String(s.data).slice(0, 7) !== k) continue;
+    const cex = (Array.isArray(s.exercicios) ? s.exercicios : []).filter(x => x && x.tipo === "cardio");
+    if (!cex.length) continue;
+    out.sessoes++;
+    for (const e of cex) {
+      const st = cardioStats(e.series);
+      out.minutos += st.tempoTotal || 0;
+      out.km += st.distTotal || 0;
+    }
+  }
+  return out;
+}
+
 /** texto da variação: "↑2 vs setembro" | "↓1 vs setembro" | "= igual a setembro" | "sem dados de setembro" */
 function varMes(atual, anterior) {
   // sem treino no mês anterior: nada de divisão por zero nem "↑9" falso
@@ -388,6 +445,93 @@ function fmtDuracao(seg) {
   if (m < 60) return m + " min";
   return Math.floor(m / 60) + "h" + pad2(m % 60);
 }
+/* ---------- cardio: tempo / velocidade / distância / inclinação ---------- */
+/** minutos (aceita "24", "24,5", "24:30" ou "1:05:00") -> minutos decimais | null */
+function parseTempoMin(v) {
+  if (v === "" || v === null || v === undefined) return null;
+  const t = String(v).trim().replace(",", ".");
+  if (!t) return null;
+  const hm = t.match(/^(\d{1,3}):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (hm) {
+    const a = +hm[1], b = +hm[2], c = hm[3] != null ? +hm[3] : null;
+    return c == null ? a + b / 60 : a + b / 60 + c / 3600;
+  }
+  const n = num(t);
+  return n != null && isFinite(n) && n >= 0 ? n : null;
+}
+/** minutos decimais -> "24:30" (mm:ss) */
+function fmtTempoMin(min) {
+  if (min == null || !isFinite(min)) return "–";
+  const total = Math.round(min * 60);
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sg = total % 60;
+  return h ? `${h}:${pad2(m)}:${pad2(sg)}` : `${pad2(m)}:${pad2(sg)}`;
+}
+/** km/h com 1 casa decimal, vírgula decimal */
+const fmtVel = (v) => (v == null || !isFinite(v)) ? "–" : (Math.round(v * 10) / 10).toFixed(1).replace(".", ",");
+/** km com 2 casas (mín. 1); sem valor -> null (não imprime "0,00") */
+function fmtKm(v) {
+  if (v == null || !isFinite(v)) return null;
+  const r = Math.round(v * 100) / 100;
+  return (Number.isInteger(r * 10) ? r.toFixed(1) : r.toFixed(2)).replace(".", ",");
+}
+/** "12,5 km/h · 24:30" a partir de uma série de cardio */
+function fmtCardioSerie(se) {
+  const parts = [];
+  if (se && se.velocidade != null) parts.push(fmtVel(se.velocidade) + " km/h");
+  if (se && se.tempo != null) parts.push(fmtTempoMin(se.tempo));
+  if (se && se.distancia != null) parts.push(fmtKm(se.distancia) + " km");
+  return parts.join(" · ");
+}
+/** série em branco de cardio, já com o último registro como placeholder */
+function blankCardioSeries(n, last) {
+  return Array.from({ length: n }, (_, i) => {
+    const prev = last && last.series && last.series[i] ? last.series[i] : null;
+    return {
+      tempo: "", velocidade: "",
+      distancia: "", inclinacao: "",
+      prevTempo: prev && prev.tempo != null ? prev.tempo : null,
+      prevVel: prev && prev.velocidade != null ? prev.velocidade : null,
+    };
+  });
+}
+/** validação de cardio: tempo e velocidade obrigatórios em TODAS as séries */
+function cardioFaltando(ex) {
+  const falt = [];
+  (ex.series || []).forEach((se, i) => {
+    const falta = [];
+    if (parseTempoMin(se.tempo) == null) falta.push("tempo");
+    if (num(se.velocidade) == null) falta.push("velocidade");
+    if (falta.length) falt.push({ i, falta });
+  });
+  return falt;
+}
+/** agrupa séries de cardio: tempo total, velocidade (média/máx), distância, inclinação */
+function cardioStats(series) {
+  const s = Array.isArray(series) ? series : [];
+  const tempos = s.map(v => v && v.tempo).filter(v => v != null);
+  const vels = s.map(v => v && v.velocidade).filter(v => v != null);
+  const dists = s.map(v => v && v.distancia).filter(v => v != null);
+  const incs = s.map(v => v && v.inclinacao).filter(v => v != null);
+  return {
+    tempoTotal: tempos.length ? tempos.reduce((a, b) => a + b, 0) : null,
+    velAvg: vels.length ? vels.reduce((a, b) => a + b, 0) / vels.length : null,
+    velMax: vels.length ? Math.max(...vels) : null,
+    distTotal: dists.length > 1 ? dists.reduce((a, b) => a + b, 0) : (dists.length ? dists[0] : null),
+    incMax: incs.length ? Math.max(...incs) : null,
+  };
+}
+/** pontos {data, vel, dist} de um exercício de cardio (uma sessão por dia) */
+function cardioForChart(exId) {
+  const porDia = new Map();
+  for (const s of [...(state.data.sessoes || [])].sort((a, b) => a.data.localeCompare(b.data))) {
+    const ex = (s.exercicios || []).find(x => x && x.exercicioId === exId);
+    if (!ex || !Array.isArray(ex.series) || !ex.series.length) continue;
+    const st = cardioStats(ex.series);
+    if (st.velAvg == null && st.distTotal == null) continue;
+    porDia.set(s.data, { data: s.data, vel: st.velAvg, velMax: st.velMax, dist: st.distTotal, tempo: st.tempoTotal, inc: st.incMax });
+  }
+  return [...porDia.values()].sort((a, b) => a.data.localeCompare(b.data));
+}
 const fmtHora = (iso) => {
   if (!iso) return "–";
   const d = new Date(iso);
@@ -417,6 +561,7 @@ const state = {
   sessao: null,        // sessão em edição {localId,data,treinoId,exercicios}
   openEx: {},          // exercício aberto por id
   chartEx: {},         // exercício selecionado no gráfico por treino
+  chartCardio: null,   // exercício de cardio selecionado no gráfico de evolução
   token: null,
   user: null,
   logged: false,
@@ -464,7 +609,8 @@ function normalizeData(d) {
         nome: String(x.nome),
         series: Math.max(1, Math.min(20, parseInt(x.series, 10) || 3)),
         reps: String(x.reps ?? "8 a 12"),
-        tipo: x.tipo === "tempo" ? "tempo" : "reps",
+        tipo: (x.tipo === "tempo" || x.tipo === "cardio") ? x.tipo : "reps",
+        ...(x.tipo === "cardio" ? { cardio: 1 } : {}),
       })),
     });
   }
@@ -476,15 +622,27 @@ function normalizeData(d) {
     const reg = {
       data: String(s.data).slice(0, 10),
       treinoId: String(s.treinoId || ""),
-      exercicios: (Array.isArray(s.exercicios) ? s.exercicios : []).filter(x => x && x.exercicioId).map(x => ({
-        exercicioId: String(x.exercicioId),
-        nome: String(x.nome || ""),
-        concluido: x.concluido === true,
-        obs: typeof x.obs === "string" ? x.obs : "",   // retrocompatível: sessões antigas não têm
-        series: (Array.isArray(x.series) ? x.series : []).filter(v => v).map(v => ({
-          peso: num(v.peso), reps: v.reps === "" || v.reps === undefined || v.reps === null ? null : (num(v.reps)),
-        })),
-      })),
+      exercicios: (Array.isArray(s.exercicios) ? s.exercicios : []).filter(x => x && x.exercicioId).map(x => {
+        const ex = {
+          exercicioId: String(x.exercicioId),
+          nome: String(x.nome || ""),
+          concluido: x.concluido === true,
+          obs: typeof x.obs === "string" ? x.obs : "",   // retrocompatível: sessões antigas não têm
+          series: (Array.isArray(x.series) ? x.series : []).filter(v => v).map(v => {
+            // retrocompatível: séries antigas só têm {peso, reps}; cardio tem {tempo, velocidade, ...}
+            const se = {
+              peso: num(v.peso), reps: v.reps === "" || v.reps === undefined || v.reps === null ? null : (num(v.reps)),
+            };
+            if (v.tempo !== undefined) se.tempo = parseTempoMin(v.tempo);
+            if (v.velocidade !== undefined) se.velocidade = num(v.velocidade);
+            if (v.distancia !== undefined) se.distancia = num(v.distancia);
+            if (v.inclinacao !== undefined) se.inclinacao = num(v.inclinacao);
+            return se;
+          }),
+        };
+        if (x.tipo === "cardio") ex.tipo = "cardio";
+        return ex;
+      }),
     };
     // horários e duração (retrocompatível: sessões antigas não têm)
     const hi = s.horaInicio ? new Date(s.horaInicio) : null;
@@ -974,6 +1132,11 @@ function cardMes() {
       <div><b id="mes-ex">${agora.exConcluidos}</b><span>exercícios</span></div>
       <div><b id="mes-min">${agora.minutos}</b><span>minutos</span></div>
     </div>`;
+  const cd = resumoCardioMes(mA);
+  if (cd.sessoes) {
+    c.insertAdjacentHTML("beforeend", `<div class="tiny" id="mes-cardio" style="margin-top:9px">
+      🏃 Cardio em ${esc(agora.nome)}: <b style="color:#93c5fd">${fmtTempoMin(cd.minutos)}</b>${cd.km ? ` · <b style="color:#93c5fd">${fmtKm(cd.km)} km</b>` : ""} (${cd.sessoes} sessão(ões))</div>`);
+  }
   if (!temDados) {
     c.insertAdjacentHTML("beforeend", `<div class="mes-empty" id="mes-vazio">Comece seu primeiro treino</div>`);
   }
@@ -1043,6 +1206,10 @@ function startSession(treinoId) {
     duracaoMin: null,
     exercicios: t.exercicios.map(ex => {
       const last = lastSeriesFor(ex.id);
+      if (ex.tipo === "cardio") {
+        return { exercicioId: ex.id, nome: ex.nome, tipo: "cardio", repsAlvo: ex.reps, concluido: false, obs: "",
+          series: blankCardioSeries(ex.series, last), lastData: last ? last.data : null };
+      }
       const series = [];
       for (let i = 0; i < ex.series; i++) {
         const prev = last && last.series[i];
@@ -1058,6 +1225,7 @@ function startSession(treinoId) {
 }
 
 function blankSeries(n, tipo) {
+  if (tipo === "cardio") return blankCardioSeries(n, null);
   return Array.from({ length: n }, () => ({ peso: "", reps: tipo === "reps" ? "" : "", prev: null }));
 }
 
@@ -1181,9 +1349,10 @@ function exCard(ex) {
   const open = !!state.openEx[ex.exercicioId];
   const feito = !!ex.concluido;
   const c = el("div", { class: "ex-card" + (open ? " open" : "") + (feito ? " feito" : "") });
+  const isCardio = ex.tipo === "cardio";
   const last = lastSeriesFor(ex.exercicioId);
-  const best = bestWeight(ex.exercicioId);
-  const stag = loadStagnation(ex.exercicioId, state.sessao ? state.sessao.data : todayISO());
+  const best = isCardio ? null : bestWeight(ex.exercicioId);
+  const stag = isCardio ? null : loadStagnation(ex.exercicioId, state.sessao ? state.sessao.data : todayISO());
   const obsPrev = obsHistoryFor(ex.exercicioId);
   const head = el("div", { class: "ex-head", style: "display:flex; align-items:center; gap:10px" });
   const chk = el("button", {
@@ -1198,8 +1367,10 @@ function exCard(ex) {
 
   const h = el("button", { class: "ex-head", style: "padding:0; flex:1; min-width:0; background:none; border:0; text-align:left" });
   h.innerHTML = `<div style="flex:1">
-      <div class="name">${esc(ex.nome)} ${ex.tipo === "tempo" ? '<span class="badge tempo">tempo</span>' : ""}</div>
-      <div class="meta">${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}</div>
+      <div class="name">${esc(ex.nome)} ${ex.tipo === "tempo" ? '<span class="badge tempo">tempo</span>' : ""}${isCardio ? '<span class="badge cardio">cardio</span>' : ""}</div>
+      <div class="meta">${isCardio
+        ? `${ex.series.length} série(s) · tempo + velocidade${last && last.series.some(v => v.velocidade != null) ? ` · último: <b style="color:var(--acc)">${fmtVel(cardioStats(last.series).velAvg)} km/h</b>` : ""}`
+        : `${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}`}</div>
       ${stag ? `<span class="mini-warn" title="Mesmo peso desde ${fmtBR(stag.desde)}">⚠ Considere aumentar a carga</span>` : ""}
     </div>
     <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
@@ -1208,6 +1379,11 @@ function exCard(ex) {
   c.appendChild(head);
 
   const body = el("div", { class: "ex-body" });
+  if (isCardio) {
+    renderCardioBody(body, ex, last);
+    c.appendChild(body);
+    return c;
+  }
   if (last) {
     const l = el("div", { class: "last" });
     l.innerHTML = `Última vez (${fmtBR(last.data)}): <b>${last.series.map(v => (v.peso ?? "–") + (v.reps ? "×" + v.reps : "")).join(" · ")}</b>
@@ -1289,6 +1465,106 @@ function exCard(ex) {
   return c;
 }
 
+/* corpo do card de um exercício de cardio: tempo + velocidade (obrigatórios), distância + inclinação (opcionais) */
+function renderCardioBody(body, ex, last) {
+  if (!Array.isArray(ex.series) || !ex.series.length) ex.series = blankCardioSeries(1, last);
+  // normaliza séries antigas/de rascunho que não têm os campos de cardio
+  ex.series.forEach(se => {
+    if (se.tempo === undefined) se.tempo = "";
+    if (se.velocidade === undefined) se.velocidade = "";
+    if (se.distancia === undefined) se.distancia = "";
+    if (se.inclinacao === undefined) se.inclinacao = "";
+  });
+
+  if (last) {
+    const l = el("div", { class: "last" });
+    l.innerHTML = `Última vez (${fmtBR(last.data)}): <b>${last.series.map(v => fmtCardioSerie(v) || "–").join(" · ")}</b>`;
+    body.appendChild(l);
+  }
+
+  const faltando = cardioFaltando(ex);
+  if (faltando.length) {
+    const w = el("div", { class: "load-warn", id: "cardio-warn-" + ex.exercicioId, style: "display:block" });
+    w.innerHTML = `⚠ <b>Tempo e velocidade são obrigatórios.</b> Falta preencher na ${faltando.map(f => `${f.i + 1}ª (${f.falta.join(" e ")})`).join(", ")}.`;
+    body.appendChild(w);
+  }
+
+  // cada série é um bloco 2×2: rótulo em cima do próprio campo (nunca desalinha)
+  ex.series.forEach((se, i) => {
+    const blk = el("div", { class: "cblock" });
+    blk.dataset.serie = String(i + 1);
+    const idx = el("div", { class: "cidx" }, `${i + 1}ª`);
+    const g = el("div", { class: "cgrid2" });
+    const cell = (txt, inp) => {
+      const w = el("div", { class: "ccell" });
+      const lb = el("span", { class: "lb" }, txt);
+      w.appendChild(lb); w.appendChild(inp);
+      return w;
+    };
+    const it = el("input", { type: "number", inputmode: "decimal", step: "0.1", min: "0", placeholder: se.prevTempo != null ? fmtTempoMin(se.prevTempo) : "min", value: se.tempo, "aria-label": `Tempo série ${i + 1} (min)` });
+    it.dataset.k = "tempo";
+    const iv = el("input", { type: "number", inputmode: "decimal", step: "0.1", min: "0", placeholder: se.prevVel != null ? fmtVel(se.prevVel) : "km/h", value: se.velocidade, "aria-label": `Velocidade série ${i + 1} (km/h)` });
+    iv.dataset.k = "velocidade";
+    const id = el("input", { type: "number", inputmode: "decimal", step: "0.01", min: "0", placeholder: "opcional", value: se.distancia, "aria-label": `Distância série ${i + 1} (km, opcional)` });
+    id.dataset.k = "distancia";
+    const ic = el("input", { type: "number", inputmode: "decimal", step: "0.5", min: "0", placeholder: "opcional", value: se.inclinacao, "aria-label": `Inclinação série ${i + 1} (%, opcional)` });
+    ic.dataset.k = "inclinacao";
+    const sync = () => {
+      it.classList.toggle("req-empty", it.value.trim() !== "" && parseTempoMin(it.value) == null);
+      iv.classList.toggle("req-empty", iv.value.trim() !== "" && num(iv.value) == null);
+    };
+    it.addEventListener("input", () => { se.tempo = it.value; sync(); saveSessaoRascunho(); });
+    iv.addEventListener("input", () => { se.velocidade = iv.value; sync(); saveSessaoRascunho(); });
+    id.addEventListener("input", () => { se.distancia = id.value; saveSessaoRascunho(); });
+    ic.addEventListener("input", () => { se.inclinacao = ic.value; saveSessaoRascunho(); });
+    g.appendChild(cell(`Tempo <span class="reqdot">*</span>`, it));
+    g.appendChild(cell(`Velocidade <span class="reqdot">*</span>`, iv));
+    g.appendChild(cell(`Distância <i>(opcional)</i>`, id));
+    g.appendChild(cell(`Inclinação <i>(opcional)</i>`, ic));
+    blk.appendChild(idx); blk.appendChild(g);
+    body.appendChild(blk);
+  });
+
+  // ações
+  const acts = el("div", { class: "row", style: "margin-top:10px; flex-wrap:wrap" });
+  const bCopy = el("button", { class: "btn sm" }, "Copiar 1ª para todas");
+  bCopy.addEventListener("click", () => {
+    const f = ex.series[0];
+    if (parseTempoMin(f.tempo) == null || num(f.velocidade) == null) return toast("Preencha tempo e velocidade da 1ª série");
+    ex.series.forEach(x => {
+      x.tempo = f.tempo; x.velocidade = f.velocidade;
+      if (f.distancia !== "") x.distancia = f.distancia;
+      if (f.inclinacao !== "") x.inclinacao = f.inclinacao;
+    });
+    saveSessaoRascunho(); render();
+  });
+  acts.appendChild(bCopy);
+  if (ex.series.length > 1) {
+    const bRm = el("button", { class: "btn sm" }, "− série");
+    bRm.addEventListener("click", () => { ex.series.pop(); saveSessaoRascunho(); render(); });
+    acts.appendChild(bRm);
+  }
+  const bAdd = el("button", { class: "btn sm" }, "+ série");
+  bAdd.addEventListener("click", () => {
+    const l = ex.series[ex.series.length - 1] || {};
+    ex.series.push({ tempo: l.tempo ?? "", velocidade: l.velocidade ?? "", distancia: "", inclinacao: "",
+      prevTempo: l.prevTempo ?? null, prevVel: l.prevVel ?? null });
+    saveSessaoRascunho(); render();
+  });
+  acts.appendChild(bAdd);
+  body.appendChild(acts);
+
+  // observações (mesmo componente dos outros tipos)
+  const obsBox = el("div", { class: "obs-wrap" });
+  const obsId = "obs-" + ex.exercicioId;
+  obsBox.innerHTML = `<label for="${esc(obsId)}">Observações <span style="text-transform:none; letter-spacing:0; font-weight:500">(opcional)</span></label>`;
+  const ta = el("textarea", { id: obsId, rows: "2", maxlength: "500", placeholder: "Ex.: inclinei 5%, cadência boa, cansaço…", "aria-label": "Observações de " + ex.nome });
+  ta.value = typeof ex.obs === "string" ? ex.obs : "";
+  ta.addEventListener("input", () => { ex.obs = ta.value; saveSessaoRascunho(); });
+  obsBox.appendChild(ta);
+  body.appendChild(obsBox);
+}
+
 /* rascunho da sessão corrente — sobrevive a reload */
 const LS_DRAFT = "academia.draft.v1";
 function saveSessaoRascunho() {
@@ -1306,6 +1582,20 @@ function loadRascunho() {
 }
 
 function toggleConcluido(ex) {
+  // cardio: tempo e velocidade são obrigatórios em todas as séries
+  if (!ex.concluido && ex.tipo === "cardio") {
+    const falt = cardioFaltando(ex);
+    if (falt.length) {
+      state.openEx[ex.exercicioId] = true;
+      render();
+      const w = $("#cardio-warn-" + CSS.escape(ex.exercicioId));
+      if (w) w.scrollIntoView({ block: "center", behavior: "smooth" });
+      toast(falt.length === 1
+        ? `Falta ${falt[0].falta.join(" e ")} na ${falt[0].i + 1}ª série`
+        : `Faltam tempo e velocidade em ${falt.length} séries`);
+      return;
+    }
+  }
   ex.concluido = !ex.concluido;
   saveSessaoRascunho();
   render();
@@ -1344,9 +1634,20 @@ function concluirSessao(s, forcar) {
     nome: ex.nome,
     concluido: !!ex.concluido,
     obs: typeof ex.obs === "string" ? ex.obs.trim() : "",
-    series: ex.series
-      .filter(se => se.peso !== "" || se.reps !== "")
-      .map(se => ({ peso: num(se.peso), reps: se.reps === "" ? null : num(se.reps) })),
+    ...(ex.tipo === "cardio" ? { tipo: "cardio" } : {}),
+    series: ex.tipo === "cardio"
+      ? ex.series
+        .filter(se => parseTempoMin(se.tempo) != null || num(se.velocidade) != null || num(se.distancia) != null || num(se.inclinacao) != null)
+        .map(se => {
+          const o = { tempo: parseTempoMin(se.tempo), velocidade: num(se.velocidade) };
+          const dt = num(se.distancia), ic = num(se.inclinacao);
+          if (dt != null) o.distancia = dt;            // opcionais: só grava quando preenchidos
+          if (ic != null) o.inclinacao = ic;
+          return o;
+        })
+      : ex.series
+        .filter(se => se.peso !== "" || se.reps !== "")
+        .map(se => ({ peso: num(se.peso), reps: se.reps === "" ? null : num(se.reps) })),
   })).filter(ex => ex.series.length || ex.concluido);
 
   if (!exercicios.length) { toast(forcar ? "Nada para salvar" : "Registre o peso de pelo menos um exercício"); return; }
@@ -1383,12 +1684,13 @@ function concluirSessao(s, forcar) {
 /* ============================================================
    Gráficos — SVG puro
    ============================================================ */
-function svgChart(points, { w = 420, h = 220, metric = "max" } = {}) {
-  const padL = 40, padR = 14, padT = 16, padB = 30;
+function svgChart(points, { w = 420, h = 220, metric = "max", yLabel = null, minPad = null } = {}) {
+  const padL = yLabel ? 52 : 40, padR = 14, padT = 16, padB = 30;
   const iw = w - padL - padR, ih = h - padT - padB;
   const vals = points.map(p => p[metric]);
   let min = Math.min(...vals), max = Math.max(...vals);
-  if (min === max) { min -= 2.5; max += 2.5; }
+  const zoom = minPad || 2.5;
+  if (min === max) { min -= zoom; max += zoom; }
   else { const pad = (max - min) * 0.15; min -= pad; max += pad; }
   if (min < 0) min = 0;
   const x = (i) => padL + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
@@ -1413,7 +1715,7 @@ function svgChart(points, { w = 420, h = 220, metric = "max" } = {}) {
     const v = min + (max - min) * (i / steps);
     const yy = y(v);
     mk("line", { x1: padL, x2: w - padR, y1: yy, y2: yy, stroke: "#2a3240", "stroke-width": 1 });
-    mk("text", { x: padL - 8, y: yy + 4, fill: "#8b98ab", "font-size": 11, "text-anchor": "end" }, Math.round(v * 10) / 10);
+    mk("text", { x: padL - 8, y: yy + 4, fill: "#8b98ab", "font-size": 11, "text-anchor": "end" }, yLabel ? fmtVel(v) : Math.round(v * 10) / 10);
   }
   // área + linha
   if (points.length > 1) {
@@ -1433,6 +1735,81 @@ function svgChart(points, { w = 420, h = 220, metric = "max" } = {}) {
     mk("text", { x: x(i), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(p.data));
   });
   if (!points.length) mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados");
+  if (yLabel) mk("text", { x: 4, y: padT - 3, fill: "#8b98ab", "font-size": 10, "text-anchor": "start" }, yLabel);
+  return svg;
+}
+
+/**
+ * Gráfico de cardio no MESMO estilo do gráfico de carga (grade, área verde, linha verde, pontos amarelos).
+ * metric: "vel" (km/h, área verde) ou "dist" (km, linha azul, área azul).
+ */
+function svgCardioChart(points, { w = 420, h = 210, metric = "vel" } = {}) {
+  const isVel = metric === "vel";
+  const pts = points.filter(p => p[metric] != null);
+  const padL = 40, padR = 14, padT = 18, padB = 30;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.setAttribute("class", "chart");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute("role", "img");
+  svg.dataset.metric = metric;
+  const mk = (tag, attrs, txt) => {
+    const n = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (txt !== undefined) n.textContent = txt;
+    svg.appendChild(n);
+    return n;
+  };
+  const all = points.map(p => p[metric]).filter(v => v != null);
+  if (!all.length) {
+    mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados de " + (isVel ? "velocidade" : "distância"));
+    return svg;
+  }
+  let min = Math.min(...all), max = Math.max(...all);
+  const zoom = isVel ? 0.5 : 0.2;
+  if (min === max) { min -= zoom * 2; max += zoom * 2; }
+  else { const pad = (max - min) * 0.18; min -= pad; max += pad; }
+  if (min < 0) min = 0;
+  const x = (i) => padL + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
+  const y = (v) => padT + ih - ((v - min) / (max - min)) * ih;
+  // grade
+  for (let i = 0; i <= 4; i++) {
+    const v = min + (max - min) * (i / 4);
+    const yy = y(v);
+    mk("line", { x1: padL, x2: w - padR, y1: yy, y2: yy, stroke: "#2a3240", "stroke-width": 1 });
+    mk("text", { x: padL - 8, y: yy + 4, fill: "#8b98ab", "font-size": 11, "text-anchor": "end" },
+      isVel ? fmtVel(v) : (Math.round(v * 10) / 10).toFixed(1).replace(".", ","));
+  }
+  // linha (ignora lacunas: distância vazia não quebra o traçado)
+  let d = "", first = true;
+  points.forEach((p, i) => {
+    if (p[metric] == null) return;
+    d += `${first ? "M" : "L"}${x(i).toFixed(1)},${y(p[metric]).toFixed(1)} `;
+    first = false;
+  });
+  const withIdx = points.map((p, i) => ({ ...p, i })).filter(p => p[metric] != null);
+  if (withIdx.length > 1) {
+    mk("path", {
+      d: `${d}L${x(withIdx[withIdx.length - 1].i).toFixed(1)},${padT + ih} L${x(withIdx[0].i).toFixed(1)},${padT + ih} Z`,
+      fill: isVel ? "rgba(74,222,128,.12)" : "rgba(96,165,250,.12)",
+    });
+  }
+  if (withIdx.length > 1) {
+    mk("path", { d: d.trim(), fill: "none", stroke: isVel ? "#4ade80" : "#60a5fa", "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" });
+  }
+  // pontos
+  withIdx.forEach(p => {
+    mk("circle", { cx: x(p.i), cy: y(p[metric]), r: 4.5, fill: "#121214", stroke: "#fbbf24", "stroke-width": 2.5 });
+    mk("title", {}, `${fmtBR(p.data)}: ${isVel ? fmtVel(p.vel) + " km/h" : fmtKm(p.dist) + " km"}${p.tempo != null ? " (" + fmtTempoMin(p.tempo) + ")" : ""}`);
+  });
+  // eixo x
+  const stepX = Math.max(1, Math.ceil(points.length / 5));
+  points.forEach((p, i) => {
+    if (i % stepX !== 0 && i !== points.length - 1) return;
+    mk("text", { x: x(i), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(p.data));
+  });
   return svg;
 }
 
@@ -1445,6 +1822,79 @@ function exerciseList() {
     out.push({ ...ex, treinoId: t.id });
   }
   return out;
+}
+
+/**
+ * Card de evolução do cardio: um gráfico de velocidade e um de distância para o
+ * exercício selecionado + seletor quando há mais de um exercício de cardio.
+ */
+function cardioEvolucaoCard(cardios) {
+  const withData = cardios.filter(ex => cardioForChart(ex.id).length);
+  const selId = (state.chartCardio && cardios.some(c => c.id === state.chartCardio)) ? state.chartCardio : (withData[0] || cardios[0]).id;
+  state.chartCardio = selId;
+  const sel = cardios.find(c => c.id === selId) || cardios[0];
+  const pts = cardioForChart(sel.id);
+
+  const card = el("div", { class: "card", id: "cardio-evo", style: "margin-top:14px" });
+  card.dataset.exercicio = sel.id;
+  card.innerHTML = `<div class="row"><h3 style="font-size:16px">Cardio · ${esc(sel.nome)}</h3><span class="sp"></span>
+    <span class="badge cardio">cardio</span></div>`;
+
+  if (cardios.length > 1) {
+    const seg = el("div", { class: "seg", style: "margin-top:8px", role: "tablist", "aria-label": "Exercício de cardio" });
+    cardios.forEach(c => {
+      const b = el("button", { class: "csel" + (c.id === selId ? " on" : ""), "aria-pressed": c.id === selId ? "true" : "false" }, c.nome);
+      b.dataset.exid = c.id;
+      b.addEventListener("click", () => { state.chartCardio = c.id; render(); });
+      seg.appendChild(b);
+    });
+    card.appendChild(seg);
+  }
+
+  if (!pts.length) {
+    card.insertAdjacentHTML("beforeend", `<p class="muted" style="font-size:14px">Ainda sem registros de cardio para este exercício. Faça um treino e o gráfico aparece aqui.</p>`);
+    return card;
+  }
+
+  // --- velocidade ---
+  const t1 = el("div", { style: "margin-top:10px" });
+  t1.innerHTML = `<div class="tiny" style="font-weight:700; color:var(--txt)">Velocidade (km/h, média da sessão)</div>`;
+  t1.appendChild(svgCardioChart(pts, { metric: "vel" }));
+  card.appendChild(t1);
+
+  const vels = pts.map(p => p.vel).filter(v => v != null);
+  const vFirst = vels[0], vLast = vels[vels.length - 1];
+  const dv = vLast - vFirst;
+  const kpi = el("div", { class: "ckpi", id: "cardio-kpi-vel" });
+  kpi.innerHTML = `<div><b style="color:var(--acc)" data-k="velmax">${fmtVel(Math.max(...vels))}</b><span>máx. km/h</span></div>
+    <div><b data-k="velligual" style="color:${dv > 0.05 ? "var(--acc)" : dv < -0.05 ? "var(--err)" : "var(--txt)"}">${dv > 0.05 ? "+" : ""}${fmtVel(dv)}</b><span>desde o início</span></div>
+    <div><b data-k="sessoes">${pts.length}</b><span>sessões</span></div>`;
+  card.appendChild(kpi);
+
+  // --- distância (opcional: pode haver sessões sem distância) ---
+  const dists = pts.filter(p => p.dist != null);
+  const t2 = el("div", { style: "margin-top:16px" });
+  t2.innerHTML = `<div class="tiny" style="font-weight:700; color:var(--txt)">Distância (km)</div>`;
+  if (dists.length) {
+    t2.appendChild(svgCardioChart(pts, { metric: "dist" }));
+    const dFirst = dists[0].dist, dLast = dists[dists.length - 1].dist;
+    const dd = dLast - dFirst;
+    const k2 = el("div", { class: "ckpi", id: "cardio-kpi-dist" });
+    k2.innerHTML = `<div><b style="color:#60a5fa" data-k="distmax">${fmtKm(Math.max(...dists.map(p => p.dist)))}</b><span>máx. km</span></div>
+      <div><b data-k="distdelta" style="color:${dd > 0.005 ? "var(--acc)" : dd < -0.005 ? "var(--err)" : "var(--txt)"}">${dd > 0.005 ? "+" : ""}${fmtKm(dd)}</b><span>desde o início</span></div>
+      <div><b data-k="distn">${dists.length}</b><span>com distância</span></div>`;
+    t2.appendChild(k2);
+  } else {
+    t2.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:6px 0 0">Sem distância registrada — é campo opcional (nem toda esteira/bicicleta mede).</p>`);
+  }
+  card.appendChild(t2);
+
+  // última sessão registrada
+  const ult = pts[pts.length - 1];
+  const lu = el("div", { class: "tiny", style: "margin-top:12px", id: "cardio-ultima" });
+  lu.innerHTML = `Última (${fmtBR(ult.data)}): <b style="color:var(--txt)">${[ult.tempo != null ? fmtTempoMin(ult.tempo) : null, ult.vel != null ? fmtVel(ult.vel) + " km/h" : null, ult.dist != null ? fmtKm(ult.dist) + " km" : null, ult.inc != null ? fmtVel(ult.inc) + " % incl." : null].filter(Boolean).join(" · ")}</b>`;
+  card.appendChild(lu);
+  return card;
 }
 
 function renderGraficos(v) {
@@ -1536,13 +1986,32 @@ function renderGraficos(v) {
   }
   v.appendChild(oc);
 
+  // ---- cardio: evolução de velocidade e distância (agrupado por exercício) ----
+  const cardios = exs.filter(ex => ex.tipo === "cardio");
+  if (cardios.length) v.appendChild(cardioEvolucaoCard(cardios));
+
   // todos os exercícios com mini resumo
   const list = el("div", { class: "card" });
   list.innerHTML = `<h3 style="font-size:15px; margin-bottom:6px">Todos os exercícios</h3>`;
   for (const ex of exs) {
     const p = seriesForChart(ex.id);
-    const stag = loadStagnation(ex.id);
+    const stag = ex.tipo === "cardio" ? null : loadStagnation(ex.id);
     const r = el("div", { class: "row", style: "padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer" });
+    if (ex.tipo === "cardio") {
+      const cp = cardioForChart(ex.id);
+      const ult = cp.length ? cp[cp.length - 1] : null;
+      r.innerHTML = `<div style="flex:1; min-width:0"><div style="font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(ex.nome)} <span class="badge cardio">cardio</span></div>
+        <div class="tiny">Treino ${esc(ex.treinoId)} · ${cp.length} sessão(ões)</div></div>
+        <div style="text-align:right"><b>${ult && ult.vel != null ? fmtVel(ult.vel) + " km/h" : "–"}</b></div>`;
+      r.addEventListener("click", () => {
+        state.chartCardio = ex.id;
+        const n = $("#cardio-evo");
+        if (n) n.scrollIntoView({ block: "start", behavior: "smooth" });
+        render();
+      });
+      list.appendChild(r);
+      return;
+    }
     const lastP = p.length ? p[p.length - 1].max : null;
     const prevP = p.length > 1 ? p[p.length - 2].max : null;
     let arrow = "";
@@ -1593,7 +2062,15 @@ function renderHistorico(v) {
     const t = getTreino(s.treinoId);
     const b = el("button", { class: "hist" });
     const totalSets = s.exercicios.reduce((a, e) => a + e.series.length, 0);
-    const vol = s.exercicios.reduce((a, e) => a + e.series.reduce((q, x) => q + (x.peso || 0) * (x.reps || 0), 0), 0);
+    const vol = s.exercicios.reduce((a, e) => a + (e.tipo === "cardio" ? 0 : e.series.reduce((q, x) => q + (x.peso || 0) * (x.reps || 0), 0)), 0);
+    // cardio: minutos e km totais da sessão (entram como chip no lugar do volume)
+    const cTot = s.exercicios.filter(e => e.tipo === "cardio").reduce((acc, e) => {
+      const st = cardioStats(e.series);
+      acc.min += st.tempoTotal || 0;
+      acc.km += st.distTotal || 0;
+      acc.n++;
+      return acc;
+    }, { min: 0, km: 0, n: 0 });
     const feitos = s.exercicios.filter(x => x.concluido).length;
     const temDur = s.duracaoMin != null && s.duracaoMin > 0;
     const temHora = !!s.horaInicio;
@@ -1604,6 +2081,7 @@ function renderHistorico(v) {
         <span>${fmtBR(s.data)}</span>
         ${temDur ? `<span class="chip" style="font-size:11px; padding:1px 7px; color:var(--acc); border-color:rgba(74,222,128,.35)">⏱ ${fmtDuracao(s.duracaoMin * 60)}</span>` : ""}
         ${temHora ? `<span>${fmtHora(s.horaInicio)} → ${fmtHora(s.horaFim)}</span>` : ""}
+        ${cTot.n ? `<span class="chip" style="font-size:11px; padding:1px 7px; color:#93c5fd; border-color:rgba(96,165,250,.35)" title="Cardio na sessão">🏃 ${fmtTempoMin(cTot.min)}${cTot.km ? " · " + fmtKm(cTot.km) + " km" : ""}</span>` : ""}
         ${nObs ? `<span title="Com observações">📝 ${nObs}</span>` : ""}
       </div>
       <div class="tiny" style="margin-top:2px">${feitos ? `${feitos}/${s.exercicios.length} exercícios feitos` : `${s.exercicios.length} exercícios`}${totalSets ? " · " + totalSets + " séries" : ""}${vol ? " · vol. " + Math.round(vol) + " kg" : ""}</div></div>
@@ -1629,7 +2107,11 @@ function showSessionDetail(s) {
     html += `<div style="padding:9px 0; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start">
       <span style="flex:none; font-weight:800; color:${ex.concluido ? "var(--acc)" : "var(--mut)"}; width:18px">${ex.concluido ? "✓" : "·"}</span>
       <div style="min-width:0; flex:1"><div style="font-weight:650; font-size:14.5px${ex.concluido ? "" : "; opacity:.7"}">${esc(ex.nome)}</div>
-      <div class="tiny">${ex.series.length ? ex.series.map((v, i) => `${i + 1}ª ${v.peso ?? "–"}kg${v.reps ? "×" + v.reps : ""}`).join(" · ") : "sem séries registradas"}</div>
+      <div class="tiny">${ex.series.length
+        ? (ex.tipo === "cardio"
+            ? ex.series.map((v, i) => `${i + 1}ª ${fmtCardioSerie(v)}`).join(" · ")
+            : ex.series.map((v, i) => `${i + 1}ª ${v.peso ?? "–"}kg${v.reps ? "×" + v.reps : ""}`).join(" · "))
+        : "sem séries registradas"}</div>
       ${ex.obs && ex.obs.trim() ? `<div class="obs-line">📝 ${esc(ex.obs.trim())}</div>` : ""}</div></div>`;
   }
   html += `</div>
@@ -1647,7 +2129,7 @@ function showSessionDetail(s) {
       exercicios: tr.exercicios.map(ex => {
         const prev = s.exercicios.find(x => x.exercicioId === ex.id);
         const def = blankSeries(ex.series, ex.tipo);
-        if (prev) prev.series.forEach((v, i) => { if (def[i]) { def[i].peso = v.peso ?? ""; def[i].prev = v.peso; } });
+        if (prev && ex.tipo !== "cardio") prev.series.forEach((v, i) => { if (def[i]) { def[i].peso = v.peso ?? ""; def[i].prev = v.peso; } });
         return { exercicioId: ex.id, nome: ex.nome, tipo: ex.tipo, repsAlvo: ex.reps, concluido: false, obs: "", series: def, lastData: s.data };
       }),
     };
@@ -1731,12 +2213,25 @@ function renderEditor(v) {
     <div class="tiny" style="margin-bottom:4px">Toque no nome para editar. Use ↑ para reordenar.</div>`;
   t.exercicios.forEach((ex, i) => {
     const r = el("div", { class: "editrow" });
+    r.dataset.exid = ex.id;
     const name = el("input", { type: "text", class: "name", value: ex.nome, "aria-label": "Nome do exercício" });
     name.addEventListener("input", () => { ex.nome = name.value; saveLocal(); scheduleSync(); });
     const sets = el("input", { type: "number", min: "1", max: "20", value: ex.series, "aria-label": "Séries" });
     sets.addEventListener("change", () => { ex.series = Math.max(1, Math.min(20, parseInt(sets.value, 10) || 3)); sets.value = ex.series; saveLocal(); scheduleSync(); });
-    const reps = el("input", { type: "text", style: "width:80px", value: ex.reps, "aria-label": "Repetições" });
+    const reps = el("input", { type: "text", style: "width:80px", value: ex.reps, "aria-label": "Meta de repetições ou tempo" });
     reps.addEventListener("input", () => { ex.reps = reps.value; saveLocal(); scheduleSync(); });
+    // seletor de tipo: Repetições | Tempo | Cardio
+    const isC = ex.tipo === "cardio";
+    const tseg = el("div", { class: "tipo-seg", style: "grid-column:1 / -1; margin-bottom:2px", role: "group", "aria-label": "Tipo do exercício" });
+    [["reps", "Repetições"], ["tempo", "Tempo"], ["cardio", "Cardio"]].forEach(([v, lb]) => {
+      const b = el("button", { type: "button", class: "tipo-btn" + (v === "cardio" ? " blue" : "") + ((ex.tipo || "reps") === v ? " on" : ""), "aria-pressed": (ex.tipo || "reps") === v ? "true" : "false" }, lb);
+      b.dataset.tipo = v;
+      b.addEventListener("click", () => { ex.tipo = v; saveLocal(); scheduleSync(); render(); });
+      tseg.appendChild(b);
+    });
+    const hint = el("div", { class: "tiny", style: "grid-column:1 / -1; margin:-2px 0 2px; line-height:1.35" },
+      isC ? "Cardio (esteira/bicicleta): registra <b>tempo</b> e <b>velocidade</b> (obrigatórios); distância e inclinação são opcionais."
+          : "Peso por série; a meta é livre (ex.: 8 a 12).");
     const del = el("button", { class: "iconbtn", "aria-label": "Remover" },
       `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>`);
     del.addEventListener("click", () => {
@@ -1751,21 +2246,20 @@ function renderEditor(v) {
     wrapSets.innerHTML = `<span class="fieldhint">Séries</span>`;
     wrapSets.appendChild(sets);
     const wrapReps = el("label");
-    wrapReps.innerHTML = `<span class="fieldhint">Reps</span>`;
+    wrapReps.innerHTML = `<span class="fieldhint">${isC ? "Meta (opcional)" : "Reps"}</span>`;
     wrapReps.appendChild(reps);
+    if (isC) reps.placeholder = "ex.: 20 min";
     const wrapBtns = el("div", { class: "row", style: "gap:6px" });
     wrapBtns.append(up, del);
-    r.append(name, wrapSets, wrapReps, wrapBtns);
+    r.append(name, tseg, hint, wrapSets, wrapReps, wrapBtns);
     list.appendChild(r);
   });
   const add = el("button", { class: "btn block", style: "margin-top:12px" }, "+ Adicionar exercício");
-  add.addEventListener("click", () => {
-    const nome = prompt("Nome do exercício:");
-    if (!nome || !nome.trim()) return;
-    t.exercicios.push({ id: uid("x"), nome: nome.trim(), series: 3, reps: "8 a 12", tipo: "reps" });
-    saveLocal(); scheduleSync(); render();
-  });
+  add.addEventListener("click", () => { askNovoExercicio(t, "reps"); });
+  const addC = el("button", { class: "btn block", style: "margin-top:8px" }, "+ Adicionar cardio (esteira / bicicleta)");
+  addC.addEventListener("click", () => { askNovoExercicio(t, "cardio"); });
   list.appendChild(add);
+  list.appendChild(addC);
   v.appendChild(list);
 
   if (state.data.treinos.length > 1) {
@@ -1777,6 +2271,16 @@ function renderEditor(v) {
     });
     v.appendChild(bd);
   }
+}
+
+/** cria um exercício na ficha; tipo 'cardio' já vem com meta de tempo em branco */
+function askNovoExercicio(t, tipo) {
+  const nome = prompt(tipo === "cardio" ? "Nome do exercício de cardio (ex.: Esteira):" : "Nome do exercício:");
+  if (!nome || !nome.trim()) return;
+  const ex = { id: uid("x"), nome: nome.trim(), series: tipo === "cardio" ? 1 : 3, reps: tipo === "cardio" ? "" : "8 a 12", tipo: tipo || "reps" };
+  t.exercicios.push(ex);
+  saveLocal(); scheduleSync(); render();
+  toast(tipo === "cardio" ? "Cardio adicionado — escolha tempo e velocidade no treino" : "Exercício adicionado");
 }
 
 function addTreino() {
@@ -1889,7 +2393,14 @@ function seedDemo() {
         horaInicio: ini.toISOString(), horaFim: fim.toISOString(), duracaoMin: dur || 52,
         exercicios: t.exercicios.map((ex, k) => ({
           exercicioId: ex.id, nome: ex.nome, concluido: true,
-          series: Array.from({ length: ex.series }, (_, i) => ({ peso: Math.round((base + k * 2 - i * 1.5) * 2) / 2, reps: 10 })),
+          ...(ex.tipo === "cardio" ? { tipo: "cardio" } : {}),
+          series: ex.tipo === "cardio"
+            ? Array.from({ length: ex.series }, () => {
+              const vel = Math.round((8.2 + (base - 40) * 0.09) * 10) / 10;
+              const min = 18 + Math.round((base - 40) * 0.38);
+              return { tempo: min, velocidade: vel };
+            })
+            : Array.from({ length: ex.series }, (_, i) => ({ peso: Math.round((base + k * 2 - i * 1.5) * 2) / 2, reps: 10 })),
         })),
       });
     });
