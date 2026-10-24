@@ -38,7 +38,9 @@
   }
   .hd{display:flex; align-items:center; gap:10px; height:58px}
   .hd h1{font-size:18px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .brandname{display:flex; flex-direction:column; justify-content:center; min-width:0; flex:1; line-height:1.05}
+  .brandname{display:flex; flex-direction:row; align-items:center; gap:9px; justify-content:flex-start; min-width:0; flex:1; line-height:1.05}
+  .hdtxt{display:flex; flex-direction:column; justify-content:center; min-width:0}
+  .hdlogo{width:30px; height:30px; border-radius:9px; flex:none; display:block}
   .brandname .nm{font-size:20px; font-weight:800; letter-spacing:-.02em; color:var(--txt)}
   .brandname .tag{font-size:10.5px; font-weight:600; color:var(--mut); letter-spacing:.02em; margin-top:2px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -212,8 +214,11 @@
 <header id="topbar" class="hidden">
   <div class="wrap hd">
     <div class="brandname">
-      <h1 id="hdTitle" class="nm">Gusto</h1>
-      <span class="tag" id="hdTag">Sinta o gosto da evolução.</span>
+      <img class="hdlogo" src="icon.svg" alt="" width="30" height="30">
+      <div class="hdtxt">
+        <h1 id="hdTitle" class="nm">Gusto</h1>
+        <span class="tag" id="hdTag">Sinta o gosto da evolução.</span>
+      </div>
     </div>
     <span class="sync" id="syncPill" title="Estado da sincronização"><i class="dot off" id="syncDot"></i><span id="syncTxt">local</span></span>
     <img class="avatar hidden" id="avatar" alt="">
