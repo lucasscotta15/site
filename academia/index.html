@@ -11,11 +11,11 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
-    --bg:#121214; --bg2:#27272A; --bg3:#333338; --line:#3F3F46;
-    --txt:#FFFFFF; --mut:#A1A1AA; --acc:#22C55E; --acc2:#22C55E;
-    --brand:#FF5500; --brand-dim:rgba(255,85,0,.14); --brand-ink:#121214;
+    --bg:#0f1115; --bg2:#161a21; --bg3:#1e242e; --line:#2a3240;
+    --txt:#e9edf4; --mut:#8b98ab; --acc:#4ade80; --acc2:#22c55e;
+    --brand:#4ade80; --brand-dim:rgba(251,191,36,.14); --brand-ink:#121214;
     --warn:#fbbf24; --err:#f87171; --blue:#60a5fa;
-    --aman:#FF5500; --aman2:#e64d00;
+    --aman:#fbbf24; --aman2:#e64d00;
     --r:14px; --safe-b: env(safe-area-inset-bottom, 0px);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
@@ -83,9 +83,9 @@
     color:#121214; background:var(--brand); border:1px solid var(--brand); font-weight:900}
   .treino-btn.st-ult{background:rgba(34,197,94,.07)}
   .treino-btn.st-ult .letter{background:var(--acc); color:#121214}
-  .treino-btn.st-prox{border:1.5px solid var(--brand); background:rgba(255,85,0,.10)}
+  .treino-btn.st-prox{border:1.5px solid var(--brand); background:rgba(251,191,36,.10)}
   .treino-btn.st-prox .letter{background:var(--brand); color:#121214}
-  .treino-btn.st-prox .sub{color:#FFB38A}
+  .treino-btn.st-prox .sub{color:#fcd34d}
   /* tabs / nav */
   nav.tabs{
     position:fixed; left:0; right:0; bottom:0; z-index:30;
@@ -118,7 +118,7 @@
     -moz-appearance:textfield;
   }
   input[type=number]{text-align:center}
-  input:focus,select:focus{outline:2px solid rgba(255,85,0,.55); outline-offset:0; border-color:var(--brand)}
+  input:focus,select:focus{outline:2px solid rgba(251,191,36,.55); outline-offset:0; border-color:var(--brand)}
   .last{font-size:12px; color:var(--mut); margin-top:2px}
   .last b{color:var(--acc); white-space:nowrap}
   .last{line-height:1.5}
@@ -192,7 +192,7 @@
   .obs-wrap textarea{width:100%; min-height:54px; resize:vertical; background:var(--bg); border:1px solid var(--line);
     border-radius:10px; padding:9px 11px; font-size:15px; font-weight:500; line-height:1.4; color:var(--txt);
     font-family:inherit; -webkit-appearance:none}
-  .obs-wrap textarea:focus{outline:2px solid rgba(255,85,0,.55); border-color:var(--brand)}
+  .obs-wrap textarea:focus{outline:2px solid rgba(251,191,36,.55); border-color:var(--brand)}
   .obs-line{font-size:12.5px; color:#D4D4D8; margin-top:4px; padding-left:9px; border-left:2px solid rgba(96,165,250,.45); white-space:pre-wrap; word-break:break-word}
   .obs-hist{margin-top:10px}
   .obs-hist .oh{display:flex; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; align-items:flex-start}
@@ -1314,12 +1314,12 @@ function svgChart(points, { w = 420, h = 220, metric = "max" } = {}) {
   // área + linha
   if (points.length > 1) {
     const d = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[metric]).toFixed(1)}`).join(" ");
-    mk("path", { d: `${d} L${x(points.length - 1)},${padT + ih} L${x(0)},${padT + ih} Z`, fill: "rgba(255,85,0,.13)" });
+    mk("path", { d: `${d} L${x(points.length - 1)},${padT + ih} L${x(0)},${padT + ih} Z`, fill: "rgba(251,191,36,.13)" });
     mk("path", { d, fill: "none", stroke: "#4ade80", "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" });
   }
   // pontos
   points.forEach((p, i) => {
-    mk("circle", { cx: x(i), cy: y(p[metric]), r: 4.5, fill: "#121214", stroke: "#FF5500", "stroke-width": 2.5 });
+    mk("circle", { cx: x(i), cy: y(p[metric]), r: 4.5, fill: "#121214", stroke: "#fbbf24", "stroke-width": 2.5 });
     mk("title", {}, `${fmtBR(p.data)}: ${p.max} kg (média ${p.avg.toFixed(1)})`);
   });
   // rótulos eixo x (máx ~5)

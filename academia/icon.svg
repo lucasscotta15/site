@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Gusto">
   <!-- Gusto — G-Pulse: squircle grafite + G laranja (arco que lembra anilha/haltere) -->
   <rect width="512" height="512" rx="116" ry="116" fill="#121214"/>
-  <g fill="none" stroke="#FF5500" stroke-linecap="round" stroke-linejoin="round">
+  <g fill="none" stroke="#22c55e" stroke-linecap="round" stroke-linejoin="round">
     <!-- corpo do G: arco aberto no eixo da barra -->
     <path d="M338 186 A104 104 0 1 0 360 292" stroke-width="54"/>
     <!-- barra do G: haste horizontal terminando em anilha -->
     <path d="M264 292 H384" stroke-width="54"/>
   </g>
   <!-- anilha de haltere na ponta da barra -->
-  <path d="M352 258 H396 A34 34 0 0 1 396 326 H352 Z" fill="#FF5500"/>
+  <path d="M352 258 H396 A34 34 0 0 1 396 326 H352 Z" fill="#22c55e"/>
   <!-- furo central da anilha -->
   <circle cx="378" cy="292" r="11" fill="#121214"/>
 </svg>
