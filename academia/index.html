@@ -14,6 +14,7 @@
     --bg:#0f1115; --bg2:#161a21; --bg3:#1e242e; --line:#2a3240;
     --txt:#e9edf4; --mut:#8b98ab; --acc:#4ade80; --acc2:#22c55e;
     --warn:#fbbf24; --err:#f87171; --blue:#60a5fa;
+    --aman:#fbbf24; --aman2:#f5b301;
     --r:14px; --safe-b: env(safe-area-inset-bottom, 0px);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
@@ -69,6 +70,17 @@
     font-weight:800; margin-right:10px; vertical-align:middle}
   .treino-btn .n{font-weight:650}
   .treino-btn .sub{font-size:13px; color:var(--mut); margin-left:44px; margin-top:-4px}
+  /* estado da ficha: verde = último treino feito, amarelo = #próximo na rotação A→B→C→D→A */
+  .treino-btn .letterwrap{display:inline-flex; align-items:center; gap:8px; margin-right:10px; vertical-align:middle}
+  .treino-btn .letterwrap .letter{margin-right:0}
+  .tag-prox{display:inline-flex; align-items:center; font-size:11px; font-weight:800; letter-spacing:.01em;
+    padding:3px 8px; border-radius:999px; white-space:nowrap;
+    color:#1a1204; background:var(--aman); border:1px solid var(--aman)}
+  .treino-btn.st-ult{background:rgba(34,197,94,.07)}
+  .treino-btn.st-ult .letter{background:var(--acc2); color:#06140b}
+  .treino-btn.st-prox{border:1.5px solid var(--aman); background:rgba(251,191,36,.08)}
+  .treino-btn.st-prox .letter{background:var(--aman); color:#1a1204}
+  .treino-btn.st-prox .sub{color:#e8c877}
   /* tabs / nav */
   nav.tabs{
     position:fixed; left:0; right:0; bottom:0; z-index:30;
@@ -808,6 +820,55 @@ function lastSessionsForTreino(trId, n = 3) {
   return state.data.sessoes.filter(s => s.treinoId === trId).sort((a, b) => b.data.localeCompare(a.data)).slice(0, n);
 }
 
+/* Rotação fixa das fichas */
+const ROTACAO = ["A", "B", "C", "D"];
+
+/* Sessão mais recente: maior data; em empate, maior horaInicio; depois última inserida */
+function ultimaSessao() {
+  const arr = Array.isArray(state.data && state.data.sessoes) ? state.data.sessoes : [];
+  let best = null, bestKey = null;
+  for (let i = 0; i < arr.length; i++) {
+    const s = arr[i];
+    if (!s || !s.data) continue;
+    const key = [String(s.data).slice(0, 10), s.horaInicio || "", i];
+    if (!bestKey || key[0] > bestKey[0]
+      || (key[0] === bestKey[0] && key[1] > bestKey[1])
+      || (key[0] === bestKey[0] && key[1] === bestKey[1] && key[2] > bestKey[2])) {
+      best = s; bestKey = key;
+    }
+  }
+  return best;
+}
+
+/* Estado de cada ficha na tela Novo treino.
+   "ult"  = verde  → última ficha treinada
+   "prox" = amarelo + tag #próximo → a seguinte na rotação A→B→C→D→A
+   sem entrada = neutra. Nunca as duas no mesmo id (garantido pelo else). */
+function estadoFichas() {
+  const map = new Map();
+  const ult = ultimaSessao();
+  let ultId = ult && ult.treinoId ? String(ult.treinoId).trim().toUpperCase() : null;
+  const existentes = (state.data.treinos || []).map(t => String(t.id).trim().toUpperCase());
+  if (ultId && !existentes.includes(ultId)) ultId = null;   // sessão órfã: ignora
+  if (ultId) map.set(ultId, "ult");
+  // próxima na rotação fixa; sem nenhum treino, começa em A
+  let prox = "A";
+  if (ultId) {
+    const idx = ROTACAO.indexOf(ultId);
+    prox = idx >= 0 ? ROTACAO[(idx + 1) % ROTACAO.length] : "A";
+  }
+  // ficha da rotação inexistente no app? usa a próxima que existir
+  if (!existentes.includes(prox)) {
+    const start = ROTACAO.indexOf(prox);
+    for (let k = 1; k <= ROTACAO.length; k++) {
+      const cand = ROTACAO[(start + k) % ROTACAO.length];
+      if (existentes.includes(cand)) { prox = cand; break; }
+    }
+  }
+  if (prox !== ultId) map.set(prox, "prox");   // verde e amarelo nunca na mesma ficha
+  return map;
+}
+
 function renderInicio(v) {
   if (state.sessao) return renderSessao(v);
   const h = el("div", { class: "card" });
@@ -816,14 +877,16 @@ function renderInicio(v) {
     <p class="muted" style="font-size:13.5px; margin:4px 0 0">Escolha a ficha de hoje. O peso da última vez já vem preenchido.</p>`;
   v.appendChild(h);
 
-  // últimas sessões como sugestão
-  const ult = [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data))[0];
+  const estado = estadoFichas();
   for (const t of state.data.treinos) {
-    const b = el("button", { class: "treino-btn" });
+    const st = estado.get(t.id) || "";   // "" | "ult" | "prox"
+    const b = el("button", { class: "treino-btn" + (st === "ult" ? " st-ult" : st === "prox" ? " st-prox" : "") });
+    b.dataset.ficha = t.id;
+    b.dataset.estado = st || "neutro";
     const ls = lastSessionsForTreino(t.id, 1)[0];
-    b.innerHTML = `<span class="letter">${esc(t.id)}</span><span class="n">${esc(t.nome)}</span>
+    b.innerHTML = `<span class="letterwrap"><span class="letter">${esc(t.id)}</span>${st === "prox"
+        ? `<span class="tag-prox" title="Próxima ficha da rotação A→B→C→D→A">#próximo</span>` : ""}</span><span class="n">${esc(t.nome)}</span>
       <div class="sub">${t.exercicios.length} exercícios${ls ? " · último dia " + fmtBR(ls.data) : " · ainda não feito"}</div>`;
-    if (ult && ult.treinoId === t.id) b.style.borderColor = "var(--acc2)";
     b.addEventListener("click", () => startSession(t.id));
     v.appendChild(b);
   }
