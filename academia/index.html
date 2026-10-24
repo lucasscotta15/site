@@ -1513,8 +1513,16 @@ function renderCardioBody(body, ex, last) {
       it.classList.toggle("req-empty", it.value.trim() !== "" && parseTempoMin(it.value) == null);
       iv.classList.toggle("req-empty", iv.value.trim() !== "" && num(iv.value) == null);
     };
-    it.addEventListener("input", () => { se.tempo = it.value; sync(); saveSessaoRascunho(); });
-    iv.addEventListener("input", () => { se.velocidade = iv.value; sync(); saveSessaoRascunho(); });
+    const reval = () => {
+      const ainda = cardioFaltando(ex);
+      const wEl = $("#cardio-warn-" + ex.exercicioId);
+      if (!ainda.length) { if (wEl) wEl.remove(); return; }
+      if (wEl) {
+        wEl.innerHTML = `⚠ <b>Tempo e velocidade são obrigatórios.</b> Falta preencher na ${ainda.map(f => `${f.i + 1}ª (${f.falta.join(" e ")})`).join(", ")}.`;
+      }
+    };
+    it.addEventListener("input", () => { se.tempo = it.value; sync(); saveSessaoRascunho(); reval(); });
+    iv.addEventListener("input", () => { se.velocidade = iv.value; sync(); saveSessaoRascunho(); reval(); });
     id.addEventListener("input", () => { se.distancia = id.value; saveSessaoRascunho(); });
     ic.addEventListener("input", () => { se.inclinacao = ic.value; saveSessaoRascunho(); });
     g.appendChild(cell(`Tempo <span class="reqdot">*</span>`, it));
@@ -2275,24 +2283,64 @@ function renderEditor(v) {
 
 /** cria um exercício na ficha; tipo 'cardio' já vem com meta de tempo em branco */
 function askNovoExercicio(t, tipo) {
-  const nome = prompt(tipo === "cardio" ? "Nome do exercício de cardio (ex.: Esteira):" : "Nome do exercício:");
-  if (!nome || !nome.trim()) return;
-  const ex = { id: uid("x"), nome: nome.trim(), series: tipo === "cardio" ? 1 : 3, reps: tipo === "cardio" ? "" : "8 a 12", tipo: tipo || "reps" };
-  t.exercicios.push(ex);
-  saveLocal(); scheduleSync(); render();
-  toast(tipo === "cardio" ? "Cardio adicionado — escolha tempo e velocidade no treino" : "Exercício adicionado");
+  const isC = tipo === "cardio";
+  openSheet(`
+    <h2>${isC ? "Adicionar cardio" : "Adicionar exercício"}</h2>
+    <p class="tiny" style="margin:2px 0 12px">${isC ? "Esteira, bicicleta, elíptico… Tempo e velocidade serão pedidos no treino." : "Exercício de musculação, com séries e repetições."}</p>
+    <label >Nome
+      <input class="inp" id="ne-nome" type="text" placeholder="${isC ? "ex.: Esteira" : "ex.: Supino reto"}" autocomplete="off">
+    </label>
+    <div class="row" style="gap:8px; margin-top:14px">
+      <button class="btn" id="ne-cancel">Cancelar</button>
+      <button class="btn pri" id="ne-ok" style="flex:1">Adicionar</button>
+    </div>`);
+  const inp = $("#ne-nome");
+  const submit = () => {
+    const nome = inp.value.trim();
+    if (!nome) { inp.focus(); return toast("Digite o nome do exercício"); }
+    const ex = { id: uid("x"), nome: nome, series: isC ? 1 : 3, reps: isC ? "" : "8 a 12", tipo: tipo || "reps" };
+    t.exercicios.push(ex);
+    hideOverlay(); saveLocal(); scheduleSync(); render();
+    toast(isC ? "Cardio adicionado — tempo e velocidade no treino" : "Exercício adicionado");
+  };
+  $("#ne-ok").addEventListener("click", submit);
+  $("#ne-cancel").addEventListener("click", hideOverlay);
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  setTimeout(() => inp.focus(), 30);
 }
 
 function addTreino() {
-  const letra = prompt("Letra/código da nova ficha (ex: E):", String.fromCharCode(65 + state.data.treinos.length));
-  if (!letra) return;
-  const nome = prompt("Nome da ficha:", "Nova ficha");
-  if (!nome) return;
-  if (state.data.treinos.some(t => t.id === letra.toUpperCase())) return toast("Já existe uma ficha com esse código");
-  const t = { id: letra.toUpperCase().slice(0, 3), nome: nome, exercicios: [] };
-  state.data.treinos.push(t);
-  state.editTreinoId = t.id;
-  saveLocal(); scheduleSync(); render();
+  const letraSug = String.fromCharCode(65 + state.data.treinos.length);
+  openSheet(`
+    <h2>Nova ficha</h2>
+    <p class="tiny" style="margin:2px 0 12px">Escolha um código curto e um nome para a ficha.</p>
+    <label >Código
+      <input class="inp" id="nf-letra" type="text" maxlength="3" value="${esc(letraSug)}" autocomplete="off" style="text-transform:uppercase">
+    </label>
+    <label  style="margin-top:10px">Nome da ficha
+      <input class="inp" id="nf-nome" type="text" placeholder="ex.: Full body" autocomplete="off">
+    </label>
+    <div class="row" style="gap:8px; margin-top:14px">
+      <button class="btn" id="nf-cancel">Cancelar</button>
+      <button class="btn pri" id="nf-ok" style="flex:1">Criar ficha</button>
+    </div>`);
+  const il = $("#nf-letra"), inn = $("#nf-nome");
+  const submit = () => {
+    const letra = il.value.trim().toUpperCase();
+    const nome = inn.value.trim();
+    if (!letra) { il.focus(); return toast("Informe o código da ficha"); }
+    if (!nome) { inn.focus(); return toast("Informe o nome da ficha"); }
+    if (state.data.treinos.some(t => t.id === letra)) return toast("Já existe uma ficha com esse código");
+    const t = { id: letra.slice(0, 3), nome: nome, exercicios: [] };
+    state.data.treinos.push(t);
+    state.editTreinoId = t.id;
+    hideOverlay(); saveLocal(); scheduleSync(); render();
+    toast("Ficha " + t.id + " criada");
+  };
+  $("#nf-ok").addEventListener("click", submit);
+  $("#nf-cancel").addEventListener("click", hideOverlay);
+  inn.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  setTimeout(() => inn.focus(), 30);
 }
 
 /* ============================================================
