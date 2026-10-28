@@ -635,7 +635,7 @@ const state = {
   tickTimer: null,     // setInterval do cronômetro
   corpoForm: false,    // formulário de medição aberto
 };
-let MEDICAO_EDIT = null;  // medição em edição (aba Corpo) — não persistido
+let MEDICAO_EDIT = null;  // medição em edição (aba Corpo) — NUNCA persistido (só em memória)
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], medicoes: [], perfil: null, aceitouAvisoMedico: false }; }
@@ -2061,6 +2061,87 @@ function svgCorpoSimples(points, { w = 420, h = 200, casas = 1, ref = null, cor 
 }
 
 /**
+ * Gráfico de DUAS séries com eixo duplo (peso kg à esquerda, IMC à direita).
+ * g1/g2: [{data, v}] — mesma base de datas; escalas independentes; 1 ponto fica centralizado.
+ */
+function svgCorpoDuplo(g1, g2, { w = 440, h = 220, c1 = "#4ade80", c2 = "#fbbf24", id = "peso-cintura", lb1 = "kg", lb2 = "cm" } = {}) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.setAttribute("class", "chart");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Evolução do peso (kg, eixo esquerdo) e do IMC (eixo direito)");
+  svg.dataset.chart = id;
+  const mk = (tag, attrs, txt, parent) => {
+    const n = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) n.setAttribute(k, v);
+    if (txt !== undefined) n.textContent = txt;
+    (parent || svg).appendChild(n);
+    return n;
+  };
+  if (!g1.length) {
+    mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados");
+    return svg;
+  }
+  const padL = 44, padR = 46, padT = 20, padB = 30;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const esc = (vals) => {
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (lo === hi) { lo -= 1; hi += 1; } else { const pad = (hi - lo) * 0.18; lo -= pad; hi += pad; }
+    return { lo, hi };
+  };
+  const e1 = esc(g1.map(p => p.v));
+  const e2 = g2.length ? esc(g2.map(p => p.v)) : null;
+  // eixo X: datas únicas de todas as medições, ordenadas
+  const datas = [...new Set(g1.concat(g2).map(p => p.data))].sort();
+  const xi = (data) => {
+    const i = datas.indexOf(data);
+    return padL + (datas.length === 1 ? iw / 2 : (i / (datas.length - 1)) * iw);
+  };
+  const y1 = (v) => padT + ih - ((v - e1.lo) / (e1.hi - e1.lo)) * ih;
+  const y2 = (v) => padT + ih - ((v - e2.lo) / (e2.hi - e2.lo)) * ih;
+  // grade + rótulos dos dois eixos (4 faixas)
+  for (let i = 0; i <= 4; i++) {
+    const yy = padT + ih - (i / 4) * ih;
+    mk("line", { x1: padL, x2: w - padR, y1: yy, y2: yy, stroke: "#2a3240", "stroke-width": 1 });
+    const v1 = e1.lo + (e1.hi - e1.lo) * (i / 4);
+    mk("text", { x: padL - 8, y: yy + 4, fill: c1, "font-size": 11, "text-anchor": "end", "data-axis": "kg" }, fmtN(v1, 1));
+    if (e2) {
+      const v2 = e2.lo + (e2.hi - e2.lo) * (i / 4);
+      mk("text", { x: w - padR + 8, y: yy + 4, fill: c2, "font-size": 11, "text-anchor": "start", "data-axis": "cintura" }, fmtN(v2, 1));
+    }
+  }
+  // rótulos dos eixos
+  mk("text", { x: padL - 8, y: padT - 7, fill: c1, "font-size": 10.5, "font-weight": 700, "text-anchor": "end", "data-axis-label": lb1 }, lb1);
+  if (e2) mk("text", { x: w - padR + 8, y: padT - 7, fill: c2, "font-size": 10.5, "font-weight": 700, "text-anchor": "start", "data-axis-label": lb2 }, lb2);
+
+  const desenha = (pts, yf, cor, dash, serie) => {
+    const g = document.createElementNS(ns, "g");
+    g.dataset.serie = serie;
+    g.dataset.pontos = String(pts.length);
+    svg.appendChild(g);
+    if (pts.length > 1) {
+      const d = pts.map((p, i) => `${i ? "L" : "M"}${xi(p.data).toFixed(1)},${yf(p.v).toFixed(1)}`).join(" ");
+      mk("path", { d, fill: "none", stroke: cor, "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round", "stroke-dasharray": dash || undefined }, undefined, g);
+    }
+    pts.forEach(p => {
+      mk("circle", { cx: xi(p.data).toFixed(1), cy: yf(p.v).toFixed(1), r: 4.5, fill: "#121214", stroke: cor, "stroke-width": 2.5, "data-v": p.v.toFixed(2), "data-data": p.data }, undefined, g);
+      mk("title", {}, `${fmtBR(p.data)}: ${serie === "peso" ? fmtN(p.v, 1) + " kg" : "IMC " + fmtN(p.v, 2)}`, g);
+    });
+  };
+  desenha(g1, y1, c1, null, "peso");
+  if (g2.length) desenha(g2, y2, c2, "5 4", "imc");
+
+  const stepX = Math.max(1, Math.ceil(datas.length / 5));
+  datas.forEach((dt, i) => {
+    if (i % stepX !== 0 && i !== datas.length - 1) return;
+    mk("text", { x: xi(dt), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(dt));
+  });
+  return svg;
+}
+
+/**
  * Gráfico de % gordura com UMA LINHA POR MÉTODO.
  * series: [{metodo, pts:[{data,v}]}] — cada método tem sua cor, seu traçado e seus pontos;
  * nenhuma linha liga pontos de métodos diferentes.
@@ -2151,10 +2232,20 @@ function svgCorpoGordura(series, { w = 420, h = 220 } = {}) {
    Corpo — tela (render Corpo / perfil / formulário de medição)
    ============================================================ */
 function abrirCorpo(acao) {
+  // entrar na aba Corpo SEMPRE mostra a visão geral: nenhum estado de edição pode sobrar
   CORPO_ACAO = acao || null;
+  MEDICAO_EDIT = null;
+  state.corpoForm = false;
   if (state.tab !== "corpo") state.tab = "corpo";
-  if (!perfilCompleto()) { state.corpoForm = false; render(); return; }
   render();
+}
+/** volta para a visão geral da aba Corpo (fecha o formulário em criação OU edição) */
+function fecharMedicaoForm() {
+  MEDICAO_EDIT = null;
+  state.corpoForm = false;
+  CORPO_ACAO = null;
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 /** abre o formulário de medição na própria tela (nunca prompt nativo) */
 function abrirMedicaoForm(m) {
@@ -2230,9 +2321,8 @@ function editorPerfil() {
     saveLocal();
     toast("Perfil salvo");
     CORPO_ACAO = null;
-    const tinhaAcao = !!state.corpoForm;
     render();
-    if (tinhaAcao || !(state.data.medicoes && state.data.medicoes.length)) setTimeout(() => abrirMedicaoForm(null), 120);
+    if (tinhaAcao) setTimeout(() => abrirMedicaoForm(null), 120);
   });
   const canc = $("#pf-cancel", box);
   if (canc) canc.addEventListener("click", () => {
@@ -2393,12 +2483,6 @@ function campoNum(id, lb, ph, val, extra = "") {
   return `<div class="ccell"><span class="lb">${lb}</span><input type="number" inputmode="decimal" id="${id}" placeholder="${ph}" value="${val ?? ""}" aria-label="${lb.replace(/<[^>]+>/g, "")}" ${extra}></div>`;
 }
 /** "valor anterior" de um campo (pré-preenche só o que é útil repetir) */
-function ultVal(f, campo, casas = 1) {
-  const m = ultimaMedicao();
-  if (!m) return "";
-  const v = campo === "peso" ? m.peso : campo === "cintura" ? m.cintura : campo === "quadril" ? m.quadril : campo === "pescoco" ? m.pescoco : null;
-  return v == null ? "" : String(Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas));
-}
 
 /** prévia legível do que o parser da balança reconheceu */
 function textoDadosBalanca(d, peso) {
@@ -2413,9 +2497,11 @@ function textoDadosBalanca(d, peso) {
 }
 function renderMedicaoForm(v) {
   const p = perfil();
-  const ed = MEDICAO_EDIT;
+  // edição só vale se a medição ainda existe; senão volta ao modo criação (campos vazios)
+  const ed = MEDICAO_EDIT && (state.data.medicoes || []).some(x => x.id === MEDICAO_EDIT.id) ? MEDICAO_EDIT : null;
+  MEDICAO_EDIT = ed;
   const ult = ed ? null : ultimaMedicao();
-  // fonte e método herdam da última medição (o que a pessoa costuma usar); data = hoje
+  // criação: TODOS os campos vazios (só fonte e método herdam do último registro); data = hoje
   const fontePad = ult && CORPO_FONTES[ult.fonte] ? ult.fonte : "academia";
   const metodoPad = ult && ult.metodo ? ult.metodo : (p.metodoPadrao || "faulkner");
   const f = ed || { data: todayISO(), fonte: fontePad, metodo: metodoPad };
@@ -2440,15 +2526,15 @@ function renderMedicaoForm(v) {
 
     <div class="two" style="margin-top:8px">
       <div class="ccell"><span class="lb">Peso (kg) <span class="reqdot">*</span></span>
-        <input type="number" inputmode="decimal" id="md-peso" step="0.1" min="20" max="400" value="${ed ? (f.peso ?? "") : ultVal(0, "peso")}" placeholder="ex.: 102,0" aria-label="Peso em quilos"></div>
+        <input type="number" inputmode="decimal" id="md-peso" step="0.1" min="20" max="400" value="${ed ? (f.peso ?? "") : ""}" placeholder="ex.: 102,0" aria-label="Peso em quilos"></div>
       <div class="ccell"><span class="lb">Cintura (cm)</span>
-        <input type="number" inputmode="decimal" id="md-cintura" step="0.1" value="${ed ? (f.cintura ?? "") : ultVal(0, "cintura")}" placeholder="recomendado" aria-label="Cintura em cent\u00edmetros"></div>
+        <input type="number" inputmode="decimal" id="md-cintura" step="0.1" value="${ed ? (f.cintura ?? "") : ""}" placeholder="recomendado" aria-label="Cintura em cent\u00edmetros"></div>
     </div>
     <div class="two" style="margin-top:8px">
       <div class="ccell"><span class="lb">Quadril (cm)</span>
-        <input type="number" inputmode="decimal" id="md-quadril" step="0.1" value="${ed ? (f.quadril ?? "") : ultVal(0, "quadril")}" placeholder="recomendado" aria-label="Quadril em cent\u00edmetros"></div>
+        <input type="number" inputmode="decimal" id="md-quadril" step="0.1" value="${ed ? (f.quadril ?? "") : ""}" placeholder="recomendado" aria-label="Quadril em cent\u00edmetros"></div>
       <div class="ccell"><span class="lb">Pesco\u00e7o (cm)</span>
-        <input type="number" inputmode="decimal" id="md-pescoco" step="0.1" value="${ed ? (f.pescoco ?? "") : ultVal(0, "pescoco")}" placeholder="recomendado" aria-label="Pesco\u00e7o em cent\u00edmetros"></div>
+        <input type="number" inputmode="decimal" id="md-pescoco" step="0.1" value="${ed ? (f.pescoco ?? "") : ""}" placeholder="recomendado" aria-label="Pesco\u00e7o em cent\u00edmetros"></div>
     </div>
 
     <details class="folha" id="folha-balanca"><summary>Dados da balança / avalia\u00e7\u00e3o <span class="tiny">(colar)</span></summary>
@@ -2617,7 +2703,7 @@ function renderMedicaoForm(v) {
   box.querySelectorAll("input,select,textarea").forEach(i => i.addEventListener("change", preview));
   preview();
 
-  $c("#md-cancelar").addEventListener("click", () => { MEDICAO_EDIT = null; state.corpoForm = false; render(); });
+  $c("#md-cancelar").addEventListener("click", (ev) => { ev.preventDefault(); fecharMedicaoForm(); });
   $c("#md-salvar").addEventListener("click", () => {
     const o = coletar();
     const err = $c("#md-erro");
@@ -2698,8 +2784,9 @@ function renderCorpo(v) {
   }
   if (CORPO_ACAO === "perfil") { v.appendChild(editorPerfil()); v.appendChild(rodapeAviso()); return; }
   if (CORPO_ACAO === "config") { v.appendChild(cardConfigCorpo(p)); v.appendChild(rodapeAviso()); return; }
-  if (state.corpoForm || MEDICAO_EDIT) { renderMedicaoForm(v); v.appendChild(rodapeAviso()); return; }
+  if (state.corpoForm === true) { renderMedicaoForm(v); v.appendChild(rodapeAviso()); return; }
 
+  MEDICAO_EDIT = null;
   const ms = medicoesOrdenadas();
   const ult = ms.length ? ms[ms.length - 1] : null;
   const ant = ms.length > 1 ? ms[ms.length - 2] : null;
@@ -2756,6 +2843,7 @@ function renderCorpo(v) {
 
   /* ---- gráficos: peso e cintura (linha única) ---- */
   const pesoPts = {};
+  // uma "duplicata" da mesma data (ex.: dobras + balança no mesmo dia) fica com a última registrada
   ms.forEach(m => { const x = num(m.peso); if (x != null) pesoPts[m.data] = { data: m.data, v: x }; });
   const pesoSerie = Object.values(pesoPts).sort((a, b) => a.data.localeCompare(b.data));
   const cintPts = {};
@@ -2763,9 +2851,18 @@ function renderCorpo(v) {
   const cintSerie = Object.values(cintPts).sort((a, b) => a.data.localeCompare(b.data));
 
   const gc = el("div", { class: "card", id: "corpo-graficos" });
+  // Peso (kg, eixo esquerdo) + Cintura (cm, eixo direito) — duas medidas INDEPENDENTES.
+  // O IMC não entra aqui: ele é peso/altura², ou seja, a MESMA informação do peso
+  // em outra escala, e as duas curvas ficariam exatamente sobrepostas.
+  const altM = num(p.alturaCm) ? num(p.alturaCm) / 100 : null;
   gc.innerHTML = `<h3 style="font-size:16px">Evolu\u00e7\u00e3o</h3>
-    <div class="tiny" style="font-weight:700; color:var(--txt); margin-top:10px">Peso (kg)</div>`;
-  gc.appendChild(svgCorpoSimples(pesoSerie, { id: "peso", cor: "#4ade80", casas: 1 }));
+    <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:10px">
+      <span class="tiny" style="font-weight:700; color:var(--txt)">Peso e cintura</span><span class="sp"></span>
+      <span class="tiny" data-legenda="peso"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"/></svg> Peso (kg \u00b7 esq.)</span>
+      ${cintSerie.length ? `<span class="tiny" data-legenda="cintura"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 3"/></svg> Cintura (cm \u00b7 dir.)</span>` : ""}
+    </div>`;
+  gc.appendChild(svgCorpoDuplo(pesoSerie, cintSerie, { id: "peso-cintura" }));
+  if (!cintSerie.length) gc.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:6px 0 0">Meça a cintura para ver a linha junto com o peso.</p>`);
   if (p.meta && p.meta.pesoKg != null) gc.insertAdjacentHTML("beforeend", `<div class="tiny">Meta: <b style="color:var(--txt)">${fmtN(p.meta.pesoKg, 1)} kg</b> \u00b7 faltam ${fmtN(ult.peso - p.meta.pesoKg, 1)} kg</div>`);
   const h2 = el("div", { style: "margin-top:16px" });
   h2.innerHTML = `<div class="tiny" style="font-weight:700; color:var(--txt)">Cintura (cm)</div>`;
