@@ -320,6 +320,30 @@
     padding:9px 11px; font-size:16px; font-family:inherit; color:var(--txt); resize:vertical; line-height:1.45}
 .md-paste:focus{outline:none; border-color:var(--acc)}
   .two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  /* seletor de perfil (família) */
+  .pf-bar{display:flex; align-items:center; gap:8px; min-width:0}
+  .pf-label{min-width:0; flex:1}
+  .pf-label .pl{display:block; font-size:10px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; font-weight:700}
+  .pf-label .pn{display:block; font-size:19px; font-weight:800; letter-spacing:-.02em; line-height:1.2;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* ícone de avatar ao lado do nome do perfil */
+  .pf-ava{width:36px; height:36px; flex:none; border-radius:50%; display:grid; place-items:center;
+    background:rgba(74,222,128,.14); border:1px solid rgba(74,222,128,.45); color:var(--acc); font-weight:900; font-size:15px}
+  .pf-chips{display:flex; gap:6px; overflow-x:auto; margin-top:10px; padding-bottom:2px; scrollbar-width:none}
+  .pf-chips::-webkit-scrollbar{display:none}
+  .pf-chip{flex:none; display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 13px;
+    border-radius:999px; border:1px solid var(--line); background:var(--bg3); color:var(--txt);
+    font-size:14px; font-weight:650; max-width:180px}
+  .pf-chip span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .pf-chip .av{width:20px; height:20px; border-radius:50%; display:grid; place-items:center; flex:none;
+    background:var(--bg); font-size:10.5px; font-weight:900; color:var(--mut)}
+  .pf-chip.on{background:rgba(74,222,128,.14); border-color:var(--acc); color:var(--acc)}
+  .pf-chip.on .av{background:var(--acc); color:#121214}
+  .pf-chip.add{color:var(--acc); border-style:dashed; border-color:rgba(74,222,128,.5)}
+  .pf-actions{display:flex; gap:8px; margin-top:10px}
+  .pf-actions .btn{flex:1}
+  .pf-badge{font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; background:rgba(251,191,36,.14);
+    color:#fde68a; border:1px solid rgba(251,191,36,.35); white-space:nowrap}
   .legend-methods{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px}
 </style>
 </head>
@@ -418,6 +442,136 @@ function stampWeek(iso) {
   return d.toISOString().slice(0, 10);
 }
 
+/* ---------- perfis (família usa o mesmo aparelho) ----------
+   COMPARTILHADO: treinos (fichas A/B/C/D — a academia é a mesma).
+   POR PERFIL: sessoes, medicoes e os dados do perfil (sexo/idade/altura/metas).
+   Item de sessão/medição sem `perfilId` é do perfil ATIVO (retrocompatível). */
+function perfisArr() {
+  if (!state.data) return [];
+  if (!Array.isArray(state.data.perfis)) state.data.perfis = [];
+  return state.data.perfis;
+}
+function perfilAtivo() {
+  const arr = perfisArr();
+  const id = state.data.perfilAtivoId;
+  const p = arr.find(x => x && x.id === id);
+  if (p) return p;
+  if (arr.length) { state.data.perfilAtivoId = arr[0].id; return arr[0]; }
+  return null;
+}
+function perfilAtivoId() { const p = perfilAtivo(); return p ? p.id : null; }
+/** true quando o item pertence ao perfil ativo (sem perfilId = do perfil ativo) */
+function doPerfilAtivo(item) {
+  if (!item) return false;
+  if (!item.perfilId) return true;
+  return item.perfilId === perfilAtivoId();
+}
+/** fichas do perfil ativo (treino sem perfilId = do perfil ativo, retrocompatível) */
+function treinosDoPerfil() {
+  const arr = Array.isArray(state.data.treinos) ? state.data.treinos : [];
+  return arr.filter(doPerfilAtivo);
+}
+function getTreino(id) {
+  return state.data.treinos.find(t => t.id === id && doPerfilAtivo(t));
+}
+/** ids de exercício únicos dentro de um perfil (fichas novas não colidem com as do perfil 1) */
+function idsExistentesDoPerfil(exceto) {
+  const s = new Set();
+  for (const t of treinosDoPerfil()) {
+    if (t === exceto) continue;
+    for (const ex of t.exercicios || []) s.add(ex.id);
+  }
+  return s;
+}
+/** cópia das fichas padrão para o perfil ativo, com ids novos (sufixo do perfil) */
+function fichasPadraoParaPerfil(pid) {
+  const suf = "-" + String(pid).replace(/[^a-z0-9]/gi, "").slice(-4).toLowerCase();
+  return clone(TREINOS_PADRAO).map(t => ({
+    ...t,
+    perfilId: pid,
+    exercicios: (t.exercicios || []).map(ex => ({ ...ex, id: ex.id + suf })),
+  }));
+}
+function sessoesDoPerfil() {
+  const arr = Array.isArray(state.data.sessoes) ? state.data.sessoes : [];
+  return arr.filter(doPerfilAtivo);
+}
+function medicoesDoPerfil() {
+  const arr = Array.isArray(state.data.medicoes) ? state.data.medicoes : [];
+  return arr.filter(doPerfilAtivo);
+}
+/** grava o perfilId nos itens sem dono (migração de dados antigos para o perfil ativo) */
+function migrarItensSemPerfil() {
+  const id = perfilAtivoId();
+  if (!id) return;
+  for (const arr of [state.data.treinos, state.data.sessoes, state.data.medicoes]) {
+    if (!Array.isArray(arr)) continue;
+    for (const it of arr) if (it && !it.perfilId) it.perfilId = id;
+  }
+}
+/** nome do perfil (nunca vazio: é o que identifica) */
+function nomePerfil(p) {
+  const n = p && typeof p.nome === "string" ? p.nome.trim() : "";
+  return n || "Sem nome";
+}
+/** idade a partir da data de nascimento (yyyy-mm-dd) */
+function idadeDeNascimento(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ""))) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const h = new Date();
+  let a = h.getFullYear() - y;
+  if (h.getMonth() + 1 < m || (h.getMonth() + 1 === m && h.getDate() < d)) a--;
+  return (a >= 0 && a <= 120) ? a : null;
+}
+/** próximo nome livre: "Perfil 1", "Perfil 2"… */
+function proximoNomePerfil() {
+  const usados = new Set(perfisArr().map(p => nomePerfil(p).toLowerCase()));
+  let k = perfisArr().length + 1;
+  while (usados.has(("perfil " + k).toLowerCase())) k++;
+  return "Perfil " + k;
+}
+/** estado padrão de um perfil novo */
+function novoPerfilObj(dados) {
+  return {
+    id: uid("p"),
+    nome: "",
+    sexo: null, nascimento: null, idade: null, alturaCm: null,
+    meta: { pesoKg: null, cinturaCm: null, gorduraPct: null },
+    metodoPadrao: "faulkner",
+    ...(dados || {}),
+  };
+}
+/** iniciais para o avatar (ex.: "Scotta" → "S", "Lucas Scotta" → "LS") */
+function iniciais(nome) {
+  const ps = String(nome || "").trim().split(/\s+/).filter(Boolean);
+  if (!ps.length) return "?";
+  return (ps.length === 1 ? ps[0].slice(0, 1) : ps[0].slice(0, 1) + ps[ps.length - 1].slice(0, 1)).toUpperCase();
+}
+/** cria as fichas padrão para o perfil ativo (ids com sufixo do perfil: sem colisão) */
+function criarFichasPadrao() {
+  const pid = perfilAtivoId();
+  if (!pid) return;
+  if (treinosDoPerfil().length) return toast("Este perfil já tem fichas");
+  const novas = fichasPadraoParaPerfil(pid);
+  state.data.treinos.push(...novas);
+  saveLocal(); scheduleSync(); render();
+  toast("4 fichas padrão criadas");
+}
+function trocarPerfil(id) {
+  if (!perfisArr().some(p => p && p.id === id)) return;
+  if (state.data.perfilAtivoId === id) return;
+  state.data.perfilAtivoId = id;
+  if (state.sessao) { stopTick(); state.sessao = null; clearRascunho(); }
+  state.openEx = {};
+  state.chartEx = {};
+  state.chartCardio = null;
+  CORPO_ACAO = null; MEDICAO_EDIT = null; state.corpoForm = false;
+  saveLocal(); scheduleSync();
+  render();
+  window.scrollTo({ top: 0 });
+  toast("Perfil: " + nomePerfil(perfilAtivo()));
+}
+
 /* ---------- resumo mensal ---------- */
 const MESES_PT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 /** {ano, mes} do mês real do aparelho (fuso local) */
@@ -434,7 +588,7 @@ const nomeMes = (m) => MESES_PT[m.mes];
 function resumoMes(m) {
   const k = mesKey(m);
   const out = { key: k, nome: nomeMes(m), treinos: 0, exConcluidos: 0, minutos: 0, porFicha: {} };
-  const arr = Array.isArray(state.data && state.data.sessoes) ? state.data.sessoes : [];
+  const arr = sessoesDoPerfil();
   for (const s of arr) {
     if (!s || !s.data) continue;
     if (String(s.data).slice(0, 7) !== k) continue;
@@ -453,7 +607,7 @@ function resumoMes(m) {
 function resumoCardioMes(m) {
   const k = mesKey(m);
   const out = { key: k, minutos: 0, km: 0, sessoes: 0 };
-  const arr = Array.isArray(state.data && state.data.sessoes) ? state.data.sessoes : [];
+  const arr = sessoesDoPerfil();
   for (const s of arr) {
     if (!s || !s.data || String(s.data).slice(0, 7) !== k) continue;
     const cex = (Array.isArray(s.exercicios) ? s.exercicios : []).filter(x => x && x.tipo === "cardio");
@@ -585,7 +739,7 @@ function cardioStats(series) {
 /** pontos {data, vel, dist} de um exercício de cardio (uma sessão por dia) */
 function cardioForChart(exId) {
   const porDia = new Map();
-  for (const s of [...(state.data.sessoes || [])].sort((a, b) => a.data.localeCompare(b.data))) {
+  for (const s of [...sessoesDoPerfil()].sort((a, b) => a.data.localeCompare(b.data))) {
     const ex = (s.exercicios || []).find(x => x && x.exercicioId === exId);
     if (!ex || !Array.isArray(ex.series) || !ex.series.length) continue;
     const st = cardioStats(ex.series);
@@ -618,7 +772,7 @@ function doneEx(s) { return s.exercicios.filter(x => x.concluido).length; }
    Estado
    ============================================================ */
 const state = {
-  data: null,          // {treinos, sessoes}
+  data: null,          // {treinos, sessoes, medicoes, perfis, perfilAtivoId}
   tab: "inicio",
   sessao: null,        // sessão em edição {localId,data,treinoId,exercicios}
   openEx: {},          // exercício aberto por id
@@ -638,7 +792,7 @@ const state = {
 let MEDICAO_EDIT = null;  // medição em edição (aba Corpo) — NUNCA persistido (só em memória)
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
-function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], medicoes: [], perfil: null, aceitouAvisoMedico: false }; }
+function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], medicoes: [], perfis: [], perfilAtivoId: null, aceitouAvisoMedico: false }; }
 
 function loadLocal() {
   try {
@@ -659,14 +813,40 @@ function saveLocal() {
 }
 
 /* normaliza estruturas vindas do Drive (defensivo) */
+/** normaliza UM perfil (defensivo) */
+function normalizePerfil(pf) {
+  const p = (pf && typeof pf === "object") ? pf : {};
+  const meta = (p.meta && typeof p.meta === "object") ? p.meta : {};
+  const nome = typeof p.nome === "string" && p.nome.trim() ? p.nome.trim().slice(0, 40) : "";
+  const nasc = /^\d{4}-\d{2}-\d{2}$/.test(String(p.nascimento || "")) ? String(p.nascimento).slice(0, 10) : null;
+  let idade = num(p.idade) != null ? Math.round(num(p.idade)) : null;
+  // nascimento manda: calcula a idade atual (dados antigos só tinham idade)
+  if (nasc) { const ia = idadeDeNascimento(nasc); if (ia != null) idade = ia; }
+  return {
+    id: String(p.id || uid("p")),
+    nome,
+    sexo: (p.sexo === "M" || p.sexo === "F") ? p.sexo : null,
+    nascimento: nasc,
+    idade,
+    alturaCm: num(p.alturaCm),
+    meta: { pesoKg: num(meta.pesoKg), cinturaCm: num(meta.cinturaCm), gorduraPct: num(meta.gorduraPct) },
+    metodoPadrao: p.metodoPadrao === "navy" ? "navy" : "faulkner",
+  };
+}
 function normalizeData(d) {
-  const out = { treinos: [], sessoes: [], medicoes: [], perfil: null, aceitouAvisoMedico: false };
+  const out = { treinos: [], sessoes: [], medicoes: [], perfis: [], perfilAtivoId: null, aceitouAvisoMedico: false };
   if (!d || typeof d !== "object") return defaultData();
+  // fichas dos perfis já conhecidos, para saber quais perfilId são válidos
+  const perfisConhecidos = new Set();
+  if (Array.isArray(d.perfis)) d.perfis.forEach(x => x && x.id && perfisConhecidos.add(String(x.id)));
+  if (d.perfil && typeof d.perfil === "object") perfisConhecidos.add("p1");
+  if (d.perfilAtivoId) perfisConhecidos.add(String(d.perfilAtivoId));
   const treinos = Array.isArray(d.treinos) ? d.treinos : [];
   for (const t of treinos) {
     if (!t || typeof t !== "object") continue;
     const exs = Array.isArray(t.exercicios) ? t.exercicios : [];
     out.treinos.push({
+      perfilId: (t.perfilId && perfisConhecidos.has(String(t.perfilId))) ? String(t.perfilId) : (t.perfilId ? String(t.perfilId) : (d.perfilAtivoId || (d.perfil ? "p1" : null))),
       id: String(t.id || uid("t")),
       nome: String(t.nome || "Treino"),
       exercicios: exs.filter(x => x && x.nome).map(x => ({
@@ -679,17 +859,38 @@ function normalizeData(d) {
       })),
     });
   }
-  if (!out.treinos.length) out.treinos = clone(TREINOS_PADRAO);
-  // ---- perfil (aba Corpo) — retrocompatível: dados antigos não têm ----
-  const pf = (d.perfil && typeof d.perfil === "object") ? d.perfil : (state.data && state.data.perfil) || {};
-  const meta = (pf.meta && typeof pf.meta === "object") ? pf.meta : {};
-  out.perfil = {
-    sexo: (pf.sexo === "M" || pf.sexo === "F") ? pf.sexo : null,
-    idade: num(pf.idade) != null ? Math.round(num(pf.idade)) : null,
-    alturaCm: num(pf.alturaCm),
-    meta: { pesoKg: num(meta.pesoKg), cinturaCm: num(meta.cinturaCm), gorduraPct: num(meta.gorduraPct) },
-    metodoPadrao: pf.metodoPadrao === "navy" ? "navy" : "faulkner",
-  };
+  // SÓ usa as fichas padrão quando não há NENHUMA ficha no arquivo (primeiro uso).
+  // Perfil novo começa sem fichas — a pessoa escolhe criar as padrão ou do zero.
+  if (!out.treinos.length && !(Array.isArray(d.treinos) && d.treinos.length)) out.treinos = fichasPadraoParaPerfil(out.perfilAtivoId || "p1");
+  // ---- perfis (aba Corpo) ----
+  // MIGRAÇÃO RETROCOMPATÍVEL: JSON antigo tem só `perfil` (objeto) → vira perfis:[{id:'p1', ...perfil}].
+  // Nenhum dado é descartado: nome ausente fica "" (exibido como "Perfil 1" se for o único).
+  const perfisIn = Array.isArray(d.perfis) ? d.perfis.filter(x => x && typeof x === "object") : [];
+  if (perfisIn.length) {
+    const vistos = new Set();
+    for (const pf of perfisIn) {
+      const p = normalizePerfil(pf);
+      while (vistos.has(p.id)) p.id = uid("p");
+      vistos.add(p.id);
+      out.perfis.push(p);
+    }
+  } else if (d.perfil && typeof d.perfil === "object") {
+    out.perfis.push(normalizePerfil(Object.assign({ id: "p1" }, d.perfil)));
+  } else if (state.data && Array.isArray(state.data.perfis) && state.data.perfis.length) {
+    // sem perfil no arquivo: mantém os perfis já carregados (nunca perde quem já usa)
+    out.perfis = state.data.perfis.map(p => normalizePerfil(p));
+  }
+  // o primeiro perfil sempre tem id estável ('p1' na migração) e nome válido
+  out.perfis.forEach((p, i) => {
+    if (!p.nome) p.nome = out.perfis.length === 1 ? "Perfil 1" : "Perfil " + (i + 1);
+  });
+  const idsValidos = out.perfis.map(p => p.id);
+  const ativo = d.perfilAtivoId || (state.data && state.data.perfilAtivoId) || null;
+  out.perfilAtivoId = idsValidos.includes(ativo) ? ativo : (idsValidos[0] || null);
+  const ativoPerfil = out.perfis.find(p => p.id === out.perfilAtivoId)
+    || { sexo: null, alturaCm: null, meta: {} };
+  // perfis achados por id (para recalcular Navy de cada dono)
+  const perfilDe = (pid) => out.perfis.find(p => p.id === pid) || ativoPerfil;
   out.aceitouAvisoMedico = d.aceitouAvisoMedico === true;
   // ---- medições antropométricas (aba Corpo) ----
   const meds = Array.isArray(d.medicoes) ? d.medicoes : [];
@@ -713,6 +914,7 @@ function normalizeData(d) {
       : (fonte === "medica" ? "inbody" : fonte === "academia" ? "faulkner" : fonte === "balanca_casa" ? "balanca" : "nenhum");
     out.medicoes.push({
       id: String(m.id || uid("med")),
+      perfilId: (m.perfilId && idsValidos.includes(String(m.perfilId))) ? String(m.perfilId) : (m.perfilId ? String(m.perfilId) : out.perfilAtivoId),
       data,
       peso: num(m.peso), cintura: num(m.cintura), quadril: num(m.quadril), pescoco: num(m.pescoco),
       perimetros: nums(m.perimetros), dobras: nums(m.dobras), pollock: nums(m.pollock),
@@ -731,7 +933,8 @@ function normalizeData(d) {
       if (f) { m.gorduraFaulkner = Math.round(f.valor * 10) / 10; if (m.gordura == null) m.gordura = m.gorduraFaulkner; }
     }
     if (m.metodo === "navy" && m.gorduraNavy == null) {
-      const nv = calcNavy(m, out.perfil.sexo, out.perfil.alturaCm);
+      const dono = perfilDe(m.perfilId);
+      const nv = calcNavy(m, dono.sexo, dono.alturaCm);
       if (nv) { m.gorduraNavy = Math.round(nv.valor * 10) / 10; if (m.gordura == null) m.gordura = m.gorduraNavy; }
     }
     if (m.metodo === "inbody" && m.gorduraInbody == null) {
@@ -748,6 +951,7 @@ function normalizeData(d) {
   for (const s of fim) {
     if (!s || !s.data) continue;
     const reg = {
+      perfilId: (s.perfilId && idsValidos.includes(String(s.perfilId))) ? String(s.perfilId) : (s.perfilId ? String(s.perfilId) : out.perfilAtivoId),
       data: String(s.data).slice(0, 10),
       treinoId: String(s.treinoId || ""),
       exercicios: (Array.isArray(s.exercicios) ? s.exercicios : []).filter(x => x && x.exercicioId).map(x => {
@@ -1056,10 +1260,9 @@ $("#overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") 
 /* ============================================================
    Consultas de dados
    ============================================================ */
-const getTreino = (id) => state.data.treinos.find(t => t.id === id);
 
 function lastSeriesFor(exId) {
-  const sess = [...state.data.sessoes].sort((a, b) => a.data.localeCompare(b.data));
+  const sess = [...sessoesDoPerfil()].sort((a, b) => a.data.localeCompare(b.data));
   for (let i = sess.length - 1; i >= 0; i--) {
     const ex = sess[i].exercicios.find(x => x.exercicioId === exId);
     if (ex && ex.series && ex.series.length) return { data: sess[i].data, series: ex.series };
@@ -1068,7 +1271,7 @@ function lastSeriesFor(exId) {
 }
 function bestWeight(exId) {
   let best = null;
-  for (const s of state.data.sessoes) {
+  for (const s of sessoesDoPerfil()) {
     const ex = s.exercicios.find(x => x.exercicioId === exId);
     if (!ex) continue;
     for (const se of ex.series) if (se.peso != null && (best == null || se.peso > best)) best = se.peso;
@@ -1077,7 +1280,7 @@ function bestWeight(exId) {
 }
 function seriesForChart(exId) {
   const pts = [];
-  for (const s of [...state.data.sessoes].sort((a, b) => a.data.localeCompare(b.data))) {
+  for (const s of [...sessoesDoPerfil()].sort((a, b) => a.data.localeCompare(b.data))) {
     const ex = s.exercicios.find(x => x.exercicioId === exId);
     if (!ex || !ex.series.length) continue;
     const ws = ex.series.map(v => v.peso).filter(v => v != null);
@@ -1091,7 +1294,7 @@ function seriesForChart(exId) {
 /** histórico cronológico (mais recente primeiro) das observações de um exercício */
 function obsHistoryFor(exId) {
   const out = [];
-  for (const s of [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data))) {
+  for (const s of [...sessoesDoPerfil()].sort((a, b) => b.data.localeCompare(a.data))) {
     const ex = s.exercicios.find(x => x.exercicioId === exId);
     const o = ex && typeof ex.obs === "string" ? ex.obs.trim() : "";
     if (o) out.push({ data: s.data, obs: o });
@@ -1119,7 +1322,7 @@ function loadStagnation(exId, atRef) {
   if (!exId) return null;
   const ref = atRef || todayISO();
   const pts = [];
-  for (const s of state.data.sessoes) {
+  for (const s of sessoesDoPerfil()) {
     if (s.data > ref) continue;
     const ex = s.exercicios.find(x => x.exercicioId === exId);
     if (!ex || !ex.series || !ex.series.length) continue;
@@ -1158,7 +1361,12 @@ function render() {
   top.classList.remove("hidden"); tabs.classList.remove("hidden");
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === state.tab));
   const titles = { inicio: "Gusto", graficos: "Evolução", historico: "Histórico", treinos: "Minhas fichas", corpo: "Corpo" };
-  $("#hdTitle").textContent = titles[state.tab] || "Gusto";
+  const pfNome = perfilAtivo() ? nomePerfil(perfilAtivo()) : null;
+  const comNome = !!pfNome && (state.tab === "historico" || state.tab === "corpo");
+  $(".hdtxt .tag").textContent = comNome ? pfNome : "Sinta o gosto da evolução.";
+  $("#hdTitle").textContent = comNome
+    ? (state.tab === "historico" ? "Histórico · " + pfNome : "Corpo · " + pfNome)
+    : (titles[state.tab] || "Gusto");
   const v = $("#view");
   v.innerHTML = "";
   if (state.tab === "inicio") renderInicio(v);
@@ -1194,7 +1402,7 @@ function renderWelcome() {
    Treino do dia
    ============================================================ */
 function lastSessionsForTreino(trId, n = 3) {
-  return state.data.sessoes.filter(s => s.treinoId === trId).sort((a, b) => b.data.localeCompare(a.data)).slice(0, n);
+  return sessoesDoPerfil().filter(s => s.treinoId === trId).sort((a, b) => b.data.localeCompare(a.data)).slice(0, n);
 }
 
 /* Rotação fixa das fichas */
@@ -1202,7 +1410,7 @@ const ROTACAO = ["A", "B", "C", "D"];
 
 /* Sessão mais recente: maior data; em empate, maior horaInicio; depois última inserida */
 function ultimaSessao() {
-  const arr = Array.isArray(state.data && state.data.sessoes) ? state.data.sessoes : [];
+  const arr = sessoesDoPerfil();
   let best = null, bestKey = null;
   for (let i = 0; i < arr.length; i++) {
     const s = arr[i];
@@ -1225,7 +1433,7 @@ function estadoFichas() {
   const map = new Map();
   const ult = ultimaSessao();
   let ultId = ult && ult.treinoId ? String(ult.treinoId).trim().toUpperCase() : null;
-  const existentes = (state.data.treinos || []).map(t => String(t.id).trim().toUpperCase());
+  const existentes = treinosDoPerfil().map(t => String(t.id).trim().toUpperCase());
   if (ultId && !existentes.includes(ultId)) ultId = null;   // sessão órfã: ignora
   if (ultId) map.set(ultId, "ult");
   // próxima na rotação fixa; sem nenhum treino, começa em A
@@ -1254,7 +1462,7 @@ function cardMes() {
   const v = varMes(agora, ant);
   const c = el("div", { class: "card mes-card", id: "card-mes" });
   c.dataset.mes = agora.key;
-  const temDados = state.data.sessoes.length > 0;
+  const temDados = sessoesDoPerfil().length > 0;
   c.innerHTML = `<div class="mes-head"><h3>Resumo do mês</h3><span class="sp"></span><span class="cap" id="mes-nome">${esc(agora.nome)}</span></div>
     <div class="mes-grid">
       <div><b id="mes-treinos">${agora.treinos}</b><span>treinos</span><i class="mes-var ${v.cls}" id="mes-var">${v.txt}</i></div>
@@ -1281,7 +1489,7 @@ function renderInicio(v) {
   v.appendChild(h);
 
   const estado = estadoFichas();
-  for (const t of state.data.treinos) {
+  for (const t of treinosDoPerfil()) {
     const st = estado.get(t.id) || "";   // "" | "ult" | "prox"
     const b = el("button", { class: "treino-btn" + (st === "ult" ? " st-ult" : st === "prox" ? " st-prox" : "") });
     b.dataset.ficha = t.id;
@@ -1296,9 +1504,10 @@ function renderInicio(v) {
 
   v.appendChild(cardMes());
 
-  if (state.data.sessoes.length) {
+  const sessoesP = sessoesDoPerfil();
+  if (sessoesP.length) {
     const box = el("div", { class: "card" });
-    const lastS = [...state.data.sessoes].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
+    const lastS = [...sessoesP].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
     box.innerHTML = `<div class="row"><h3 style="font-size:15px">Últimos treinos</h3><span class="sp"></span>
       <button class="btn sm" id="go-hist">Ver tudo</button></div>`;
     for (const s of lastS) {
@@ -1795,8 +2004,10 @@ function concluirSessao(s, forcar) {
   s.duracaoMin = Math.round((seg / 60) * 10) / 10;  // em minutos, 1 casa decimal (ex.: 52.4); nunca 0
 
   // substitui sessão do mesmo treino no mesmo dia (evita duplicar ao corrigir)
-  const idx = state.data.sessoes.findIndex(x => x.data === s.data && x.treinoId === s.treinoId);
+  const pid = perfilAtivoId();
+  const idx = state.data.sessoes.findIndex(x => doPerfilAtivo(x) && x.data === s.data && x.treinoId === s.treinoId);
   const reg = {
+    perfilId: pid,
     data: s.data, treinoId: s.treinoId,
     horaInicio: s.horaInicio, horaFim: s.horaFim, duracaoMin: s.duracaoMin,
     exercicios,
@@ -1845,12 +2056,15 @@ const CORPO_FONTE_LBL = {
 };
 const AVISO_MEDICO = "\u26a0\ufe0f O Gusto \u00e9 uma ferramenta de acompanhamento, n\u00e3o um programa m\u00e9dico. Os \u00edndices (IMC, gordura corporal, RCE, RCQ) s\u00e3o ESTIMATIVAS calculadas por f\u00f3rmulas antropom\u00e9tricas e n\u00e3o substituem avalia\u00e7\u00e3o profissional. Consulte m\u00e9dico ou nutricionista antes de tomar decis\u00f5es sobre peso, dieta ou treino.";
 
-/* ---------- perfil ---------- */
+/* ---------- perfil (aba Corpo) — SEMPRE o perfil ativo ---------- */
 function perfil() {
-  if (!state.data.perfil || typeof state.data.perfil !== "object") {
-    state.data.perfil = { sexo: null, idade: null, alturaCm: null, meta: {}, metodoPadrao: "faulkner" };
+  let p = perfilAtivo();
+  if (!p) {
+    // primeiro uso: cria o perfil do dono do aparelho
+    p = novoPerfilObj({ nome: "Perfil 1" });
+    state.data.perfis = [p];
+    state.data.perfilAtivoId = p.id;
   }
-  const p = state.data.perfil;
   if (p.meta === undefined || p.meta === null || typeof p.meta !== "object") p.meta = {};
   if (!p.metodoPadrao) p.metodoPadrao = "faulkner";
   return p;
@@ -1983,7 +2197,7 @@ function fmtDelta(v, casas = 1, unidade = "") {
 }
 /** medições em ordem cronológica (com data válida) */
 function medicoesOrdenadas() {
-  const arr = Array.isArray(state.data.medicoes) ? state.data.medicoes : [];
+  const arr = medicoesDoPerfil();
   // ordena por data; mesma data → a registrada por último fica como a mais recente
   return arr.filter(m => m && m.data)
     .map((m, i) => ({ m, i }))
@@ -2258,23 +2472,27 @@ function abrirMedicaoForm(m) {
   if (f) f.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 
-/* ---------- perfil ---------- */
+/* ---------- editor do perfil ativo ---------- */
 function editorPerfil() {
   const p = perfil();
   const box = el("div", { class: "card av-form", id: "corpo-perfil-editor", style: "margin-top:14px" });
-  box.innerHTML = `<div class="row"><h3 style="font-size:16px">Seu perfil</h3><span class="sp"></span>
+  box.innerHTML = `<div class="row"><h3 style="font-size:16px">Perfil · ${esc(nomePerfil(p))}</h3><span class="sp"></span>
       <span class="tiny">${perfilCompleto() ? "editar" : "necessário"}</span></div>
-    <p class="tiny" style="margin:4px 0 0">Sexo e altura são indispensáveis para calcular IMC, RCE e % de gordura.</p>
+    <p class="tiny" style="margin:4px 0 0">Nome identifica quem é (a família usa o mesmo app). Sexo e altura são indispensáveis para calcular IMC, RCE e % de gordura.</p>
     <div class="perfil-grid">
+      <div class="pfcell full"><span class="lb">Nome <span class="reqdot">*</span></span>
+        <input type="text" id="pf-nome" maxlength="40" placeholder="${esc(proximoNomePerfil())}" value="${esc(p.nome || "")}" aria-label="Nome do perfil" autocomplete="off"></div>
       <div class="pfcell full"><span class="lb">Sexo</span>
         <div class="cseg-l" role="group" aria-label="Sexo">
           <button type="button" data-sexo="M" class="${p.sexo === "M" ? "on" : ""}">Masculino</button>
           <button type="button" data-sexo="F" class="${p.sexo === "F" ? "on" : ""}">Feminino</button>
         </div>
       </div>
+      <div class="pfcell"><span class="lb">Nascimento</span>
+        <input type="date" id="pf-nasc" min="1900-01-01" max="${todayISO()}" value="${esc(p.nascimento || "")}" aria-label="Data de nascimento"></div>
       <div class="pfcell"><span class="lb">Idade (anos)</span>
         <input type="number" inputmode="numeric" id="pf-idade" min="10" max="110" placeholder="ex.: 40" value="${p.idade ?? ""}" aria-label="Idade"></div>
-      <div class="pfcell"><span class="lb">Altura (cm)</span>
+      <div class="pfcell full"><span class="lb">Altura (cm)</span>
         <input type="number" inputmode="decimal" id="pf-altura" min="100" max="250" step="0.5" placeholder="ex.: 183" value="${p.alturaCm ?? ""}" aria-label="Altura em centímetros"></div>
       <div class="pfcell full"><span class="lb">Meta de peso (kg) <span style="text-transform:none; letter-spacing:0; font-weight:500">opcional</span></span>
         <input type="number" inputmode="decimal" id="pf-meta-peso" step="0.1" placeholder="ex.: 95" value="${p.meta.pesoKg ?? ""}" aria-label="Meta de peso"></div>
@@ -2290,22 +2508,37 @@ function editorPerfil() {
     </div>
     <div class="load-warn hidden" id="pf-erro" style="display:none"></div>
     <button class="btn pri block" id="pf-salvar" style="margin-top:12px">Salvar perfil</button>
+    ${perfilCompleto() || perfisArr().length > 1 ? `<button class="btn block danger" id="pf-excluir" style="margin-top:8px">Excluir este perfil</button>` : ""}
     ${perfilCompleto() ? `<button class="btn block" id="pf-cancel" style="background:none;border-color:transparent;color:var(--mut)">Cancelar</button>` : ""}`;
   // segmento de sexo
   box.querySelectorAll("[data-sexo]").forEach(b => b.addEventListener("click", () => {
     box.querySelectorAll("[data-sexo]").forEach(o => o.classList.toggle("on", o === b));
     box.dataset.sexo = b.dataset.sexo;
+    idadeDoNasc();
   }));
   box.dataset.sexo = p.sexo || "";
   const err = (msg) => { const e = $("#pf-erro", box); e.style.display = ""; e.innerHTML = `\u26a0 <b>${esc(msg)}</b>`; };
+  // nascimento preenche a idade automaticamente
+  const idadeDoNasc = () => {
+    const nasc = $("#pf-nasc", box).value;
+    const ia = idadeDeNascimento(nasc);
+    if (ia != null) $("#pf-idade", box).value = String(ia);
+  };
+  $("#pf-nasc", box).addEventListener("change", idadeDoNasc);
   $("#pf-salvar", box).addEventListener("click", () => {
+    const nome = $("#pf-nome", box).value.trim();
     const sexo = box.dataset.sexo || null;
-    const idade = num($("#pf-idade", box).value);
+    const nasc = $("#pf-nasc", box).value || null;
+    let idade = num($("#pf-idade", box).value);
     const alturaCm = num($("#pf-altura", box).value);
+    if (!nome) return err("Informe o nome do perfil");
     if (!sexo) return err("Informe o sexo");
     if (alturaCm == null || alturaCm < 100 || alturaCm > 250) return err("Informe a altura em cm (entre 100 e 250)");
+    if (nasc) { const ia = idadeDeNascimento(nasc); if (ia != null) idade = ia; }
     if (idade != null && (idade < 10 || idade > 110)) return err("Idade entre 10 e 110 anos");
+    p.nome = nome.slice(0, 40);
     p.sexo = sexo;
+    p.nascimento = nasc;
     p.idade = idade == null ? null : Math.round(idade);
     p.alturaCm = Math.round(alturaCm * 10) / 10;
     p.meta = {
@@ -2314,21 +2547,122 @@ function editorPerfil() {
       gorduraPct: num($("#pf-meta-gordura", box).value),
     };
     p.metodoPadrao = $("#pf-metodo", box).value === "navy" ? "navy" : "faulkner";
+    // recalcula o método das medições DESTE perfil que dependem do perfil
+    for (const m of medicoesDoPerfil()) recalcularMedicao(m);
     saveLocal();
     scheduleSync();
-    // recalcula o método das medições que dependem do perfil
-    for (const m of (state.data.medicoes || [])) recalcularMedicao(m);
-    saveLocal();
     toast("Perfil salvo");
     CORPO_ACAO = null;
     render();
-    if (tinhaAcao) setTimeout(() => abrirMedicaoForm(null), 120);
   });
   const canc = $("#pf-cancel", box);
   if (canc) canc.addEventListener("click", () => {
     CORPO_ACAO = null; saveLocal(); scheduleSync(); render();
   });
+  const exc = $("#pf-excluir", box);
+  if (exc) exc.addEventListener("click", () => confirmarExclusaoPerfil(p));
   return box;
+}
+
+/* ---------- excluir perfil: apaga fichas, sessões e medições DELE ---------- */
+function confirmarExclusaoPerfil(p) {
+  const total = perfisArr().length;
+  if (total <= 1) return toast("Não é possível excluir o último perfil");
+  const fim = (arr) => (Array.isArray(arr) ? arr.filter(x => x && x.perfilId === p.id) : []);
+  const nF = fim(state.data.treinos).length, nS = fim(state.data.sessoes).length, nM = fim(state.data.medicoes).length;
+  const msg = `Excluir o perfil “${nomePerfil(p)}”?\n\n` +
+    `Apaga permanentemente:\n• ${nF} ficha(s) de treino\n• ${nS} treino(s) no histórico\n• ${nM} medição(ões)\n\n` +
+    `Os outros perfis não são afetados. Esta ação não pode ser desfeita.`;
+  if (!confirm(msg)) return;
+  // comparação EXPLÍCITA (nunca por negação: `undefined !== id` apagaria itens sem dono)
+  state.data.perfis = perfisArr().filter(x => x.id !== p.id);
+  state.data.treinos = state.data.treinos.filter(x => x.perfilId !== p.id);
+  state.data.sessoes = state.data.sessoes.filter(x => x.perfilId !== p.id);
+  state.data.medicoes = state.data.medicoes.filter(x => x.perfilId !== p.id);
+  if (state.data.perfilAtivoId === p.id) state.data.perfilAtivoId = state.data.perfis[0] ? state.data.perfis[0].id : null;
+  if (state.sessao) { stopTick(); state.sessao = null; clearRascunho(); }
+  CORPO_ACAO = null; MEDICAO_EDIT = null; state.corpoForm = false;
+  saveLocal(); scheduleSync(); hideOverlay(); render();
+  toast("Perfil excluído");
+}
+
+/* ---------- novo perfil: nome, sexo, nascimento/idade, altura, metas ---------- */
+function abrirFormPerfil() {
+  openSheet(`
+    <div class="row"><h2 style="font-size:18px">Novo perfil</h2><span class="sp"></span>
+      <button class="iconbtn" id="np-x" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <p class="tiny" style="margin:4px 0 10px">O perfil novo começa <b style="color:var(--txt)">sem fichas, sem treinos e sem medições</b>. Depois você pode criar as 4 fichas padrão.</p>
+    <div class="field"><label for="np-nome">Nome *</label>
+      <input type="text" id="np-nome" maxlength="40" placeholder="${esc(proximoNomePerfil())}" value="" autocomplete="off"></div>
+    <div class="field"><label>Sexo</label>
+      <div class="cseg-l" id="np-sexo" role="group" aria-label="Sexo">
+        <button type="button" data-sexo="M">Masculino</button>
+        <button type="button" data-sexo="F">Feminino</button>
+      </div></div>
+    <div class="two">
+      <div class="ccell"><span class="lb">Nascimento</span><input type="date" id="np-nasc" min="1900-01-01" max="${todayISO()}" aria-label="Data de nascimento"></div>
+      <div class="ccell"><span class="lb">Idade (anos)</span><input type="number" inputmode="numeric" id="np-idade" min="10" max="110" placeholder="ex.: 35" aria-label="Idade"></div>
+    </div>
+    <div class="field"><label for="np-altura">Altura (cm)</label>
+      <input type="number" inputmode="decimal" id="np-altura" min="100" max="250" step="0.5" placeholder="ex.: 170"></div>
+    <div class="two">
+      <div class="ccell"><span class="lb">Meta de peso (kg)</span><input type="number" inputmode="decimal" id="np-meta-peso" step="0.1" placeholder="opcional" aria-label="Meta de peso"></div>
+      <div class="ccell"><span class="lb">Meta de cintura (cm)</span><input type="number" inputmode="decimal" id="np-meta-cintura" step="0.1" placeholder="opcional" aria-label="Meta de cintura"></div>
+    </div>
+    <div class="load-warn hidden" id="np-erro"></div>
+    <button class="btn pri block" id="np-criar" style="margin-top:12px">Criar perfil</button>
+    <button class="btn block" id="np-cancel" style="background:none;border-color:transparent;color:var(--mut)">Cancelar</button>`);
+  const sheet = $("#sheet");
+  sheet.dataset.popup = "novo-perfil";
+  let sexo = "";
+  sheet.querySelectorAll("#np-sexo [data-sexo]").forEach(b => b.addEventListener("click", () => {
+    sexo = b.dataset.sexo;
+    sheet.querySelectorAll("#np-sexo [data-sexo]").forEach(o => o.classList.toggle("on", o === b));
+  }));
+  $("#np-nasc").addEventListener("change", () => {
+    const ia = idadeDeNascimento($("#np-nasc").value);
+    if (ia != null) $("#np-idade").value = String(ia);
+  });
+  $("#np-x").addEventListener("click", hideOverlay);
+  $("#np-cancel").addEventListener("click", hideOverlay);
+  $("#np-criar").addEventListener("click", () => {
+    const nome = $("#np-nome").value.trim() || proximoNomePerfil();
+    let idade = num($("#np-idade").value);
+    const nasc = $("#np-nasc").value || null;
+    const alturaCm = num($("#np-altura").value);
+    const err = (msg) => { const e = $("#np-erro"); e.style.display = ""; e.innerHTML = `\u26a0 <b>${esc(msg)}</b>`; };
+    if (nasc) { const ia = idadeDeNascimento(nasc); if (ia != null) idade = ia; }
+    if (idade != null && (idade < 10 || idade > 110)) return err("Idade entre 10 e 110 anos");
+    if (alturaCm != null && (alturaCm < 100 || alturaCm > 250)) return err("Altura em cm (entre 100 e 250)");
+    const p = novoPerfilObj({
+      nome: nome.slice(0, 40), sexo: sexo || null, nascimento: nasc,
+      idade: idade == null ? null : Math.round(idade),
+      alturaCm: alturaCm == null ? null : Math.round(alturaCm * 10) / 10,
+      meta: { pesoKg: num($("#np-meta-peso").value), cinturaCm: num($("#np-meta-cintura").value), gorduraPct: null },
+    });
+    state.data.perfis = perfisArr().concat([p]);
+    state.data.perfilAtivoId = p.id;
+    if (state.sessao) { stopTick(); state.sessao = null; clearRascunho(); }
+    state.openEx = {}; state.chartEx = {}; state.chartCardio = null;
+    CORPO_ACAO = null; MEDICAO_EDIT = null; state.corpoForm = false;
+    saveLocal(); scheduleSync(); hideOverlay(); render();
+    toast("Perfil “" + p.nome + "” criado");
+    setTimeout(() => convidarFichasPadrao(p.nome), 250);
+  });
+  setTimeout(() => $("#np-nome").focus(), 40);
+}
+
+/** oferece as 4 fichas padrão ao perfil recém-criado (ele começa sem fichas) */
+function convidarFichasPadrao(nome) {
+  if (treinosDoPerfil().length) return;
+  openSheet(`
+    <h2 style="font-size:18px">Fichas de ${esc(nome)}</h2>
+    <p class="tiny" style="margin:6px 0 0">Este perfil ainda não tem fichas. Quer começar com as <b style="color:var(--txt)">4 fichas padrão</b> (Pernas · Peito/Tríceps · Pernas/Abdômen · Costas/Bíceps) ou montar do zero?</p>
+    <button class="btn pri block" id="cf-padrao" style="margin-top:14px">+ Criar as 4 fichas padrão</button>
+    <button class="btn block" id="cf-zero">Começar do zero</button>`);
+  $("#sheet").dataset.popup = "fichas-padrao";
+  $("#cf-padrao").addEventListener("click", () => { hideOverlay(); criarFichasPadrao(); });
+  $("#cf-zero").addEventListener("click", () => { hideOverlay(); state.tab = "treinos"; render(); });
 }
 
 /* ---------- recalcular método/gordura de uma medição ---------- */
@@ -2498,7 +2832,7 @@ function textoDadosBalanca(d, peso) {
 function renderMedicaoForm(v) {
   const p = perfil();
   // edição só vale se a medição ainda existe; senão volta ao modo criação (campos vazios)
-  const ed = MEDICAO_EDIT && (state.data.medicoes || []).some(x => x.id === MEDICAO_EDIT.id) ? MEDICAO_EDIT : null;
+  const ed = MEDICAO_EDIT && medicoesDoPerfil().some(x => x.id === MEDICAO_EDIT.id) ? MEDICAO_EDIT : null;
   MEDICAO_EDIT = ed;
   const ult = ed ? null : ultimaMedicao();
   // criação: TODOS os campos vazios (só fonte e método herdam do último registro); data = hoje
@@ -2706,6 +3040,7 @@ function renderMedicaoForm(v) {
   $c("#md-cancelar").addEventListener("click", (ev) => { ev.preventDefault(); fecharMedicaoForm(); });
   $c("#md-salvar").addEventListener("click", () => {
     const o = coletar();
+    o.perfilId = perfilAtivoId();
     const err = $c("#md-erro");
     const fail = (msg, alvo) => {
       err.style.display = ""; err.innerHTML = `\u26a0 <b>${esc(msg)}</b>`;
@@ -2726,6 +3061,7 @@ function renderMedicaoForm(v) {
 
 function salvarMedicao(o) {
   if (!Array.isArray(state.data.medicoes)) state.data.medicoes = [];
+  o.perfilId = o.perfilId || perfilAtivoId();   // cada medição pertence ao perfil ativo
   if (MEDICAO_EDIT) {
     const i = state.data.medicoes.findIndex(m => m.id === MEDICAO_EDIT.id);
     if (i >= 0) state.data.medicoes[i] = o; else state.data.medicoes.push(o);
@@ -2767,6 +3103,37 @@ function abrirAvisoMedico() {
   if (sh) sh.dataset.popup = "aviso-medico";
 }
 
+/** barra de perfis no topo da aba Corpo: quem está ativo + chips + ações */
+function barraPerfis() {
+  const p = perfil();
+  const arr = perfisArr();
+  const c = el("div", { class: "card", id: "corpo-perfis", style: "margin-top:14px; padding:12px 14px" });
+  c.dataset.perfilAtivo = p.id;
+  c.innerHTML = `<div class="pf-bar">
+      <span class="pf-ava" aria-hidden="true">${esc(iniciais(nomePerfil(p)))}</span>
+      <div class="pf-label"><span class="pl">Perfil ativo</span><span class="pn" id="corpo-perfil-nome">${esc(nomePerfil(p))}</span></div>
+      ${arr.length > 1 ? `<span class="pf-badge" id="corpo-perfil-total">${arr.length} perfis</span>` : `<span class="pf-badge" id="corpo-perfil-total" style="background:rgba(74,222,128,.12); color:var(--acc); border-color:rgba(74,222,128,.35)">só você</span>`}
+    </div>
+    <div class="pf-chips" role="tablist" aria-label="Perfis">
+      ${arr.map(x => `<button type="button" class="pf-chip${x.id === p.id ? " on" : ""}" data-perfil="${esc(x.id)}" role="tab" aria-selected="${x.id === p.id ? "true" : "false"}">
+        <span class="av">${esc(iniciais(nomePerfil(x)))}</span><span>${esc(nomePerfil(x))}</span></button>`).join("")}
+      <button type="button" class="pf-chip add" id="pf-novo-chip">+ Novo perfil</button>
+    </div>
+    <div class="pf-actions">
+      <button class="btn sm" id="corpo-editar-perfil2">Editar perfil</button>
+      ${arr.length > 1 ? `<button class="btn sm danger" id="corpo-excluir-perfil">Excluir</button>` : ""}
+    </div>`;
+  c.querySelectorAll("[data-perfil]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.perfil === p.id) return;
+    trocarPerfil(b.dataset.perfil);
+  }));
+  $("#pf-novo-chip", c).addEventListener("click", abrirFormPerfil);
+  $("#corpo-editar-perfil2", c).addEventListener("click", () => abrirCorpo("perfil"));
+  const ex = $("#corpo-excluir-perfil", c);
+  if (ex) ex.addEventListener("click", () => confirmarExclusaoPerfil(p));
+  return c;
+}
+
 function renderCorpo(v) {
   stopTick();
   const p = perfil();
@@ -2780,21 +3147,23 @@ function renderCorpo(v) {
       <p class="muted" style="font-size:13.5px; margin:4px 0 0">Peso, medidas, IMC e gordura corporal estimada \u2014 tudo com um aviso honesto: isto n\u00e3o substitui avalia\u00e7\u00e3o profissional.</p>
       <p class="tiny" style="margin:8px 0 0; color:#fbbf24">Falta completar o perfil para calcular IMC, RCE e % de gordura. O peso e as medições já funcionam abaixo.</p>`;
     v.appendChild(intro);
+    v.appendChild(barraPerfis());
     v.appendChild(editorPerfil());
     if (!state.data.aceitouAvisoMedico) setTimeout(abrirAvisoMedico, 60);
     // segue para o conteúdo normal (números, gráficos e lista) em vez de parar aqui
   }
-  if (CORPO_ACAO === "perfil") { v.appendChild(editorPerfil()); v.appendChild(rodapeAviso()); return; }
-  if (CORPO_ACAO === "config") { v.appendChild(cardConfigCorpo(p)); v.appendChild(rodapeAviso()); return; }
-  if (state.corpoForm === true) { renderMedicaoForm(v); v.appendChild(rodapeAviso()); return; }
+  if (CORPO_ACAO === "perfil") { v.appendChild(barraPerfis()); v.appendChild(editorPerfil()); v.appendChild(rodapeAviso()); return; }
+  if (CORPO_ACAO === "config") { v.appendChild(barraPerfis()); v.appendChild(cardConfigCorpo(p)); v.appendChild(rodapeAviso()); return; }
+  if (state.corpoForm === true) { v.appendChild(barraPerfis()); renderMedicaoForm(v); v.appendChild(rodapeAviso()); return; }
 
   MEDICAO_EDIT = null;
   const ms = medicoesOrdenadas();
   const ult = ms.length ? ms[ms.length - 1] : null;
   const ant = ms.length > 1 ? ms[ms.length - 2] : null;
 
-  /* ---- topo: ação + perfil ---- */
-  const top = el("div", { class: "card", style: "margin-top:14px" });
+  /* ---- topo: seletor de perfil + ação ---- */
+  v.appendChild(barraPerfis());
+  const top = el("div", { class: "card" });
   top.innerHTML = `<div class="row">
       <div style="flex:1; min-width:0">
         <div class="tiny">${p.sexo ? (p.sexo === "F" ? "Feminino" : "Masculino") : "Sexo não informado"}${p.idade ? " \u00b7 " + p.idade + " anos" : ""}${num(p.alturaCm) ? " \u00b7 <b style=\"color:var(--txt)\">" + fmtN(p.alturaCm, 0) + " cm</b>" : " \u00b7 <b style=\"color:#fbbf24\">altura não informada</b>"}</div>
@@ -2812,7 +3181,7 @@ function renderCorpo(v) {
 
   if (!ult) {
     const e = el("div", { class: "card muted", id: "corpo-vazio" });
-    e.innerHTML = `Nenhuma medi\u00e7\u00e3o ainda. Toque em <b style="color:var(--txt)">+ Nova medi\u00e7\u00e3o</b> e registre o peso de hoje \u2014 os gr\u00e1ficos aparecem a partir da segunda.`;
+    e.innerHTML = `<b style="color:var(--txt)">${esc(nomePerfil(p))}</b> n\u00e3o tem medi\u00e7\u00f5es ainda. Toque em <b style="color:var(--txt)">+ Nova medi\u00e7\u00e3o</b> e registre o peso de hoje \u2014 os gr\u00e1ficos aparecem a partir da segunda.`;
     v.appendChild(e);
     v.appendChild(rodapeAviso());
     if (!state.data.aceitouAvisoMedico) setTimeout(abrirAvisoMedico, 60);
@@ -3045,6 +3414,9 @@ function cardConfigCorpo(p) {
   c.innerHTML = `<div class="row"><h3 style="font-size:16px">Configurações</h3><span class="sp"></span>
       <button class="btn sm" id="cfg-fechar">Fechar</button></div>
     <div class="var-list" style="margin-top:8px">
+      <div class="vl"><span class="vk">Perfil</span><span class="vv">${esc(nomePerfil(p))}</span></div>
+      <div class="vl"><span class="vk">Nascimento</span><span class="vv">${p.nascimento ? fmtBR(p.nascimento) : "\u2013"}</span></div>
+      <div class="vl"><span class="vk">Fichas</span><span class="vv">${treinosDoPerfil().length}</span></div>
       <div class="vl"><span class="vk">Sexo</span><span class="vv">${esc(p.sexo === "F" ? "Feminino" : "Masculino")}</span></div>
       <div class="vl"><span class="vk">Idade</span><span class="vv">${p.idade ? esc(p.idade) + " anos" : "–"}</span></div>
       <div class="vl"><span class="vk">Altura</span><span class="vv">${fmtN(p.alturaCm, 0)} cm</span></div>
@@ -3053,7 +3425,7 @@ function cardConfigCorpo(p) {
     </div>
     <button class="btn block" id="cfg-perfil">Editar perfil e metas</button>
     <button class="btn block sm" id="cfg-aviso">Ler o aviso novamente</button>
-    <div class="tiny" style="margin-top:10px">Medições: ${(state.data.medicoes || []).length} · dados no aparelho e no Drive (<b>academia-dados.json</b>)</div>`;
+    <div class="tiny" style="margin-top:10px">Medições: ${medicoesDoPerfil().length} · dados no aparelho e no Drive (<b>academia-dados.json</b>)</div>`;
   $("#cfg-fechar", c).addEventListener("click", () => { CORPO_ACAO = null; render(); });
   $("#cfg-perfil", c).addEventListener("click", () => abrirCorpo("perfil"));
   $("#cfg-aviso", c).addEventListener("click", () => abrirAvisoMedico());
@@ -3070,7 +3442,7 @@ function rodapeAviso() {
 
 /* -------------------- detalhe de uma medi\u00e7\u00e3o -------------------- */
 function showDetalheMedicao(id) {
-  const m = (state.data.medicoes || []).find(x => x.id === id);
+  const m = medicoesDoPerfil().find(x => x.id === id);
   if (!m) return;
   const n = numerosMedicao(m);
   const p = perfil();
@@ -3253,7 +3625,7 @@ function svgCardioChart(points, { w = 420, h = 210, metric = "vel" } = {}) {
 function exerciseList() {
   const out = [];
   const seen = new Set();
-  for (const t of state.data.treinos) for (const ex of t.exercicios) {
+  for (const t of treinosDoPerfil()) for (const ex of t.exercicios) {
     if (seen.has(ex.id)) continue;
     seen.add(ex.id);
     out.push({ ...ex, treinoId: t.id });
@@ -3345,13 +3717,13 @@ function renderGraficos(v) {
   const mA = mesAtual();
   const agora = resumoMes(mA);
   const ant = resumoMes(somaMes(mA, -1));
-  const fichas = (state.data.treinos || []).filter(t => (agora.porFicha[String(t.id).trim().toUpperCase()] || 0) > 0
+  const fichas = treinosDoPerfil().filter(t => (agora.porFicha[String(t.id).trim().toUpperCase()] || 0) > 0
     || (ant.porFicha[String(t.id).trim().toUpperCase()] || 0) > 0);
   const mes = el("div", { class: "card fichas-mes", id: "ev-mes", style: "margin-top:14px" });
   mes.innerHTML = `<div class="row"><h3 style="font-size:16px">Por ficha</h3><span class="sp"></span>
     <span class="tiny" id="ev-mes-cap" style="text-align:right; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(agora.nome)} vs ${esc(ant.nome)}</span></div>`;
   if (!fichas.length) {
-    mes.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:8px 0 0">${state.data.sessoes.length
+    mes.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:8px 0 0">${sessoesDoPerfil().length
       ? `Nenhum treino em ${esc(agora.nome)} nem em ${esc(ant.nome)}.`
       : "Comece seu primeiro treino"}</p>`);
   } else {
@@ -3468,9 +3840,9 @@ function renderGraficos(v) {
    ============================================================ */
 function renderHistorico(v) {
   stopTick();
-  const sess = [...state.data.sessoes].sort((a, b) => (b.data + (b.horaInicio || "")).localeCompare(a.data + (a.horaInicio || "")));
+  const sess = [...sessoesDoPerfil()].sort((a, b) => (b.data + (b.horaInicio || "")).localeCompare(a.data + (a.horaInicio || "")));
   if (!sess.length) {
-    v.innerHTML = `<div class="card muted" style="margin-top:14px">Nenhum treino registrado ainda. Escolha uma ficha na aba Treino.</div>`;
+    v.innerHTML = `<div class="card muted" style="margin-top:14px" id="hist-vazio">Nenhum treino registrado ainda para <b style="color:var(--txt)">${esc(nomePerfil(perfil()))}</b>. Escolha uma ficha na aba Treino \u2014 cada perfil tem as suas.</div>`;
     if (!state.logged) v.appendChild(loginPromptCard());
     return;
   }
@@ -3481,7 +3853,9 @@ function renderHistorico(v) {
   const somaMin = comDur.reduce((a, s) => a + s.duracaoMin, 0);
   const mediaMin = comDur.length ? Math.round(somaMin / comDur.length) : null;
   const sum = el("div", { class: "card", style: "margin-top:14px" });
-  sum.innerHTML = `<div class="row"><div><div class="tiny">Esta semana</div><b style="font-size:24px">${thisWeek}</b><span class="muted"> treino(s)</span></div>
+  sum.id = "hist-resumo";
+  sum.innerHTML = `<div class="row" style="margin-bottom:8px"><div class="tiny" style="font-weight:700; color:var(--txt)" id="hist-perfil">Histórico · ${esc(nomePerfil(perfil()))}</div></div>
+    <div class="row"><div><div class="tiny">Esta semana</div><b style="font-size:24px">${thisWeek}</b><span class="muted"> treino(s)</span></div>
     <span class="sp"></span><div style="text-align:center"><div class="tiny">Total</div><b style="font-size:24px">${sess.length}</b></div>
     <span class="sp"></span><div style="text-align:right"><div class="tiny">${mediaMin != null ? "Média por treino" : "Duração"}</div><b style="font-size:20px">${mediaMin != null ? fmtDuracao(mediaMin * 60) : "–"}</b></div></div>
     ${somaMin ? `<div class="tiny" style="margin-top:8px">Tempo total registrado: <b style="color:var(--txt)">${fmtDuracao(somaMin * 60)}</b></div>` : ""}`;
@@ -3588,13 +3962,31 @@ function showSessionDetail(s) {
    ============================================================ */
 function renderFichas(v) {
   if (state.editTreinoId) return renderEditor(v);
-  const acc = el("div", { class: "card" });
-  acc.innerHTML = `<div class="row"><div><div style="font-weight:700; font-size:15px">${state.logged ? "Sincronizado" : "Só neste aparelho"}</div>
+  const pf = perfil();
+  const acc = el("div", { class: "card", id: "fichas-perfil", style: "padding:11px 14px" });
+  acc.innerHTML = `<div class="pf-bar"><span class="pf-ava" aria-hidden="true">${esc(iniciais(nomePerfil(pf)))}</span>
+      <div class="pf-label" style="flex:1"><span class="pl">Fichas de</span><span class="pn" id="fichas-perfil-nome">${esc(nomePerfil(pf))}</span></div>
+      <button class="btn sm" id="fichas-trocar">Trocar</button></div>
+    <div class="tiny" style="margin-top:6px">Cada perfil tem as suas próprias fichas (${treinosDoPerfil().length}). Fichas, treinos e medições nunca se misturam.</div>`;
+  v.appendChild(acc);
+  $("#fichas-trocar", acc).addEventListener("click", () => { state.tab = "corpo"; abrirCorpo(null); });
+
+  const acc2 = el("div", { class: "card" });
+  acc2.innerHTML = `<div class="row"><div><div style="font-weight:700; font-size:15px">${state.logged ? "Sincronizado" : "Só neste aparelho"}</div>
     <div class="tiny">${state.logged ? "Dados salvos no Google Drive" : "Entre para salvar no Drive"}</div></div>
     <span class="sp"></span><span class="sync" style="padding:6px 10px"><i class="dot ${state.logged ? "ok" : "off"}"></i>${state.logged ? "Drive" : "local"}</span></div>`;
-  v.appendChild(acc);
+  v.appendChild(acc2);
 
-  for (const t of state.data.treinos) {
+  const fichasDoPerfil = treinosDoPerfil();
+  if (!fichasDoPerfil.length) {
+    const em = el("div", { class: "card", id: "fichas-vazio" });
+    em.innerHTML = `<h3 style="font-size:16px">Nenhuma ficha em ${esc(nomePerfil(pf))}</h3>
+      <p class="tiny" style="margin:5px 0 0">Perfil novo começa do zero. Crie as 4 fichas padrão (Pernas · Peito/Tríceps · Pernas/Abdômen · Costas/Bíceps) ou monte as suas.</p>
+      <button class="btn pri block" id="fichas-padrao" style="margin-top:10px">+ Criar as 4 fichas padrão</button>`;
+    v.appendChild(em);
+    $("#fichas-padrao", em).addEventListener("click", () => criarFichasPadrao());
+  }
+  for (const t of fichasDoPerfil) {
     const c = el("div", { class: "card" });
     c.innerHTML = `<div class="row"><span class="letter badge" style="font-size:14px; padding:7px 10px">${esc(t.id)}</span>
       <div style="flex:1"><div style="font-weight:700">${esc(t.nome)}</div><div class="tiny">${t.exercicios.length} exercícios</div></div>
@@ -3630,7 +4022,7 @@ function renderFichas(v) {
   bImp.addEventListener("click", importBackup);
   acct.appendChild(bImp);
   v.appendChild(acct);
-  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.0 · dados no seu Drive"));
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.3 · dados no seu Drive"));
 }
 
 function renderEditor(v) {
@@ -3699,7 +4091,7 @@ function renderEditor(v) {
   list.appendChild(addC);
   v.appendChild(list);
 
-  if (state.data.treinos.length > 1) {
+  if (treinosDoPerfil().length > 1) {
     const bd = el("button", { class: "btn block danger" }, "Excluir ficha");
     bd.addEventListener("click", () => {
       if (!confirm("Excluir a ficha “" + t.nome + "”?")) return;
@@ -3728,6 +4120,7 @@ function askNovoExercicio(t, tipo) {
     const nome = inp.value.trim();
     if (!nome) { inp.focus(); return toast("Digite o nome do exercício"); }
     const ex = { id: uid("x"), nome: nome, series: isC ? 1 : 3, reps: isC ? "" : "8 a 12", tipo: tipo || "reps" };
+    while (idsExistentesDoPerfil(t).has(ex.id)) ex.id = uid("x");
     t.exercicios.push(ex);
     hideOverlay(); saveLocal(); scheduleSync(); render();
     toast(isC ? "Cardio adicionado — tempo e velocidade no treino" : "Exercício adicionado");
@@ -3739,7 +4132,7 @@ function askNovoExercicio(t, tipo) {
 }
 
 function addTreino() {
-  const letraSug = String.fromCharCode(65 + state.data.treinos.length);
+  const letraSug = String.fromCharCode(65 + treinosDoPerfil().length);
   openSheet(`
     <h2>Nova ficha</h2>
     <p class="tiny" style="margin:2px 0 12px">Escolha um código curto e um nome para a ficha.</p>
@@ -3759,8 +4152,8 @@ function addTreino() {
     const nome = inn.value.trim();
     if (!letra) { il.focus(); return toast("Informe o código da ficha"); }
     if (!nome) { inn.focus(); return toast("Informe o nome da ficha"); }
-    if (state.data.treinos.some(t => t.id === letra)) return toast("Já existe uma ficha com esse código");
-    const t = { id: letra.slice(0, 3), nome: nome, exercicios: [] };
+    if (treinosDoPerfil().some(t => t.id === letra)) return toast("Já existe uma ficha com esse código");
+    const t = { id: letra.slice(0, 3), nome: nome, exercicios: [], perfilId: perfilAtivoId() };
     state.data.treinos.push(t);
     state.editTreinoId = t.id;
     hideOverlay(); saveLocal(); scheduleSync(); render();
@@ -3847,6 +4240,9 @@ if ("serviceWorker" in navigator) {
   const dr = loadRascunho();
   if (dr) { state.sessao = dr; }
   // dados de demonstração só em modo dev (query ?demo=1)
+  // migra o formato antigo (perfil único, itens sem dono) e já grava: nada volta a ficar ambíguo
+  migrarItensSemPerfil();
+  saveLocal();
   if (new URLSearchParams(location.search).has("demo") && !state.data.sessoes.length) {
     seedDemo();
   }
@@ -3867,6 +4263,7 @@ function seedDemo() {
       const ini = new Date(data + "T07:10:00");
       const fim = new Date(ini.getTime() + (dur || 52) * 60000);
       state.data.sessoes.push({
+        perfilId: perfilAtivoId(),
         data, treinoId,
         horaInicio: ini.toISOString(), horaFim: fim.toISOString(), duracaoMin: dur || 52,
         exercicios: t.exercicios.map((ex, k) => ({
