@@ -263,6 +263,61 @@
     color:var(--mut); font-size:12.5px; font-weight:700; padding:0 4px; display:flex; align-items:center; justify-content:center; gap:4px}
   .tipo-seg button.on{background:rgba(74,222,128,.16); border-color:var(--acc); color:var(--acc)}
   .tipo-seg button.blue.on{background:rgba(96,165,250,.16); border-color:#60a5fa; color:#93c5fd}
+
+  /* ===== aba Corpo (medições e composição corporal) ===== */
+  nav.tabs button{font-size:10.5px; padding:9px 1px 8px}
+  nav.tabs svg{width:21px;height:21px}
+  .perfil-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 8px; margin-top:8px}
+  .perfil-grid .full{grid-column:1 / -1}
+  .pfcell{min-width:0}
+  .pfcell .lb{display:block; font-size:10px; color:var(--mut); text-transform:uppercase; letter-spacing:.05em;
+    font-weight:700; margin-bottom:3px}
+  .pfcell input, .pfcell select{min-height:46px !important; font-size:16px !important; padding:0 8px !important; border-radius:9px}
+  .pfcell select{text-align:left}
+  .cseg-l{display:flex; gap:6px; margin-top:2px}
+  .cseg-l button{flex:1; min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--bg);
+    color:var(--mut); font-weight:700; font-size:14px}
+  .cseg-l button.on{background:var(--brand); border-color:var(--brand); color:#121214}
+  .kpi-body{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:10px}
+  .kbox{background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:9px 10px; min-width:0; position:relative}
+  .kbox .kl{font-size:10px; color:var(--mut); text-transform:uppercase; letter-spacing:.05em; font-weight:700;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:14px}
+  .kbox .kv{font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em; line-height:1.2}
+  .kbox .ks{font-size:11px; color:var(--mut); margin-top:1px}
+  .kbox.g{border-color:rgba(74,222,128,.5)} .kbox.g .kv{color:var(--acc)}
+  .kbox.a{border-color:rgba(251,191,36,.55)} .kbox.a .kv{color:#fbbf24}
+  .kbox.r{border-color:rgba(248,113,113,.5)} .kbox.r .kv{color:var(--err)}
+  .kbox .sema{position:absolute; top:9px; right:9px; width:9px; height:9px; border-radius:50%; background:var(--mut)}
+  .kbox.g .sema{background:var(--acc)} .kbox.a .sema{background:#fbbf24} .kbox.r .sema{background:var(--err)}
+  .kbox.na .kv{color:var(--mut); font-size:15px}
+  .var-list{margin-top:10px; border-top:1px solid var(--line)}
+  .var-list .vl{display:flex; align-items:baseline; gap:8px; padding:7px 0; border-bottom:1px solid rgba(42,50,64,.6); font-size:13.5px}
+  .var-list .vl:last-child{border-bottom:0}
+  .var-list .vk{flex:1; min-width:0; color:var(--txt)}
+  .var-list .vv{font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .med-hist{display:flex; align-items:center; gap:10px; width:100%; background:var(--bg); border:1px solid var(--line);
+    border-radius:12px; padding:10px 12px; margin:8px 0; text-align:left}
+  .med-hist .md{font-weight:700; font-size:14px; white-space:nowrap}
+  .med-hist .mi{flex:1; min-width:0; font-size:12px; color:var(--mut); line-height:1.45}
+  .med-hist .mi b{color:var(--txt); font-weight:700}
+  .src-tag{display:inline-block; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px;
+    border:1px solid var(--line); background:var(--bg3); color:#cbd5e1; white-space:nowrap}
+  .src-tag.inbody{border-color:rgba(96,165,250,.5); color:#93c5fd}
+  .src-tag.faulkner{border-color:rgba(74,222,128,.5); color:var(--acc)}
+  .src-tag.navy{border-color:rgba(251,191,36,.5); color:#fde68a}
+  .src-tag.balanca{border-color:rgba(196,181,253,.5); color:#ddd6fe}
+  .aviso-fixo{margin:16px 0 6px; padding:10px 12px; border-radius:12px; font-size:11.5px; line-height:1.45;
+    background:rgba(251,191,36,.07); border:1px solid rgba(251,191,36,.28); color:#fde68a}
+  .aviso-fixo b{color:#fbbf24}
+  .folha{display:block; background:var(--bg); border:1px solid var(--line); border-radius:12px; margin:10px 0; overflow:hidden}
+  .folha > summary{cursor:pointer; padding:12px 12px; font-weight:700; font-size:14px; list-style:none; display:flex; align-items:center; gap:8px}
+  .folha > summary::-webkit-details-marker{display:none}
+  .folha > summary::after{content:"+"; margin-left:auto; color:var(--mut); font-weight:800}
+  .folha[open] > summary::after{content:"–"}
+  .folha[open] > summary{border-bottom:1px solid var(--line)}
+  .folha .folha-body{padding:4px 10px 12px}
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .legend-methods{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px}
 </style>
 </head>
 <body>
@@ -295,6 +350,10 @@
   <button data-tab="historico">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
     Histórico
+  </button>
+  <button data-tab="corpo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="4.2" r="2"/><path d="M12 7.5v6M12 9.5l-3.5-1.5M12 9.5l3.5-1.5M12 13.5l-3.2 7M12 13.5l3.2 7"/></svg>
+    Corpo
   </button>
   <button data-tab="treinos">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
@@ -571,17 +630,20 @@ const state = {
   saving: false,
   editTreinoId: null,
   tickTimer: null,     // setInterval do cronômetro
+  corpoForm: false,    // formulário de medição aberto
 };
+let MEDICAO_EDIT = null;  // medição em edição (aba Corpo) — não persistido
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
-function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [] }; }
+function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], medicoes: [], perfil: null, aceitouAvisoMedico: false }; }
 
 function loadLocal() {
   try {
     const raw = localStorage.getItem(LS_DATA);
     if (raw) {
       const d = JSON.parse(raw);
-      if (d && Array.isArray(d.treinos) && Array.isArray(d.sessoes)) return d;
+      // aceita dados antigos (sem medicoes/perfil) e dados novos
+    if (d && typeof d === "object" && Array.isArray(d.treinos) && Array.isArray(d.sessoes)) return d;
     }
   } catch (e) { console.warn("localStorage corrompido", e); }
   return null;
@@ -595,7 +657,7 @@ function saveLocal() {
 
 /* normaliza estruturas vindas do Drive (defensivo) */
 function normalizeData(d) {
-  const out = { treinos: [], sessoes: [] };
+  const out = { treinos: [], sessoes: [], medicoes: [], perfil: null, aceitouAvisoMedico: false };
   if (!d || typeof d !== "object") return defaultData();
   const treinos = Array.isArray(d.treinos) ? d.treinos : [];
   for (const t of treinos) {
@@ -615,6 +677,65 @@ function normalizeData(d) {
     });
   }
   if (!out.treinos.length) out.treinos = clone(TREINOS_PADRAO);
+  // ---- perfil (aba Corpo) — retrocompatível: dados antigos não têm ----
+  const pf = (d.perfil && typeof d.perfil === "object") ? d.perfil : (state.data && state.data.perfil) || {};
+  const meta = (pf.meta && typeof pf.meta === "object") ? pf.meta : {};
+  out.perfil = {
+    sexo: (pf.sexo === "M" || pf.sexo === "F") ? pf.sexo : null,
+    idade: num(pf.idade) != null ? Math.round(num(pf.idade)) : null,
+    alturaCm: num(pf.alturaCm),
+    meta: { pesoKg: num(meta.pesoKg), cinturaCm: num(meta.cinturaCm), gorduraPct: num(meta.gorduraPct) },
+    metodoPadrao: pf.metodoPadrao === "navy" ? "navy" : "faulkner",
+  };
+  out.aceitouAvisoMedico = d.aceitouAvisoMedico === true;
+  // ---- medições antropométricas (aba Corpo) ----
+  const meds = Array.isArray(d.medicoes) ? d.medicoes : [];
+  const nums = (o) => {
+    const out2 = {};
+    if (!o || typeof o !== "object") return out2;
+    for (const [k, v] of Object.entries(o)) { const x = num(v); if (x != null) out2[k] = x; }
+    return out2;
+  };
+  const METS = ["faulkner", "navy", "inbody", "balanca", "nenhum"];
+  for (const m of meds) {
+    if (!m || typeof m !== "object") continue;
+    const data = String(m.data || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) continue;
+    const fonte = m.fonte === "medica" || m.fonte === "academia" || m.fonte === "balanca_casa" || m.fonte === "outra"
+      ? m.fonte
+      : (String(m.fonte || "").toLowerCase().includes("inbody") ? "medica"
+        : String(m.fonte || "").toLowerCase().includes("academia") ? "academia"
+        : String(m.fonte || "").toLowerCase().includes("balan") ? "balanca_casa" : "outra");
+    const metodo = METS.includes(m.metodo) ? m.metodo
+      : (fonte === "medica" ? "inbody" : fonte === "academia" ? "faulkner" : fonte === "balanca_casa" ? "balanca" : "nenhum");
+    out.medicoes.push({
+      id: String(m.id || uid("med")),
+      data,
+      peso: num(m.peso), cintura: num(m.cintura), quadril: num(m.quadril), pescoco: num(m.pescoco),
+      perimetros: nums(m.perimetros), dobras: nums(m.dobras), pollock: nums(m.pollock),
+      profissional: nums(m.profissional),
+      fonte, metodo,
+      gordura: num(m.gordura), gorduraFaulkner: num(m.gorduraFaulkner), gorduraNavy: num(m.gorduraNavy),
+      gorduraBalanca: num(m.gorduraBalanca), gorduraInbody: num(m.gorduraInbody),
+      obs: typeof m.obs === "string" ? m.obs : "",
+    });
+  }
+  out.medicoes.sort((a, b) => a.data.localeCompare(b.data));
+  for (const m of out.medicoes) {
+    // deriva a gordura do método quando o dado permite (dados antigos podem ter só peso/medidas)
+    if (m.metodo === "faulkner" && m.gorduraFaulkner == null) {
+      const f = calcFaulkner(m.dobras);
+      if (f) { m.gorduraFaulkner = Math.round(f.valor * 10) / 10; if (m.gordura == null) m.gordura = m.gorduraFaulkner; }
+    }
+    if (m.metodo === "navy" && m.gorduraNavy == null) {
+      const nv = calcNavy(m, out.perfil.sexo, out.perfil.alturaCm);
+      if (nv) { m.gorduraNavy = Math.round(nv.valor * 10) / 10; if (m.gordura == null) m.gordura = m.gorduraNavy; }
+    }
+    if (m.metodo === "inbody" && m.gorduraInbody == null) {
+      const gi = num(m.profissional && m.profissional.gorduraPct);
+      if (gi != null) { m.gorduraInbody = gi; if (m.gordura == null) m.gordura = gi; }
+    }
+  }
   const sessoes = Array.isArray(d.sessoes) ? d.sessoes : [];
   const fim = Array.isArray(d.sessoes) ? d.sessoes : [];
   for (const s of fim) {
@@ -1029,7 +1150,7 @@ function render() {
   }
   top.classList.remove("hidden"); tabs.classList.remove("hidden");
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === state.tab));
-  const titles = { inicio: "Gusto", graficos: "Evolução", historico: "Histórico", treinos: "Minhas fichas" };
+  const titles = { inicio: "Gusto", graficos: "Evolução", historico: "Histórico", treinos: "Minhas fichas", corpo: "Corpo" };
   $("#hdTitle").textContent = titles[state.tab] || "Gusto";
   const v = $("#view");
   v.innerHTML = "";
@@ -1037,6 +1158,7 @@ function render() {
   else if (state.tab === "graficos") renderGraficos(v);
   else if (state.tab === "historico") renderHistorico(v);
   else if (state.tab === "treinos") renderFichas(v);
+  else if (state.tab === "corpo") renderCorpo(v);
   setSync(sync.state);
 }
 
@@ -1687,6 +1809,1028 @@ function concluirSessao(s, forcar) {
   render();
   const feitos = exercicios.filter(x => x.concluido).length;
   toast(`Treino salvo! ${fmtDuracao(seg)} · ${feitos}/${exercicios.length} exercícios 💪`);
+}
+
+
+/* ============================================================
+   Corpo — perfil, medições e composição corporal
+   ATENÇÃO: tudo aqui é ESTIMATIVA por fórmula antropométrica.
+   Os gráficos NUNCA misturam métodos: Faulkner, Navy, InBody e
+   balança divergem até ~18 pontos de gordura na mesma pessoa.
+   ============================================================ */
+const CORPO_METODOS = ["faulkner", "navy", "inbody", "balanca"];
+const CORPO_METODO_LBL = {
+  faulkner: "Faulkner", navy: "Navy", inbody: "InBody/DEXA", balanca: "Balança", nenhum: "Sem método",
+};
+/* cor de cada método nos gráficos — SEMPRE separado por método */
+const CORPO_METODO_COR = { faulkner: "#4ade80", navy: "#fbbf24", inbody: "#60a5fa", balanca: "#c4b5fd", nenhum: "#8b98ab" };
+let CORPO_ACAO = null;
+const CORPO_FONTES = {
+  academia: { lbl: "Academia", metodo: "faulkner" },
+  medica: { lbl: "Médica/InBody", metodo: "inbody" },
+  balanca_casa: { lbl: "Balança de casa", metodo: "balanca" },
+  outra: { lbl: "Outra", metodo: "none" },
+};
+const CORPO_FONTE_LBL = {
+  academia: "Academia", medica: "Médica/InBody", balanca_casa: "Balança de casa", outra: "Outra",
+  /* aliases de dados antigos/manuais */
+  "Médica/InBody": "Médica/InBody", "Balança de casa": "Balança de casa", "Balança": "Balança de casa",
+};
+const AVISO_MEDICO = "\u26a0\ufe0f O Gusto \u00e9 uma ferramenta de acompanhamento, n\u00e3o um programa m\u00e9dico. Os \u00edndices (IMC, gordura corporal, RCE, RCQ) s\u00e3o ESTIMATIVAS calculadas por f\u00f3rmulas antropom\u00e9tricas e n\u00e3o substituem avalia\u00e7\u00e3o profissional. Consulte m\u00e9dico ou nutricionista antes de tomar decis\u00f5es sobre peso, dieta ou treino.";
+
+/* ---------- perfil ---------- */
+function perfil() {
+  if (!state.data.perfil || typeof state.data.perfil !== "object") {
+    state.data.perfil = { sexo: null, idade: null, alturaCm: null, meta: {}, metodoPadrao: "faulkner" };
+  }
+  const p = state.data.perfil;
+  if (p.meta === undefined || p.meta === null || typeof p.meta !== "object") p.meta = {};
+  if (!p.metodoPadrao) p.metodoPadrao = "faulkner";
+  return p;
+}
+/** sexo e altura são indispensáveis para IMC/RCE/Navy */
+function perfilCompleto() {
+  const p = perfil();
+  return !!(p.sexo && num(p.alturaCm) && num(p.alturaCm) > 50 && num(p.alturaCm) < 260);
+}
+
+/* ---------- cálculos ---------- */
+/** IMC = peso / altura(m)^2 + classificação OMS */
+function calcIMC(peso, alturaCm) {
+  const p = num(peso), h = num(alturaCm);
+  if (p == null || h == null || p <= 0 || h <= 0) return null;
+  const imc = p / Math.pow(h / 100, 2);
+  let cls, tone;
+  if (imc < 18.5) { cls = "baixo peso"; tone = "a"; }
+  else if (imc < 25) { cls = "normal"; tone = "g"; }
+  else if (imc < 30) { cls = "sobrepeso"; tone = "a"; }
+  else if (imc < 35) { cls = "obesidade I"; tone = "r"; }
+  else if (imc < 40) { cls = "obesidade II"; tone = "r"; }
+  else { cls = "obesidade III"; tone = "r"; }
+  return { valor: imc, cls, tone };
+}
+/** RCE = cintura / altura — meta < 0,50 */
+function calcRCE(cintura, alturaCm) {
+  const c = num(cintura), h = num(alturaCm);
+  if (c == null || h == null || c <= 0 || h <= 0) return null;
+  const v = c / h;
+  let cls, tone;
+  if (v < 0.50) { cls = "meta atingida"; tone = "g"; }
+  else if (v < 0.60) { cls = "atenção"; tone = "a"; }
+  else { cls = "risco elevado"; tone = "r"; }
+  return { valor: v, cls, tone };
+}
+/** RCQ = cintura / quadril — risco > 0,90 (H) e > 0,85 (M) */
+function calcRCQ(cintura, quadril, sexo) {
+  const c = num(cintura), q = num(quadril);
+  if (c == null || q == null || c <= 0 || q <= 0) return null;
+  const v = c / q;
+  const lim = sexo === "F" ? 0.85 : 0.90;
+  return { valor: v, lim, risco: v > lim, cls: v > lim ? "acima do limite" : "dentro do limite", tone: v > lim ? "r" : "g" };
+}
+/** % gordura pela fórmula da Marinha (medidas em cm; converte para polegadas) */
+function calcNavy(m, sexo, alturaCm) {
+  if (!m || !sexo) return null;
+  const cint = num(m.cintura), pes = num(m.pescoco), alt = num(alturaCm), quad = num(m.quadril);
+  if (cint == null || pes == null || !(alt > 0)) return null;
+  const IN = 2.54;
+  const altIn = alt / IN;
+  let pct;
+  if (sexo === "M") {
+    if (!(cint - pes > 0)) return null;
+    pct = 86.010 * Math.log10((cint - pes) / IN) - 70.041 * Math.log10(altIn) + 36.76;
+  } else {
+    if (quad == null || !(cint + quad - pes > 0)) return null;
+    pct = 163.205 * Math.log10((cint + quad - pes) / IN) - 97.684 * Math.log10(altIn) - 78.387;
+  }
+  if (!isFinite(pct)) return null;
+  return { valor: pct };
+}
+/** % gordura pela fórmula de Faulkner (4 dobras: SE + TR + SI + AB), todas em mm */
+function calcFaulkner(dobras) {
+  if (!dobras) return null;
+  const d = dobras, v = [d.subescapular, d.tricipital, d.suprailiaca, d.abdominal].map(num);
+  if (v.some(x => x == null)) return null;
+  return { valor: v.reduce((a, b) => a + b, 0) * 0.153 + 5.783 };
+}
+
+/* ---------- série de % gordura POR MÉTODO (nunca misturada) ---------- */
+/**
+ * Pontos de % gordura de um método, um por data (a medição mais recente da data).
+ * gs: "gordura" | "gorduraFaulkner" | "gorduraBalanca". Método sem valor fica fora da série.
+ */
+function gorduraSerie(metodo, gs = "gordura") {
+  const porDia = new Map();
+  for (const m of medicoesOrdenadas()) {
+    if (m.metodo !== metodo) continue;
+    const v = num(m[gs]);
+    if (v == null) continue;
+    porDia.set(m.data, { data: m.data, v: v, fonte: m.fonte });
+  }
+  return [...porDia.values()].sort((a, b) => a.data.localeCompare(b.data));
+}
+/** quais métodos têm dados de gordura (e por qual campo) */
+function metodosComGordura() {
+  const out = [];
+  for (const metodo of CORPO_METODOS) {
+    const pts = gorduraPointsMetodo(metodo);
+    if (pts.length) out.push({ metodo, gs: "gordura", pts });
+  }
+  return out;
+}
+/**
+ * Pontos de % gordura de UM método. A ordem de prioridade do campo evita misturar
+ * réguas diferentes: o valor padrão da medição vem primeiro (Faulkner calculado da
+ * dobra, InBody do profissional, Navy das circunferências, balança do aparelho).
+ */
+function gorduraPointsMetodo(metodo) {
+  for (const gs of ["gordura", "gorduraFaulkner", "gorduraNavy", "gorduraInbody", "gorduraBalanca"]) {
+    const pts = gorduraSerie(metodo, gs);
+    if (pts.length) return pts;
+  }
+  return [];
+}
+function fmtPct(v, casas = 1) { return v == null || !isFinite(v) ? "–" : (Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas)).toFixed(casas).replace(".", ",") + " %"; }
+function fmtN(v, casas = 1) { return v == null || !isFinite(v) ? "–" : (Number((Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas)).toFixed(casas))).toFixed(casas).replace(".", ","); }
+function fmtDelta(v, casas = 1, unidade = "") {
+  if (v == null || !isFinite(v)) return "–";
+  const r = Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas);
+  if (r === 0) return "= 0" + (unidade ? " " + unidade : "");
+  return (r > 0 ? "+" : "−") + fmtN(Math.abs(r), casas) + (unidade ? " " + unidade : "");
+}
+/** medições em ordem cronológica (com data válida) */
+function medicoesOrdenadas() {
+  const arr = Array.isArray(state.data.medicoes) ? state.data.medicoes : [];
+  // ordena por data; mesma data → a registrada por último fica como a mais recente
+  return arr.filter(m => m && m.data)
+    .map((m, i) => ({ m, i }))
+    .sort((a, b) => String(a.m.data).localeCompare(String(b.m.data)) || a.i - b.i)
+    .map(x => x.m);
+}
+/** cor de cada método nos gráficos */
+function corMetodo(metodo) { return CORPO_METODO_COR[metodo] || CORPO_METODO_COR.nenhum; }
+
+/* ============================================================
+   Gráficos da aba Corpo
+   ============================================================ */
+/**
+ * Gráfico de linha simples (peso, cintura).
+ * points: [{data, v}] · ref: {v, tol} para a faixa verde (RCE) · cor: cor da linha
+ */
+function svgCorpoSimples(points, { w = 420, h = 200, casas = 1, ref = null, cor = "#4ade80", id = "" } = {}) {
+  const ns = "http://www.w3.org/2000/svg";
+  const padL = 44, padR = 14, padT = 16, padB = 30;
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.setAttribute("class", "chart");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute("role", "img");
+  if (id) svg.dataset.chart = id;
+  const mk = (tag, attrs, txt) => {
+    const n = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (txt !== undefined) n.textContent = txt;
+    svg.appendChild(n);
+    return n;
+  };
+  if (!points.length) {
+    mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados");
+    return svg;
+  }
+  const vals = points.map(p => p.v);
+  let min = Math.min(...vals), max = Math.max(...vals);
+  if (ref) { min = Math.min(min, ref.v - (ref.tol || 0) * 2); max = Math.max(max, ref.v + (ref.tol || 0) * 2); }
+  if (min === max) { min -= 1; max += 1; }
+  else { const pad = (max - min) * 0.18; min -= pad; max += pad; }
+  if (min < 0) min = 0;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const x = (i) => padL + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
+  const y = (v) => padT + ih - ((v - min) / (max - min)) * ih;
+  for (let i = 0; i <= 4; i++) {
+    const v = min + (max - min) * (i / 4);
+    const yy = y(v);
+    mk("line", { x1: padL, x2: w - padR, y1: yy, y2: yy, stroke: "#2a3240", "stroke-width": 1 });
+    mk("text", { x: padL - 8, y: yy + 4, fill: "#8b98ab", "font-size": 11, "text-anchor": "end" }, fmtN(v, casas));
+  }
+  // faixa de referência (ex.: RCE < 0,50)
+  if (ref) {
+    const yTop = y(Math.min(max, ref.v + (ref.tol || 0))), yBot = y(Math.max(min, ref.v - (ref.tol || 0)));
+    mk("rect", { x: padL, y: Math.min(yTop, yBot), width: iw, height: Math.max(1, Math.abs(yBot - yTop)), fill: ref.cor || "rgba(74,222,128,.12)" });
+    const yl = y(ref.v);
+    if (yl >= padT && yl <= padT + ih) {
+      mk("line", { x1: padL, x2: w - padR, y1: yl, y2: yl, stroke: ref.corLinha || "#4ade80", "stroke-width": 1, "stroke-dasharray": "4 4", opacity: .8 });
+    }
+  }
+  if (points.length > 1) {
+    const d = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+    mk("path", { d, fill: "none", stroke: cor, "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" });
+  }
+  points.forEach((p, i) => {
+    mk("circle", { cx: x(i), cy: y(p.v), r: 4.5, fill: "#121214", stroke: cor, "stroke-width": 2.5 });
+    mk("title", {}, `${fmtBR(p.data)}: ${fmtN(p.v, casas)}`);
+  });
+  const stepX = Math.max(1, Math.ceil(points.length / 5));
+  points.forEach((p, i) => {
+    if (i % stepX !== 0 && i !== points.length - 1) return;
+    mk("text", { x: x(i), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(p.data));
+  });
+  return svg;
+}
+
+/**
+ * Gráfico de % gordura com UMA LINHA POR MÉTODO.
+ * series: [{metodo, pts:[{data,v}]}] — cada método tem sua cor, seu traçado e seus pontos;
+ * nenhuma linha liga pontos de métodos diferentes.
+ */
+function svgCorpoGordura(series, { w = 420, h = 220 } = {}) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.setAttribute("class", "chart");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  svg.setAttribute("role", "img");
+  svg.dataset.chart = "gordura";
+  const mk = (tag, attrs, txt) => {
+    const n = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (txt !== undefined) n.textContent = txt;
+    svg.appendChild(n);
+    return n;
+  };
+  const all = [];
+  const datas = [];
+  series.forEach(s => s.pts.forEach(p => { all.push(p.v); if (!datas.includes(p.data)) datas.push(p.data); }));
+  if (!all.length) {
+    mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados de gordura");
+    return svg;
+  }
+  datas.sort();
+  const padL = 40, padR = 14, padT = 18, padB = 30;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  let min = Math.min(...all), max = Math.max(...all);
+  if (min === max) { min -= 2; max += 2; } else { const pad = (max - min) * 0.2; min -= pad; max += pad; }
+  if (min < 0) min = 0;
+  const xi = (i) => padL + (datas.length === 1 ? iw / 2 : (i / (datas.length - 1)) * iw);
+  const y = (v) => padT + ih - ((v - min) / (max - min)) * ih;
+  for (let i = 0; i <= 4; i++) {
+    const v = min + (max - min) * (i / 4);
+    const yy = y(v);
+    mk("line", { x1: padL, x2: w - padR, y1: yy, y2: yy, stroke: "#2a3240", "stroke-width": 1 });
+    mk("text", { x: padL - 8, y: yy + 4, fill: "#8b98ab", "font-size": 11, "text-anchor": "end" }, fmtN(v, 1));
+  }
+  // uma linha por método — dados nunca compartilham caminho com outro método
+  for (const s of series) {
+    const pts = s.pts.slice().sort((a, b) => a.data.localeCompare(b.data));
+    if (!pts.length) continue;
+    const g = document.createElementNS(ns, "g");
+    g.dataset.metodo = s.metodo;
+    g.dataset.chart = "gordura";
+    g.dataset.line = s.pts.length > 1 ? "1" : "0";
+    const cor = corMetodo(s.metodo);
+    if (pts.length > 1) {
+      const d = pts.map((p, i) => `${i ? "L" : "M"}${xi(datas.indexOf(p.data)).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+      const path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", cor);
+      path.setAttribute("stroke-width", "2.5");
+      path.setAttribute("stroke-linejoin", "round");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-dasharray", s.metodo === "navy" ? "7 4" : s.metodo === "balanca" ? "2 4" : "0");
+      path.dataset.metodo = s.metodo;
+      path.dataset.role = "linha-gordura-" + s.metodo;
+      g.appendChild(path);
+    }
+    for (const p of pts) {
+      const c = document.createElementNS(ns, "circle");
+      c.setAttribute("cx", xi(datas.indexOf(p.data))); c.setAttribute("cy", y(p.v)); c.setAttribute("r", 4.5);
+      c.setAttribute("fill", "#121214"); c.setAttribute("stroke", cor); c.setAttribute("stroke-width", 2.5);
+      c.dataset.metodo = s.metodo;
+      const tt = document.createElementNS(ns, "title");
+      tt.textContent = `${CORPO_METODO_LBL[s.metodo]} · ${fmtBR(p.data)}: ${fmtPct(p.v)}`;
+      c.appendChild(tt);
+      g.appendChild(c);
+    }
+    svg.appendChild(g);
+  }
+  const stepX = Math.max(1, Math.ceil(datas.length / 5));
+  datas.forEach((d, i) => {
+    if (i % stepX !== 0 && i !== datas.length - 1) return;
+    mk("text", { x: xi(i), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(d));
+  });
+  return svg;
+}
+
+
+/* ============================================================
+   Corpo — tela (render Corpo / perfil / formulário de medição)
+   ============================================================ */
+function abrirCorpo(acao) {
+  CORPO_ACAO = acao || null;
+  if (state.tab !== "corpo") state.tab = "corpo";
+  if (!perfilCompleto()) { state.corpoForm = false; render(); return; }
+  render();
+}
+/** abre o formulário de medição na própria tela (nunca prompt nativo) */
+function abrirMedicaoForm(m) {
+  MEDICAO_EDIT = m || null;
+  CORPO_ACAO = null;
+  state.corpoForm = true;
+  state.tab = "corpo";
+  render();
+  const f = $("#medicao-form");
+  if (f) f.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+/* ---------- perfil ---------- */
+function editorPerfil() {
+  const p = perfil();
+  const box = el("div", { class: "card av-form", id: "corpo-perfil-editor", style: "margin-top:14px" });
+  box.innerHTML = `<div class="row"><h3 style="font-size:16px">Seu perfil</h3><span class="sp"></span>
+      <span class="tiny">${perfilCompleto() ? "editar" : "necessário"}</span></div>
+    <p class="tiny" style="margin:4px 0 0">Sexo e altura são indispensáveis para calcular IMC, RCE e % de gordura.</p>
+    <div class="perfil-grid">
+      <div class="pfcell full"><span class="lb">Sexo</span>
+        <div class="cseg-l" role="group" aria-label="Sexo">
+          <button type="button" data-sexo="M" class="${p.sexo === "M" ? "on" : ""}">Masculino</button>
+          <button type="button" data-sexo="F" class="${p.sexo === "F" ? "on" : ""}">Feminino</button>
+        </div>
+      </div>
+      <div class="pfcell"><span class="lb">Idade (anos)</span>
+        <input type="number" inputmode="numeric" id="pf-idade" min="10" max="110" placeholder="ex.: 40" value="${p.idade ?? ""}" aria-label="Idade"></div>
+      <div class="pfcell"><span class="lb">Altura (cm)</span>
+        <input type="number" inputmode="decimal" id="pf-altura" min="100" max="250" step="0.5" placeholder="ex.: 183" value="${p.alturaCm ?? ""}" aria-label="Altura em centímetros"></div>
+      <div class="pfcell full"><span class="lb">Meta de peso (kg) <span style="text-transform:none; letter-spacing:0; font-weight:500">opcional</span></span>
+        <input type="number" inputmode="decimal" id="pf-meta-peso" step="0.1" placeholder="ex.: 95" value="${p.meta.pesoKg ?? ""}" aria-label="Meta de peso"></div>
+      <div class="pfcell"><span class="lb">Meta de cintura (cm)</span>
+        <input type="number" inputmode="decimal" id="pf-meta-cintura" step="0.1" placeholder="opcional" value="${p.meta.cinturaCm ?? ""}" aria-label="Meta de cintura"></div>
+      <div class="pfcell"><span class="lb">Meta de gordura (%)</span>
+        <input type="number" inputmode="decimal" id="pf-meta-gordura" step="0.1" placeholder="opcional" value="${p.meta.gorduraPct ?? ""}" aria-label="Meta de gordura"></div>
+      <div class="pfcell full"><span class="lb">Método padrão exibido</span>
+        <select id="pf-metodo" aria-label="Método padrão">
+          <option value="faulkner"${p.metodoPadrao === "faulkner" ? " selected" : ""}>Faulkner (dobras)</option>
+          <option value="navy"${p.metodoPadrao === "navy" ? " selected" : ""}>Navy (circunferências)</option>
+        </select></div>
+    </div>
+    <div class="load-warn hidden" id="pf-erro" style="display:none"></div>
+    <button class="btn pri block" id="pf-salvar" style="margin-top:12px">Salvar perfil</button>
+    ${perfilCompleto() ? `<button class="btn block" id="pf-cancel" style="background:none;border-color:transparent;color:var(--mut)">Cancelar</button>` : ""}`;
+  // segmento de sexo
+  box.querySelectorAll("[data-sexo]").forEach(b => b.addEventListener("click", () => {
+    box.querySelectorAll("[data-sexo]").forEach(o => o.classList.toggle("on", o === b));
+    box.dataset.sexo = b.dataset.sexo;
+  }));
+  box.dataset.sexo = p.sexo || "";
+  const err = (msg) => { const e = $("#pf-erro", box); e.style.display = ""; e.innerHTML = `\u26a0 <b>${esc(msg)}</b>`; };
+  $("#pf-salvar", box).addEventListener("click", () => {
+    const sexo = box.dataset.sexo || null;
+    const idade = num($("#pf-idade", box).value);
+    const alturaCm = num($("#pf-altura", box).value);
+    if (!sexo) return err("Informe o sexo");
+    if (alturaCm == null || alturaCm < 100 || alturaCm > 250) return err("Informe a altura em cm (entre 100 e 250)");
+    if (idade != null && (idade < 10 || idade > 110)) return err("Idade entre 10 e 110 anos");
+    p.sexo = sexo;
+    p.idade = idade == null ? null : Math.round(idade);
+    p.alturaCm = Math.round(alturaCm * 10) / 10;
+    p.meta = {
+      pesoKg: num($("#pf-meta-peso", box).value),
+      cinturaCm: num($("#pf-meta-cintura", box).value),
+      gorduraPct: num($("#pf-meta-gordura", box).value),
+    };
+    p.metodoPadrao = $("#pf-metodo", box).value === "navy" ? "navy" : "faulkner";
+    saveLocal();
+    scheduleSync();
+    // recalcula o método das medições que dependem do perfil
+    for (const m of (state.data.medicoes || [])) recalcularMedicao(m);
+    saveLocal();
+    toast("Perfil salvo");
+    CORPO_ACAO = null;
+    const tinhaAcao = !!state.corpoForm;
+    render();
+    if (tinhaAcao || !(state.data.medicoes && state.data.medicoes.length)) setTimeout(() => abrirMedicaoForm(null), 120);
+  });
+  const canc = $("#pf-cancel", box);
+  if (canc) canc.addEventListener("click", () => {
+    CORPO_ACAO = null; saveLocal(); scheduleSync(); render();
+  });
+  return box;
+}
+
+/* ---------- recalcular método/gordura de uma medição ---------- */
+function recalcularMedicao(m) {
+  const p = perfil();
+  if (!m.metodo) m.metodo = m.fonte === "medica" ? "inbody" : m.fonte === "academia" ? "faulkner" : m.fonte === "balanca_casa" ? "balanca" : "nenhum";
+  if (m.metodo === "faulkner") {
+    const f = calcFaulkner(m.dobras);
+    m.gorduraFaulkner = f ? Math.round(f.valor * 10) / 10 : null;
+    // % principal da linha Faulkner (separada das demais no gráfico)
+    m.gordura = f ? m.gorduraFaulkner : (num(m.gordura) == null ? null : m.gordura);
+  } else if (m.metodo === "navy") {
+    const n = calcNavy(m, p.sexo, p.alturaCm);
+    m.gorduraNavy = n ? Math.round(n.valor * 10) / 10 : null;
+    if (n) m.gordura = m.gorduraNavy;
+  } else if (m.metodo === "balanca") {
+    if (m.gorduraBalanca == null) m.gorduraBalanca = num(m.gordura);
+  }
+  if (m.gordura != null) m.gordura = Math.round(num(m.gordura) * 10) / 10;
+  return m;
+}
+
+/* -------------------- formulário de medição (navio) -------------------- */
+const CORPO_PERIM = [
+  ["ombro", "Ombro"], ["torax", "T\u00f3rax"], ["bracoD", "Bra\u00e7o D"], ["bracoE", "Bra\u00e7o E"],
+  ["antebracoD", "Antebra\u00e7o D"], ["antebracoE", "Antebra\u00e7o E"],
+  ["coxaD", "Coxa D"], ["coxaE", "Coxa E"], ["panturrilhaD", "Panturrilha D"], ["panturrilhaE", "Panturrilha E"],
+];
+const CORPO_DOBRAS = [
+  ["tricipital", "Tricipital"], ["subescapular", "Subescapular"], ["suprailiaca", "Supraili\u00edaca"], ["abdominal", "Abdominal"],
+  ["peitoral", "Peitoral"], ["axilarMedia", "Axilar m\u00e9dia"], ["coxa", "Coxa"], ["bicipital", "Bicipital"], ["panturrilha", "Panturrilha"],
+];
+const CORPO_POLLOCK3 = [["peitoral", "Peitoral"], ["abdominal", "Abdominal"], ["coxa", "Coxa"]];
+const CORPO_PROF = [
+  ["gorduraPct", "% gordura", "0.1"], ["massaMagraKg", "Massa magra (kg)", "0.1"],
+  ["massaMuscularKg", "Massa muscular esquel\u00e9tica (kg)", "0.1"], ["gorduraVisceral", "Gordura visceral", "1"],
+  ["tmbKcal", "TMB (kcal)", "1"],
+];
+function campoNum(id, lb, ph, val, extra = "") {
+  return `<div class="ccell"><span class="lb">${lb}</span><input type="number" inputmode="decimal" id="${id}" placeholder="${ph}" value="${val ?? ""}" aria-label="${lb.replace(/<[^>]+>/g, "")}" ${extra}></div>`;
+}
+/** "valor anterior" de um campo (pré-preenche só o que é útil repetir) */
+function ultVal(f, campo, casas = 1) {
+  const m = ultimaMedicao();
+  if (!m) return "";
+  const v = campo === "peso" ? m.peso : campo === "cintura" ? m.cintura : campo === "quadril" ? m.quadril : campo === "pescoco" ? m.pescoco : null;
+  return v == null ? "" : String(Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas));
+}
+
+function renderMedicaoForm(v) {
+  const p = perfil();
+  const ed = MEDICAO_EDIT;
+  const ult = ed ? null : ultimaMedicao();
+  // fonte e método herdam da última medição (o que a pessoa costuma usar); data = hoje
+  const fontePad = ult && CORPO_FONTES[ult.fonte] ? ult.fonte : "academia";
+  const metodoPad = ult && ult.metodo ? ult.metodo : (p.metodoPadrao || "faulkner");
+  const f = ed || { data: todayISO(), fonte: fontePad, metodo: metodoPad };
+  const dobras = f.dobras || {};
+  const peri = f.perimetros || {};
+  const prof = f.profissional || {};
+  const box = el("div", { class: "card av-form", style: "margin-top:14px", id: "medicao-form" });
+  box.innerHTML = `<div class="row"><h2 style="font-size:17px">${ed ? "Editar medi\u00e7\u00e3o" : "Nova medi\u00e7\u00e3o"}</h2><span class="sp"></span>
+      <button class="btn sm" id="md-cancelar">Cancelar</button></div>
+
+    <div class="field" style="margin-top:12px"><label for="md-data">Data</label>
+      <input type="date" id="md-data" value="${esc(f.data || todayISO())}" aria-label="Data da medi\u00e7\u00e3o"></div>
+
+    <div class="two" style="margin-top:6px">
+      <div class="ccell"><span class="lb">Peso (kg) <span class="reqdot">*</span></span>
+        <input type="number" inputmode="decimal" id="md-peso" step="0.1" min="20" max="400" value="${ed ? (f.peso ?? "") : ultVal(0, "peso")}" placeholder="ex.: 102,0" aria-label="Peso em quilos"></div>
+      <div class="ccell"><span class="lb">Fonte <span class="reqdot">*</span></span>
+        <select id="md-fonte" aria-label="Fonte da medi\u00e7\u00e3o">
+          ${Object.entries(CORPO_FONTES).map(([k, o]) => `<option value="${k}"${(f.fonte || "academia") === k ? " selected" : ""}>${esc(o.lbl)}</option>`).join("")}
+        </select></div>
+    </div>
+    <div class="two" style="margin-top:8px">
+      <div class="ccell"><span class="lb">Cintura (cm)</span>
+        <input type="number" inputmode="decimal" id="md-cintura" step="0.1" value="${ed ? (f.cintura ?? "") : ultVal(0, "cintura")}" placeholder="recomendado" aria-label="Cintura em cent\u00edmetros"></div>
+      <div class="ccell"><span class="lb">Quadril (cm)</span>
+        <input type="number" inputmode="decimal" id="md-quadril" step="0.1" value="${ed ? (f.quadril ?? "") : ultVal(0, "quadril")}" placeholder="recomendado" aria-label="Quadril em cent\u00edmetros"></div>
+    </div>
+    <div class="two" style="margin-top:8px">
+      <div class="ccell"><span class="lb">Pesco\u00e7o (cm)</span>
+        <input type="number" inputmode="decimal" id="md-pescoco" step="0.1" value="${ed ? (f.pescoco ?? "") : ultVal(0, "pescoco")}" placeholder="recomendado" aria-label="Pesco\u00e7o em cent\u00edmetros"></div>
+      <div class="ccell"><span class="lb">M\u00e9todo</span>
+        <select id="md-metodo" aria-label="M\u00e9todo de c\u00e1lculo">
+          ${CORPO_METODOS.concat(["nenhum"]).map(k => `<option value="${k}"${(f.metodo || "faulkner") === k ? " selected" : ""}>${esc(CORPO_METODO_LBL[k])}</option>`).join("")}
+        </select></div>
+    </div>
+    <div class="two" id="md-bal-wrap" style="margin-top:8px">
+      <div class="ccell"><span class="lb">% gordura da balança</span>
+        <input type="number" inputmode="decimal" id="md-gordura-balanca" step="0.1" min="0" max="70" value="${ed && (f.gorduraBalanca != null ? f.gorduraBalanca : (f.metodo === "balanca" && f.gordura != null ? f.gordura : "")) || ""}" placeholder="ex.: 33,5" aria-label="Gordura da balança"></div>
+    </div>
+    <p class="tiny" style="margin:6px 0 0" id="md-metodo-hint"></p>
+
+    <details class="folha" id="folha-perimetros"><summary>Per\u00edmetros completos <span class="tiny">(opcional)</span></summary>
+      <div class="folha-body"><div class="perfil-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        ${CORPO_PERIM.map(([k, lb]) => campoNum("md-p-" + k, lb, "cm", peri[k], 'step="0.1" min="0"')).join("")}
+      </div></div></details>
+
+    <details class="folha" id="folha-dobras"><summary>Dobras cut\u00e2neas (mm) <span class="tiny">(opcional)</span></summary>
+      <div class="folha-body">
+        <p class="tiny" style="margin:2px 0 6px">Faulkner usa <b>Subescapular + Tricipital + Suprail\u00edaca + Abdominal</b>.</p>
+        <div class="perfil-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          ${CORPO_DOBRAS.map(([k, lb]) => campoNum("md-d-" + k, lb, "mm", dobras[k], 'step="0.5" min="0"')).join("")}
+        </div>
+        <div class="csec" style="margin-top:10px">Pollock 3 dobras <b>(mm)</b></div>
+        <div class="perfil-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:4px">
+          ${CORPO_POLLOCK3.map(([k, lb]) => campoNum("md-p3-" + k, lb, "mm", (f.pollock || {})[k], 'step="0.5" min="0"')).join("")}
+        </div>
+        <div class="tiny" id="md-faulkner-prev" style="margin-top:8px"></div>
+      </div></details>
+
+    <details class="folha" id="folha-prof"><summary>Avalia\u00e7\u00e3o profissional <span class="tiny">(InBody/DEXA)</span></summary>
+      <div class="folha-body">
+        <div class="perfil-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          ${CORPO_PROF.map(([k, lb, st]) => campoNum("md-prof-" + k, lb, "\u2013", prof[k], `step="${st}" min="0"`)).join("")}
+        </div>
+      </div></details>
+
+    <div class="field"><label for="md-obs">Observa\u00e7\u00f5es</label>
+      <textarea id="md-obs" rows="2" maxlength="500" style="width:100%; min-height:54px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 11px; font-size:15px; font-family:inherit; color:var(--txt)" placeholder="Ex.: em jejum, ap\u00f3s treino, hidrata\u00e7\u00e3o normal\u2026">${esc(f.obs || "")}</textarea></div>
+
+    <div class="tiny" id="md-preview" style="margin:4px 0 0"></div>
+    <div class="load-warn hidden" id="md-erro" style="display:none"></div>
+    <button class="btn pri block" id="md-salvar" style="margin-top:12px">${ed ? "Salvar altera\u00e7\u00f5es" : "Salvar medi\u00e7\u00e3o"}</button>`;
+  v.appendChild(box);
+
+  const $c = (id) => $(id, box);
+  const hint = $c("#md-metodo-hint");
+  const hintTxt = () => {
+    const m = $c("#md-metodo").value;
+    if (m === "faulkner") return "Faulkner: dobradas Subescapular, Tricipital, Suprail\u00edaca e Abdominal (mm).";
+    if (m === "navy") return "Navy: precisa de cintura, pesco\u00e7o e altura" + (p.sexo === "F" ? " e quadril" : "") + ".";
+    if (m === "inbody") return "InBody/DEXA: informe o % de gordura em \u201cAvalia\u00e7\u00e3o profissional\u201d.";
+    if (m === "balanca") return "Balan\u00e7a: informe o % de gordura que a balan\u00e7a mostrou.";
+    return "Sem c\u00e1lculo de gordura \u2014 s\u00f3 peso e medidas.";
+  };
+  const updHint = () => { hint.textContent = hintTxt(); };
+  // ao trocar a fonte, sugere o método correspondente (editável)
+  $c("#md-fonte").addEventListener("change", () => {
+    const sug = CORPO_FONTES[$c("#md-fonte").value].metodo;
+    if (sug !== "none") $c("#md-metodo").value = sug;
+    updHint(); preview();
+  });
+  $c("#md-metodo").addEventListener("change", () => {
+    if ($c("#md-metodo").value === "faulkner") $c("#folha-dobras").open = true;
+    if ($c("#md-metodo").value === "navy") { $c("#folha-perimetros").open = true; $c("#folha-dobras").open = false; }
+    if ($c("#md-metodo").value === "inbody" || $c("#md-metodo").value === "balanca") $c("#folha-prof").open = true;
+    updHint(); preview();
+  });
+  updHint();
+
+  // helper: monta o objeto da medição a partir do formulário
+  const coletar = () => {
+    const g = (id) => num($c(id).value);
+    const dobrasOut = {}, periOut = {}, pollockOut = {};
+    CORPO_DOBRAS.forEach(([k]) => { const x = g("#md-d-" + k); if (x != null) dobrasOut[k] = x; });
+    CORPO_POLLOCK3.forEach(([k]) => { const x = g("#md-p3-" + k); if (x != null) pollockOut[k] = x; });
+    CORPO_PERIM.forEach(([k]) => { const x = g("#md-p-" + k); if (x != null) periOut[k] = x; });
+    const profOut = {};
+    CORPO_PROF.forEach(([k]) => { const x = g("#md-prof-" + k); if (x != null) profOut[k] = x; });
+    const metodo = $c("#md-metodo").value;
+    const o = {
+      id: ed && ed.id ? ed.id : uid("med"),
+      data: $c("#md-data").value || todayISO(),
+      peso: g("#md-peso"),
+      cintura: g("#md-cintura"), quadril: g("#md-quadril"), pescoco: g("#md-pescoco"),
+      perimetros: periOut, dobras: dobrasOut, pollock: pollockOut, profissional: profOut,
+      fonte: $c("#md-fonte").value, metodo,
+      obs: $c("#md-obs").value.trim(),
+      gordura: null, gorduraFaulkner: null, gorduraNavy: null, gorduraBalanca: null, gorduraInbody: null,
+    };
+    if (metodo === "inbody" && profOut.gorduraPct != null) { o.gordura = profOut.gorduraPct; o.gorduraInbody = profOut.gorduraPct; }
+    if (metodo === "balanca") { o.gordura = g("#md-gordura-balanca"); o.gorduraBalanca = o.gordura; }
+    if (metodo === "faulkner") {
+      const fa = calcFaulkner(dobrasOut);
+      o.gorduraFaulkner = fa ? Math.round(fa.valor * 10) / 10 : null;
+      o.gordura = o.gorduraFaulkner;
+    }
+    if (metodo === "navy") {
+      const nv = calcNavy(o, p.sexo, p.alturaCm);
+      o.gorduraNavy = nv ? Math.round(nv.valor * 10) / 10 : null;
+      o.gordura = o.gorduraNavy;
+    }
+    return o;
+  };
+  const syncBal = () => { const w = $c("#md-bal-wrap"); if (w) w.style.display = $c("#md-metodo").value === "balanca" ? "" : "none"; };
+  $c("#md-metodo").addEventListener("change", syncBal);
+  $c("#md-fonte").addEventListener("change", syncBal);
+  syncBal();
+
+  const preview = () => {
+    const el2 = $c("#md-preview");
+    const o = coletar();
+    const imc = calcIMC(o.peso, p.alturaCm);
+    const rce = calcRCE(o.cintura, p.alturaCm);
+    const partes = [];
+    if (imc) partes.push(`IMC ${fmtN(imc.valor, 1)} (${imc.cls})`);
+    if (rce) partes.push(`RCE ${fmtN(rce.valor, 2)}`);
+    const fa = $c("#md-faulkner-prev");
+    if (fa) {
+      const fv = calcFaulkner(o.dobras);
+      const m = $c("#md-metodo").value;
+      fa.innerHTML = fv
+        ? `Faulkner com essas dobras: <b style="color:${m === "faulkner" ? "var(--acc)" : "#fde68a"}">${fmtPct(fv.valor)}</b>${m === "faulkner" ? " (este \u00e9 o valor salvo)" : " \u2014 mude o m\u00e9todo para Faulkner para usar"}.`
+        : `Faulkner: faltam dobras (SE, TR, SI, AB).`;
+    }
+    el2.innerHTML = o.peso != null ? `<b style="color:var(--txt)">${partes.join(" \u00b7 ") || ""}</b>` : "";
+  };
+  box.querySelectorAll("input,select").forEach(i => i.addEventListener("input", preview));
+  box.querySelectorAll("input,select").forEach(i => i.addEventListener("change", preview));
+  preview();
+
+  $c("#md-cancelar").addEventListener("click", () => { MEDICAO_EDIT = null; state.corpoForm = false; render(); });
+  $c("#md-salvar").addEventListener("click", () => {
+    const o = coletar();
+    const err = $c("#md-erro");
+    const fail = (msg, alvo) => {
+      err.style.display = ""; err.innerHTML = `\u26a0 <b>${esc(msg)}</b>`;
+      $c("#md-peso").classList.toggle("req-empty", alvo === "peso");
+      err.scrollIntoView({ block: "center", behavior: "smooth" });
+    };
+    if (o.peso == null || o.peso <= 0) return fail("Informe o peso (kg) \u2014 obrigat\u00f3rio", "peso");
+    if (o.peso < 20 || o.peso > 400) return fail("Peso fora da faixa esperada (20 a 400 kg)", "peso");
+    if (!o.data) return fail("Informe a data");
+    if (!$c("#md-fonte").value) return fail("Escolha a fonte");
+    if (o.metodo === "faulkner" && o.gorduraFaulkner == null) toast("Faulkner sem as 4 dobras \u2014 gordura n\u00e3o calculada");
+    if (o.metodo === "navy" && o.gorduraNavy == null) toast("Navy com dados insuficientes \u2014 gordura n\u00e3o calculada");
+    err.style.display = "none";
+    salvarMedicao(o);
+  });
+}
+
+function salvarMedicao(o) {
+  if (!Array.isArray(state.data.medicoes)) state.data.medicoes = [];
+  if (MEDICAO_EDIT) {
+    const i = state.data.medicoes.findIndex(m => m.id === MEDICAO_EDIT.id);
+    if (i >= 0) state.data.medicoes[i] = o; else state.data.medicoes.push(o);
+  } else {
+    state.data.medicoes.push(o);
+  }
+  state.data.medicoes.sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  MEDICAO_EDIT = null;
+  state.corpoForm = false;
+  saveLocal();
+  scheduleSync();
+  render();
+  toast(MEDICAO_EDIT ? "Medi\u00e7\u00e3o salva" : "Medi\u00e7\u00e3o salva \u2713");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* ============================================================
+   Corpo — tela principal
+   ============================================================ */
+function ultimaMedicao() {
+  const l = medicoesOrdenadas();
+  return l.length ? l[l.length - 1] : null;
+}
+function abrirAvisoMedico() {
+  if (document.querySelector(".overlay.show")) return;
+  openSheet(`
+    <div style="font-size:26px; line-height:1">\u26a0\ufe0f</div>
+    <h2 style="font-size:18px; margin-top:6px">Antes de come\u00e7ar</h2>
+    <p style="font-size:14.5px; line-height:1.5; color:var(--txt); margin:10px 0 0" id="aviso-medico-txt">${esc(AVISO_MEDICO.replace("\u26a0\ufe0f ", ""))}</p>
+    <button class="btn pri block" id="aviso-ok" style="margin-top:16px">Entendi</button>`);
+  $("#aviso-ok").addEventListener("click", () => {
+    state.data.aceitouAvisoMedico = true;
+    saveLocal(); scheduleSync(); hideOverlay(); render();
+    const ab = $("[data-tab='corpo']");
+    if (ab) { ab.dataset.avisoOk = "1"; }
+  });
+  const sh = $("#sheet");
+  if (sh) sh.dataset.popup = "aviso-medico";
+}
+
+function renderCorpo(v) {
+  stopTick();
+  const p = perfil();
+  if (!perfilCompleto()) {
+    CORPO_ACAO = null;
+    MEDICAO_EDIT = null;
+    const intro = el("div", { class: "card", style: "margin-top:14px" });
+    intro.innerHTML = `<h2 style="font-size:17px">Corpo</h2>
+      <p class="muted" style="font-size:13.5px; margin:4px 0 0">Peso, medidas, IMC e gordura corporal estimada \u2014 tudo com um aviso honesto: isto n\u00e3o substitui avalia\u00e7\u00e3o profissional.</p>`;
+    v.appendChild(intro);
+    v.appendChild(editorPerfil());
+    v.appendChild(rodapeAviso());
+    if (!state.data.aceitouAvisoMedico) setTimeout(abrirAvisoMedico, 60);
+    return;
+  }
+  if (CORPO_ACAO === "perfil") { v.appendChild(editorPerfil()); v.appendChild(rodapeAviso()); return; }
+  if (CORPO_ACAO === "config") { v.appendChild(cardConfigCorpo(p)); v.appendChild(rodapeAviso()); return; }
+  if (state.corpoForm || MEDICAO_EDIT) { renderMedicaoForm(v); v.appendChild(rodapeAviso()); return; }
+
+  const ms = medicoesOrdenadas();
+  const ult = ms.length ? ms[ms.length - 1] : null;
+  const ant = ms.length > 1 ? ms[ms.length - 2] : null;
+
+  /* ---- topo: ação + perfil ---- */
+  const top = el("div", { class: "card", style: "margin-top:14px" });
+  top.innerHTML = `<div class="row">
+      <div style="flex:1; min-width:0">
+        <div class="tiny">${esc(p.sexo === "F" ? "Feminino" : "Masculino")}${p.idade ? " \u00b7 " + p.idade + " anos" : ""} \u00b7 <b style="color:var(--txt)">${fmtN(p.alturaCm, 0)} cm</b></div>
+        <div class="tiny">Perfil completo${ult ? " \u00b7 última medi\u00e7\u00e3o " + fmtBR(ult.data) : ""}</div>
+      </div>
+      <button class="btn sm" id="corpo-editar-perfil" aria-label="Configurações do Corpo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+    <button class="btn pri block" id="corpo-nova" style="margin-top:10px">+ Nova medi\u00e7\u00e3o</button>
+    ${ult && CORPO_ACAO !== "config" ? `<div class="tiny" style="margin-top:6px; text-align:center">\u00faltima: ${fmtBR(ult.data)} \u00b7 ${esc(nomeFonte(ult.fonte))}</div>` : ""}`;
+  v.appendChild(top);
+  $("#corpo-editar-perfil", top).addEventListener("click", () => abrirCorpo("config"));
+  $("#corpo-nova", top).addEventListener("click", () => abrirMedicaoForm(null));
+
+  if (!ult) {
+    const e = el("div", { class: "card muted", id: "corpo-vazio" });
+    e.innerHTML = `Nenhuma medi\u00e7\u00e3o ainda. Toque em <b style="color:var(--txt)">+ Nova medi\u00e7\u00e3o</b> e registre o peso de hoje \u2014 os gr\u00e1ficos aparecem a partir da segunda.`;
+    v.appendChild(e);
+    v.appendChild(rodapeAviso());
+    if (!state.data.aceitouAvisoMedico) setTimeout(abrirAvisoMedico, 60);
+    return;
+  }
+
+  /* ---- números atuais (semáforo) ---- */
+  const n = numerosMedicao(ult);
+  const kc = el("div", { class: "card", id: "corpo-atuais" });
+  kc.innerHTML = `<div class="row"><h3 style="font-size:16px">N\u00fameros atuais</h3><span class="sp"></span>
+      <span class="tiny">${fmtBR(ult.data)} \u00b7 ${esc(nomeFonte(ult.fonte))}</span></div>
+    <div class="kpi-body">
+      <div class="kbox ${n.imc ? n.imc.tone : "na"}" id="kb-imc"><span class="sema"></span><div class="kl">IMC</div>
+        <div class="kv">${n.imc ? fmtN(n.imc.valor, 1) : "\u2013"}</div><div class="ks">${n.imc ? esc(n.imc.cls) : "sem altura"}</div></div>
+      <div class="kbox ${n.rce ? n.rce.tone : "na"}" id="kb-rce"><span class="sema"></span><div class="kl">RCE \u00b7 meta &lt; 0,50</div>
+        <div class="kv">${n.rce ? fmtN(n.rce.valor, 2) : "\u2013"}</div><div class="ks">${n.rce ? esc(n.rce.cls) : "sem cintura"}</div></div>
+      <div class="kbox ${n.rcq ? n.rcq.tone : "na"}" id="kb-rcq"><span class="sema"></span><div class="kl">RCQ \u00b7 risco &gt; ${n.rcq ? fmtN(n.rcq.lim, 2) : "0,90"}</div>
+        <div class="kv">${n.rcq ? fmtN(n.rcq.valor, 2) : "\u2013"}</div><div class="ks">${n.rcq ? esc(n.rcq.cls) : "sem quadril"}</div></div>
+      <div class="kbox ${n.gordura == null ? "na" : ""}" id="kb-gordura"><div class="kl">Gordura ${esc(ult.metodo ? CORPO_METODO_LBL[ult.metodo] : "\u2013")}</div>
+        <div class="kv">${n.gordura == null ? "\u2013" : fmtPct(n.gordura)}</div><div class="ks">${n.gordura == null ? "sem dado neste m\u00e9todo" : "estimativa " + esc(CORPO_METODO_LBL[ult.metodo] || "")}</div></div>
+      <div class="kbox na"><div class="kl">Peso</div><div class="kv" id="kb-peso">${fmtN(ult.peso, 1)} kg</div>
+        <div class="ks">${ant && ant.peso != null && ult.peso != null ? "var. " + fmtDelta(ult.peso - ant.peso, 1, "kg") : "primeira medi\u00e7\u00e3o"}</div></div>
+      <div class="kbox ${n.massaMagra == null ? "na" : ""}" id="kb-massa"><div class="kl">Massa magra</div>
+        <div class="kv">${n.massaMagra == null ? "\u2013" : fmtN(n.massaMagra, 1) + " kg"}</div><div class="ks">${n.massaMagra == null ? "precisa do % de gordura" : "massa gorda " + fmtN(n.massaGorda, 1) + " kg"}</div></div>
+    </div>`;
+  v.appendChild(kc);
+
+  /* ---- comparação com a medição anterior ---- */
+  v.appendChild(cardComparacao(ult, ant));
+
+  /* ---- gráficos: peso e cintura (linha única) ---- */
+  const pesoPts = {};
+  ms.forEach(m => { const x = num(m.peso); if (x != null) pesoPts[m.data] = { data: m.data, v: x }; });
+  const pesoSerie = Object.values(pesoPts).sort((a, b) => a.data.localeCompare(b.data));
+  const cintPts = {};
+  ms.forEach(m => { const x = num(m.cintura); if (x != null) cintPts[m.data] = { data: m.data, v: x }; });
+  const cintSerie = Object.values(cintPts).sort((a, b) => a.data.localeCompare(b.data));
+
+  const gc = el("div", { class: "card", id: "corpo-graficos" });
+  gc.innerHTML = `<h3 style="font-size:16px">Evolu\u00e7\u00e3o</h3>
+    <div class="tiny" style="font-weight:700; color:var(--txt); margin-top:10px">Peso (kg)</div>`;
+  gc.appendChild(svgCorpoSimples(pesoSerie, { id: "peso", cor: "#4ade80", casas: 1 }));
+  if (p.meta && p.meta.pesoKg != null) gc.insertAdjacentHTML("beforeend", `<div class="tiny">Meta: <b style="color:var(--txt)">${fmtN(p.meta.pesoKg, 1)} kg</b> \u00b7 faltam ${fmtN(ult.peso - p.meta.pesoKg, 1)} kg</div>`);
+  const h2 = el("div", { style: "margin-top:16px" });
+  h2.innerHTML = `<div class="tiny" style="font-weight:700; color:var(--txt)">Cintura (cm)</div>`;
+  if (cintSerie.length) h2.appendChild(svgCorpoSimples(cintSerie, { id: "cintura", cor: "#fbbf24", casas: 1 }));
+  else h2.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:6px 0 0">Sem cintura registrada \u2014 recomenda-se medir na altura do umbigo.</p>`);
+  gc.appendChild(h2);
+  v.appendChild(gc);
+
+  /* ---- % gordura: uma linha por método (NUNCA misturado) ---- */
+  v.appendChild(cardGorduraMetodos());
+
+  /* ---- histórico de medições ---- */
+  const hc = el("div", { class: "card", id: "corpo-historico" });
+  hc.innerHTML = `<div class="row"><h3 style="font-size:16px">Medi\u00e7\u00f5es</h3><span class="sp"></span><span class="tiny">${ms.length}</span></div>`;
+  for (const m of ms.slice().reverse()) {
+    const b = el("button", { class: "med-hist" });
+    b.dataset.id = m.id;
+    const mm = numerosMedicao(m);
+    const partes = [];
+    if (m.cintura != null) partes.push("cintura <b>" + fmtN(m.cintura, 0) + "</b>");
+    if (mm.imc) partes.push("IMC <b>" + fmtN(mm.imc.valor, 1) + "</b>");
+    if (mm.gordura != null) partes.push("gordura <b>" + fmtPct(mm.gordura) + "</b> " + esc(CORPO_METODO_LBL[m.metodo] || ""));
+    b.innerHTML = `<div style="min-width:0">
+        <div class="md">${fmtBR(m.data)}</div>
+        <span class="src-tag ${esc(m.metodo || "")}">${esc(nomeFonte(m.fonte))}</span></div>
+      <div class="mi"><b>${fmtN(m.peso, 1)} kg</b>${partes.length ? " \u00b7 " + partes.join(" \u00b7 ") : ""}</div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b98ab" stroke-width="2.5" style="flex:none"><path d="M9 6l6 6-6 6"/></svg>`;
+    b.addEventListener("click", () => showDetalheMedicao(m.id));
+    hc.appendChild(b);
+  }
+  v.appendChild(hc);
+  v.appendChild(rodapeAviso());
+  if (!state.data.aceitouAvisoMedico) setTimeout(abrirAvisoMedico, 60);
+}
+
+function nomeFonte(f) {
+  return CORPO_FONTE_LBL[f] || CORPO_FONTE_LBL[CORPO_FONTES[f] && CORPO_FONTES[f].lbl] || (f ? String(f) : "Outra");
+}
+
+/** números derivados de uma medição (todos podem ser null) */
+function numerosMedicao(m) {
+  const p = perfil();
+  const alt = num(p.alturaCm);
+  const imc = calcIMC(m.peso, alt);
+  const rce = calcRCE(m.cintura, alt);
+  const rcq = calcRCQ(m.cintura, m.quadril, p.sexo);
+  const metodo = m.metodo;
+  let gordura = null;
+  if (metodo === "inbody") gordura = num(m.gorduraInbody) != null ? num(m.gorduraInbody) : (num(m.gordura) != null ? num(m.gordura) : num(m.profissional && m.profissional.gorduraPct));
+  else if (metodo === "balanca") gordura = num(m.gorduraBalanca) != null ? num(m.gorduraBalanca) : num(m.gordura);
+  else if (metodo === "faulkner") gordura = num(m.gorduraFaulkner) != null ? num(m.gorduraFaulkner) : num(m.gordura);
+  else if (metodo === "navy") gordura = num(m.gorduraNavy) != null ? num(m.gorduraNavy) : num(m.gordura);
+  let massaMagra = null, massaGorda = null;
+  if (gordura != null && num(m.peso) != null) {
+    massaMagra = num(m.peso) * (1 - gordura / 100);
+    massaGorda = num(m.peso) * (gordura / 100);
+  }
+  // massa magra de avaliação profissional tem prioridade (fonte mais confiável)
+  const profMagra = m.profissional && num(m.profissional.massaMagraKg);
+  if (profMagra != null) massaMagra = profMagra;
+  // sem % de gordura NESTE método: massa magra/gorda fica nula (não mistura métodos)
+  if (gordura == null) { massaMagra = profMagra != null ? profMagra : null; massaGorda = null; }
+  return { imc, rce, rcq, gordura, massaMagra, massaGorda, metodo };
+}
+
+/** comparação com a medição anterior; % gordura só é comparado dentro do MESMO método */
+function cardComparacao(ult, ant) {
+  const c = el("div", { class: "card", id: "corpo-comparacao" });
+  if (!ant) {
+    c.innerHTML = `<h3 style="font-size:16px">Desde a anterior</h3>
+      <p class="tiny" style="margin:6px 0 0">Primeira medi\u00e7\u00e3o registrada \u2014 a partir da pr\u00f3xima voc\u00ea v\u00ea a varia\u00e7\u00e3o.</p>`;
+    return c;
+  }
+  const a = numerosMedicao(ult), b = numerosMedicao(ant);
+  const casas = (k) => (k.indexOf("IMC") >= 0 || k.indexOf("RCE") >= 0 || k.indexOf("RCQ") >= 0) ? 2 : 1;
+  const antesDepois = {
+    "Peso (kg)": [ant.peso, ult.peso, "kg"], "Cintura (cm)": [ant.cintura, ult.cintura, "cm"],
+    "IMC": [b.imc && b.imc.valor, a.imc && a.imc.valor, ""], "RCE": [b.rce && b.rce.valor, a.rce && a.rce.valor, ""],
+    "RCQ": [b.rcq && b.rcq.valor, a.rcq && a.rcq.valor, ""],
+  };
+  const linha = (k, v, ok) => {
+    const pa = antesDepois[k] || [];
+    const de = pa[0] == null ? "" : `<span class="tiny" style="margin-left:6px">(${fmtN(pa[0], casas(k))} \u2192 ${fmtN(pa[1], casas(k))})</span>`;
+    return `<div class="vl"><span class="vk">${k}${de}</span>
+    <span class="vv" style="color:${v == null ? "var(--mut)" : ok ? "var(--acc)" : "var(--err)"}">${v == null ? "\u2013" : fmtDelta(v, casas(k), k === "IMC" ? "" : k.indexOf("(kg)") >= 0 ? "kg" : k.indexOf("(cm)") >= 0 ? "cm" : "")}</span></div>`;
+  };
+  const dPeso = ult.peso != null && ant.peso != null ? ult.peso - ant.peso : null;
+  const dCint = ult.cintura != null && ant.cintura != null ? ult.cintura - ant.cintura : null;
+  const movLbl = (dCint == null && dPeso == null) ? "" : (() => {
+    const pesoCaiu = dPeso != null && dPeso < 0, cintDim = dCint != null && dCint < 0, cintSub = dCint != null && dCint > 0;
+    if (pesoCaiu && cintDim) return { cls: "", txt: "peso e cintura caíram" };
+    if (pesoCaiu && cintSub) return { cls: "load-warn", txt: "peso caiu com cintura maior" };
+    if (pesoCaiu) return { cls: "", txt: "peso caiu" };
+    if (cintDim) return { cls: "", txt: "cintura diminuiu" };
+    if (dPeso != null && dPeso > 0) return { cls: "flat", txt: "peso subiu" };
+    return null;
+  })();
+  c.innerHTML = `<div class="row"><h3 style="font-size:16px">Desde a anterior</h3><span class="sp"></span>
+      <span class="tiny">${fmtBR(ant.data)} \u2192 ${fmtBR(ult.data)}</span></div>
+    <div class="var-list" id="cmp-linhas">
+      ${linha("Peso (kg)", dPeso, dPeso != null && dPeso <= 0)}
+      ${linha("Cintura (cm)", dCint, dCint != null && dCint <= 0)}
+      ${a.imc && b.imc ? linha("IMC", a.imc.valor - b.imc.valor, a.imc.valor <= b.imc.valor) : ""}
+      ${a.rce && b.rce ? linha("RCE", a.rce.valor - b.rce.valor, a.rce.valor <= b.rce.valor) : ""}
+      ${a.rcq && b.rcq ? linha("RCQ", a.rcq.valor - b.rcq.valor, a.rcq.valor <= b.rcq.valor) : ""}
+    </div>
+    <div id="cmp-gordura"></div>
+    ${movLbl ? (movLbl.cls ? `<div class="load-warn" style="margin-top:8px">⚠ <b>${movLbl.txt}</b>. Acompanhe a circunferência abdominal — o peso sozinho não conta a história.</div>`
+      : `<div class="tiny" style="margin-top:8px; color:#93c5fd">↘ ${movLbl.txt}.</div>`) : ""}
+    <div class="tiny" style="margin-top:6px">A % de gordura s\u00f3 \u00e9 comparada entre medi\u00e7\u00f5es do <b>mesmo m\u00e9todo</b>.</div>`;
+  const gbox = $("#cmp-gordura", c);
+  // cada método só é comparado com o anterior DO MESMO método
+  let html = "";
+  for (const serie of metodosComGordura()) {
+    const pts = serie.pts;
+    if (pts.length < 2) continue;
+    const last = pts[pts.length - 1], prev = pts[pts.length - 2];
+    const d = last.v - prev.v;
+    html += `<div class="vl" data-cmp-gordura="${serie.metodo}" style="font-size:13.5px; display:flex; gap:8px; padding:7px 0; border-bottom:1px solid rgba(42,50,64,.6)">
+      <span class="vk"><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${corMetodo(serie.metodo)};margin-right:6px;vertical-align:-1px"></i>Gordura ${esc(CORPO_METODO_LBL[serie.metodo])}</span>
+      <span class="vv" style="color:${d <= 0 ? "var(--acc)" : "var(--err)"}">${fmtDelta(d, 1, "pp")}</span></div>`;
+  }
+  const semPar = metodosComGordura().filter(s => s.pts.length < 2).map(s => CORPO_METODO_LBL[s.metodo]);
+  gbox.innerHTML = html + (semPar.length ? `<div class="tiny" style="margin-top:6px">Sem medição anterior para comparar: ${esc(semPar.join(", "))}.</div>` : "");
+  return c;
+}
+
+/** card de % gordura: uma linha por método, com legenda e KPIs separados */
+function cardGorduraMetodos() {
+  const c = el("div", { class: "card", id: "corpo-gordura" });
+  c.innerHTML = `<div class="row"><h3 style="font-size:16px">% de gordura por m\u00e9todo</h3><span class="sp"></span>
+      <span class="badge" style="background:rgba(251,191,36,.13); color:#fde68a">separado</span></div>
+    <p class="tiny" style="margin:4px 0 0">Cada m\u00e9todo tem a sua linha. Faulkner, Navy, InBody e balan\u00e7a divergem at\u00e9 ~18 pontos na mesma pessoa \u2014 por isso nunca s\u00e3o ligados no mesmo gr\u00e1fico.</p>`;
+  const series = metodosComGordura().map(x => ({ metodo: x.metodo, gs: x.gs, pts: gorduraSerie(x.metodo, x.gs) }));
+  if (!series.some(s => s.pts.length)) {
+    c.insertAdjacentHTML("beforeend", `<p class="muted" style="font-size:14px; margin-top:10px" id="corpo-gordura-vazia">Nenhum % de gordura registrado ainda. Registre as dobras (Faulkner), as circunfer\u00eancias (Navy) ou o valor do InBody.</p>`);
+    return c;
+  }
+  c.appendChild(svgCorpoGordura(series));
+  // legenda (uma entrada por método, com o tra\u00e7ado de cada linha)
+  const lg = el("div", { class: "chart-legend", id: "corpo-gordura-legenda", style: "margin-top:6px" });
+  series.forEach(s => {
+    const it = el("span");
+    it.dataset.metodo = s.metodo;
+    const cor = corMetodo(s.metodo);
+    // amostra com o mesmo traçado da linha do gráfico
+    const amostra = s.metodo === "navy"
+      ? `repeating-linear-gradient(90deg,${cor} 0 6px,transparent 6px 10px)`
+      : s.metodo === "balanca"
+        ? `repeating-linear-gradient(90deg,${cor} 0 3px,transparent 3px 6px)`
+        : cor;
+    it.innerHTML = `<i style="background:${amostra}"></i>${esc(CORPO_METODO_LBL[s.metodo])}`;
+    lg.appendChild(it);
+  });
+  c.appendChild(lg);
+  // KPIs por método: cada um com seu pr\u00f3prio n\u00famero e varia\u00e7\u00e3o
+  const gr = el("div", { class: "kpi-body", id: "corpo-gordura-kpis", style: "margin-top:8px" });
+  series.forEach(s => {
+    const pts = s.pts;
+    const last = pts[pts.length - 1];
+    const prev = pts.length > 1 ? pts[pts.length - 2] : null;
+    const d = prev ? last.v - prev.v : null;
+    const box = el("div", { class: "kbox", style: `border-color:${corMetodo(s.metodo)}55` });
+    box.dataset.metodo = s.metodo;
+    box.dataset.gordura = String(Math.round(last.v * 10) / 10);
+    box.dataset.n = String(pts.length);
+    const sub = d == null
+      ? (pts.length === 1 ? "1 medição · " + fmtBRshort(last.data) : pts.length + " medições")
+      : "\u2212" + fmtN(Math.abs(d), 1) + " pp vs anterior";
+    box.innerHTML = `<div class="kl" style="color:${corMetodo(s.metodo)}">${esc(CORPO_METODO_LBL[s.metodo])}</div>
+      <div class="kv" style="color:${corMetodo(s.metodo)}; font-size:20px">${fmtPct(last.v)}</div>
+      <div class="ks">${sub}</div>`;
+    gr.appendChild(box);
+  });
+  c.appendChild(gr);
+  return c;
+}
+
+/** ajustes da aba Corpo: perfil, metas, método padrão e aviso */
+function cardConfigCorpo(p) {
+  const c = el("div", { class: "card", id: "corpo-config", style: "margin-top:14px" });
+  c.innerHTML = `<div class="row"><h3 style="font-size:16px">Configurações</h3><span class="sp"></span>
+      <button class="btn sm" id="cfg-fechar">Fechar</button></div>
+    <div class="var-list" style="margin-top:8px">
+      <div class="vl"><span class="vk">Sexo</span><span class="vv">${esc(p.sexo === "F" ? "Feminino" : "Masculino")}</span></div>
+      <div class="vl"><span class="vk">Idade</span><span class="vv">${p.idade ? esc(p.idade) + " anos" : "–"}</span></div>
+      <div class="vl"><span class="vk">Altura</span><span class="vv">${fmtN(p.alturaCm, 0)} cm</span></div>
+      <div class="vl"><span class="vk">Meta de peso</span><span class="vv">${p.meta && p.meta.pesoKg != null ? fmtN(p.meta.pesoKg, 1) + " kg" : "–"}</span></div>
+      <div class="vl"><span class="vk">Método padrão</span><span class="vv">${esc(CORPO_METODO_LBL[p.metodoPadrao] || "Faulkner")}</span></div>
+    </div>
+    <button class="btn block" id="cfg-perfil">Editar perfil e metas</button>
+    <button class="btn block sm" id="cfg-aviso">Ler o aviso novamente</button>
+    <div class="tiny" style="margin-top:10px">Medições: ${(state.data.medicoes || []).length} · dados no aparelho e no Drive (<b>academia-dados.json</b>)</div>`;
+  $("#cfg-fechar", c).addEventListener("click", () => { CORPO_ACAO = null; render(); });
+  $("#cfg-perfil", c).addEventListener("click", () => abrirCorpo("perfil"));
+  $("#cfg-aviso", c).addEventListener("click", () => abrirAvisoMedico());
+  return c;
+}
+
+function rodapeAviso() {
+  const d = el("div", { class: "aviso-fixo", id: "aviso-fixo" });
+  d.innerHTML = `<b>N\u00e3o \u00e9 programa m\u00e9dico.</b> ${esc(AVISO_MEDICO.replace("\u26a0\ufe0f ", ""))} <a href="#" id="aviso-ler" style="color:#fbbf24; text-decoration:underline">ler novamente</a>`;
+  const a = $("#aviso-ler", d);
+  if (a) a.addEventListener("click", (e) => { e.preventDefault(); abrirAvisoMedico(); });
+  return d;
+}
+
+/* -------------------- detalhe de uma medi\u00e7\u00e3o -------------------- */
+function showDetalheMedicao(id) {
+  const m = (state.data.medicoes || []).find(x => x.id === id);
+  if (!m) return;
+  const n = numerosMedicao(m);
+  const p = perfil();
+  const validados = [];
+  if (n.imc) validados.push(`IMC <b>${fmtN(n.imc.valor, 1)}</b>`);
+  validados.push(`peso <b>${fmtN(m.peso, 1)} kg</b>`);
+  if (m.cintura != null) validados.push(`cintura <b>${fmtN(m.cintura, 1)} cm</b>`);
+  let html = `<div class="row"><div><h2 style="font-size:18px">${fmtBR(m.data)}</h2>
+    <div class="tiny">${esc(nomeFonte(m.fonte))} \u00b7 m\u00e9todo ${esc(CORPO_METODO_LBL[m.metodo] || "\u2013")}</div></div><span class="sp"></span>
+    <button class="iconbtn" id="med-x"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="kpi-body">
+      <div class="kbox ${n.imc ? n.imc.tone : "na"}"><div class="kl">IMC</div><div class="kv">${n.imc ? fmtN(n.imc.valor, 1) : "\u2013"}</div><div class="ks">${esc(n.imc ? n.imc.cls : "sem altura")}</div></div>
+      <div class="kbox ${n.rce ? n.rce.tone : "na"}"><div class="kl">RCE</div><div class="kv">${n.rce ? fmtN(n.rce.valor, 2) : "\u2013"}</div><div class="ks">${esc(n.rce ? n.rce.cls : "sem cintura")}</div></div>
+      <div class="kbox ${n.rcq ? n.rcq.tone : "na"}"><div class="kl">RCQ</div><div class="kv">${n.rcq ? fmtN(n.rcq.valor, 2) : "\u2013"}</div><div class="ks">${esc(n.rcq ? n.rcq.cls : "sem quadril")}</div></div>
+      <div class="kbox"><div class="kl">Peso</div><div class="kv">${fmtN(m.peso, 1)} kg</div></div>
+    </div>
+    <h3 style="font-size:14px; margin-top:14px">Composi\u00e7\u00e3o estimada</h3>
+    <div class="var-list">
+      ${m.metodo ? `<div class="vl"><span class="vk">% gordura (${esc(CORPO_METODO_LBL[m.metodo])})</span><span class="vv">${n.gordura == null ? "dados insuficientes" : fmtPct(n.gordura)}</span></div>` : ""}
+      ${n.massaMagra != null ? `<div class="vl"><span class="vk">Massa magra</span><span class="vv">${fmtN(n.massaMagra, 1)} kg</span></div>` : ""}
+      ${n.massaGorda != null ? `<div class="vl"><span class="vk">Massa gorda</span><span class="vv">${fmtN(n.massaGorda, 1)} kg</span></div>` : ""}
+    </div>`;
+  const peri = m.perimetros || {}, dob = m.dobras || {}, prof = m.profissional || {};
+  const pcnt = Object.keys(peri).length, dcnt = Object.keys(dob).length, prcnt = Object.keys(prof).length;
+  if (pcnt) html += `<h3 style="font-size:14px; margin-top:14px">Per\u00edmetros (cm)</h3><div class="var-list">` +
+    Object.entries(peri).map(([k, v]) => `<div class="vl"><span class="vk">${esc((CORPO_PERIM.find(x => x[0] === k) || [k, k])[1])}</span><span class="vv">${fmtN(v, 1)}</span></div>`).join("") + `</div>`;
+  if (dcnt) html += `<h3 style="font-size:14px; margin-top:14px">Dobras (mm)</h3><div class="var-list">` +
+    Object.entries(dob).map(([k, v]) => `<div class="vl"><span class="vk">${esc((CORPO_DOBRAS.find(x => x[0] === k) || [k, k])[1])}</span><span class="vv">${fmtN(v, 1)}</span></div>`).join("") + `</div>`;
+  if (prcnt) html += `<h3 style="font-size:14px; margin-top:14px">Avalia\u00e7\u00e3o profissional</h3><div class="var-list">` +
+    Object.entries(prof).map(([k, v]) => `<div class="vl"><span class="vk">${esc((CORPO_PROF.find(x => x[0] === k) || [k, k])[1])}</span><span class="vv">${fmtN(v, 1)}</span></div>`).join("") + `</div>`;
+  if (m.obs) html += `<div class="obs-line" style="margin-top:12px">\ud83d\udcdd ${esc(m.obs)}</div>`;
+  html += `<div class="tiny" style="margin-top:12px; color:#fde68a">Estimativas por f\u00f3rmula \u2014 n\u00e3o substituem avalia\u00e7\u00e3o m\u00e9dica.</div>
+    <button class="btn block" id="med-edit">Editar medi\u00e7\u00e3o</button>
+    <button class="btn block danger" id="med-del">Excluir medi\u00e7\u00e3o</button>`;
+  openSheet(html);
+  $("#med-x").addEventListener("click", hideOverlay);
+  $("#med-edit").addEventListener("click", () => {
+    hideOverlay();
+    abrirMedicaoForm(m);
+  });
+  $("#med-del").addEventListener("click", () => {
+    if (!confirm("Excluir a medi\u00e7\u00e3o de " + fmtBR(m.data) + "?")) return;
+    state.data.medicoes = state.data.medicoes.filter(x => x.id !== m.id);
+    saveLocal(); scheduleSync(); hideOverlay(); render(); toast("Medi\u00e7\u00e3o exclu\u00edda");
+  });
 }
 
 /* ============================================================
@@ -2375,6 +3519,7 @@ document.querySelectorAll("#tabs button").forEach(b => {
     if (state.sessao && state.tab === "inicio") { /* mantém sessão mas troca de aba */ }
     state.tab = b.dataset.tab;
     state.editTreinoId = null;
+    if (b.dataset.tab !== "corpo") { CORPO_ACAO = null; MEDICAO_EDIT = null; state.corpoForm = false; }
     window.scrollTo({ top: 0 });
     render();
   });

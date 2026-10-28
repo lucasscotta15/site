@@ -1,7 +1,7 @@
 {
   "name": "Gusto",
   "short_name": "Gusto",
-  "description": "Seu diário e controle de treinos.",
+  "description": "Gusto — treinos, evolução e acompanhamento corporal. Sinta o gosto da evolução.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
