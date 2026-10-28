@@ -2902,7 +2902,7 @@ const BALANCA_LABEL = {
   gorduraPct: /^(?:gordura|%\s*g\b|\bgc\b|\bpg\b|\bgord\b|\bfat\b)/,
 };
 /** um novo rótulo no meio de um token (ex.: "Peso 80 MME 40 Gordura 20%"); "gordura visceral" não conta */
-const BALANCA_OUTRO_ROTULO = "massa\\s*magra|livre\\s*de\\s*gordura|\\bmme\\b|massa\\s*muscular(?:\\s*esqueletica)?|musculo|visceral|\\btmb\\b|taxa\\s*metabolica|metabol\\w*|basal|peso\\s*da\\s*agua|\\bagua\\b|hidrat\\w*|gordura(?!\\s*visceral)|%\\s*g\\b|\\bgc\\b|\\bpg\\b";
+const BALANCA_OUTRO_ROTULO = "massa\\s*magra|livre\\s*de\\s*gordura|\\bmme\\b|massa\\s*muscular(?:\\s*esqueletica)?|musculo|visceral|\\btmb\\b|taxa\\s*metabolica|metabol\\w*|basal|registro\\s*de\\s*massa\\s*muscular|massa\\s*de\\s*gordura|gordura\\s*corporal|\\bimc\\b|indice\\s*de\\s*massa\\s*corporal|massa\\s*muscular\\s*esqueletica|peso\\s*da\\s*agua|\\bagua\\b|hidrat\\w*|gordura(?!\\s*visceral)|%\\s*g\\b|\\bgc\\b|\\bpg\\b";
 // corta antes de um novo rótulo: com espaço ("40 kg Gordura") ou colado na unidade ("80kg MME")
 const BALANCA_CORTE = new RegExp("(?:(?<=\\d{1,2}(?:[.,]\\d{1,2})?\\s*(?:kg|%|kcal|cm|\\.))|\\s+)(?=" + BALANCA_OUTRO_ROTULO + ")", "gi");
 /** "resíduo" que não é dado numérico útil (peso, IMC, data, hora, marca do aparelho) */
@@ -2912,7 +2912,19 @@ function balancaNorm(t) {
   return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 function balancaCampo(label) {
-  if (/^massa\b/.test(label)) return /muscul|m[uú]sculo/.test(label) ? "mmeKg" : (BALANCA_LABEL.massaMagraKg.test(label) ? "massaMagraKg" : null);
+  const l = String(label || "").toLowerCase();
+  // texto do app da balança: "Registro de massa muscular" / "Massa muscular esquelética"
+  // são MASSA MUSCULAR (MME), nunca massa magra — testar antes de qualquer regra de "massa".
+  if (/massa\s*muscular|musculo\s*esquelet|esquelet|registro\s*de\s*massa|skeletal|\bsmm\b|\bmme\b|\bmm\b/.test(l)) return "mmeKg";
+  // "massa de gordura"/"gordura visceral" NÃO são % de gordura corporal
+  if (/gordura\s*visceral/.test(l)) return "visceral";
+  if (/(massa|peso|registro)\s*(de\s*)?gordura|gordura\s*(corporal)?\s*kg|fat\s*mass/.test(l)) return "gorduraKg";
+  if (/gordura\s*(corporal)?|^gordura|percentual\s*de\s*gordura|\bpgc\b|\bbf\b|\bfat\b/.test(l)) return "gorduraPct";
+  if (/massa\s*magra|livre\s*de\s*gordura|fat\s*free|lean\s*body/.test(l)) return "massaMagraKg";
+  if (/agua|hidrat|water/.test(l)) return "aguaKg";
+  if (/visceral/.test(l)) return "visceral";
+  if (/\bimc\b|indice\s*de\s*massa\s*corporal|^imc/.test(l)) return "imcIgual";   // ignorado: app calcula
+  if (/\btmb\b|metabol|basal|\bget\b|taxa\s*metabol|kcal/.test(l)) return "tmb";
   return ["mmeKg", "visceral", "tmb", "aguaKg", "gorduraPct", "massaMagraKg"].find(k => BALANCA_LABEL[k].test(label)) || null;
 }
 /** aplica valor/unidade de um rótulo; devolve true se virou campo */
@@ -2934,6 +2946,19 @@ function balancaAplicar(out, campo, valor, unidade, peso) {
       if (!peso || !(v > 0 && v < 100)) return false;
       out.mmeKg = Math.round(v * peso) / 100;
     } else { if (!(v > 0 && v <= 200)) return false; out.mmeKg = Math.round(v * 10) / 10; }
+  } else if (campo === "massaTotal") {
+    if (!(v > 0 && v <= 200)) return false;
+    out.massaMuscularTotalKg = Math.round(v * 10) / 10;
+    if (u === "%" && peso) out.massaMuscularTotalPct = Math.round(v * 10) / 10;
+    return true;
+  } else if (campo === "gorduraKg") {
+    // "Massa de gordura 29,8 kg" — guarda em kg; o % vem de gorduraPct
+    if (!(v > 0 && v <= 200)) return false;
+    out.gorduraKg = Math.round(v * 10) / 10;
+    return true;
+  } else if (campo === "imcIgual") {
+    // IMC da balança: o app calcula sozinho — não guarda, não reclama
+    return true;
   } else if (campo === "visceral") { if (!(v >= 0 && v <= 60)) return false; out.visceral = Math.round(v * 10) / 10; }
   else if (campo === "tmb") { if (!(v >= 500 && v <= 6000)) return false; out.tmb = Math.round(v); }
   else if (campo === "massaMagraKg") { if (!(v > 0 && v <= 200)) return false; out.massaMagraKg = Math.round(v * 10) / 10; }
@@ -2946,45 +2971,92 @@ function parseDadosBalanca(txt, pesoKg) {
   const bruto = String(txt == null ? "" : txt).trim();
   if (!bruto) return { dados: out, naoReconhecido };
   const peso = num(pesoKg);
-  const partes = bruto.split(BALANCA_SEP_ANTES).flatMap(p => p.split(BALANCA_CORTE));
-  let pend = null;   // rótulo sem número no mesmo token ("Gordura" e "31,5%" em linhas diferentes)
-  for (const parte of partes) {
-    const t = String(parte).trim().replace(/^[:=.\s]+|[:=]+$/g, "");
-    if (!t || t === "-" || t === "–") continue;
-    const label = balancaNorm(t);
-    const nums = t.match(/\d{1,4}(?:[.,]\d{1,2})?/g) || [];
-    const unid = ((t.match(BALANCA_UNID) || [])[1] || "").toLowerCase();
-    const campo = balancaCampo(label);
-    if (!nums.length) {
-      if (campo) pend = campo; else naoReconhecido.push(t);
-      continue;
+  const imcIgnorados = [];
+
+  /* Estratégia: achar os RÓTULOS por posição e cortar o texto no rótulo seguinte.
+     Isso funciona com "|", "·", quebra de linha, vírgula e também com texto corrido
+     ("Gordura corporal 29.9% Massa muscular esquelética 35.9kg ..."). */
+  const ROTULOS = [
+    ["massaMagraKg",  /massa\s*magra|livre\s*de\s*gordura|fat\s*free|lean\s*body/i],
+    ["massaTotal",    /registro\s*de\s*massa\s*muscular|massa\s*muscular\s*(?:total|registrada)/i],
+    ["mmeKg",         /massa\s*muscular(?:\s*esquel[eé]tica)?|m[uú]sculo\s*esquel[eé]tico|\bmme\b|skeletal\s*muscle|\bsmm\b/i],
+    ["gorduraKg",     /massa\s*de\s*gordura|gordura\s*(?:corporal|total)\s*\(?\s*kg|fat\s*mass/i],
+    ["gorduraPct",    /gordura\s*(?:corporal|corporal\s*%)?|percentual\s*de\s*gordura|\bpgc\b|\bbf\b|\bfat\s*%/i],
+    ["aguaKg",        /[aá]gua|hidrata[cç][aã]o|water/i],
+    ["visceral",      /gordura\s*visceral|visceral/i],
+    ["tmb",           /\btmb\b|metabolismo(?:\s*basal)?|metab[oó]lic[ao]\s*basal|taxa\s*metab[oó]lica|basal|\bget\b/i],
+    ["imcIgnorar",    /\bimc\b|[ií]ndice\s*de\s*massa\s*corporal/i],   // NUNCA aceito do usuário
+  ];
+  const BAL = /[·•;|\n\r\t]+|\s{2,}/;
+
+  // normaliza separadores fortes em " · " para depois cortar rótulo a rótulo
+  let t = bruto.replace(BAL, " · ");
+  // remove o peso isolado do texto (o app já tem o campo próprio)
+  t = t.replace(/peso\s*(?:atual|corporal)?\s*[:=]?\s*\d{1,3}(?:[.,]\d{1,2})?\s*(?:kg)?/i, " · ");
+
+  // localizar todos os rótulos com sua posição
+  const achados = [];
+  for (const [campo, re] of ROTULOS) {
+    const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+    let m;
+    while ((m = g.exec(t)) !== null) {
+      achados.push({ campo, ini: m.index, fim: m.index + m[0].length });
+      if (m.index === g.lastIndex) g.lastIndex++;
     }
-    if (!campo) {
-      // número sem rótulo: só "%" solto é aceito como gordura — nunca por posição
-      const soPct = nums.length === 1 && unid === "%" && !/[a-z]/i.test(t.replace(/%/g, ""));
-      if (soPct) {
-        const alvo = pend || "gorduraPct";
-        if (!balancaAplicar(out, alvo, nums[0], "%", peso)) naoReconhecido.push(t);
-        pend = null;
-      } else if (!BALANCA_RUIDO.test(label)) naoReconhecido.push(t);   // peso, IMC, data… (o app calcula)
-      continue;
-    }
-    pend = null;
-    let ok = false;
-    for (const n of nums) if (balancaAplicar(out, campo, n, unid, peso)) { ok = true; break; }
-    if (!ok) naoReconhecido.push(t);
   }
+  if (!achados.length) {
+    // sem rótulo: aceita só um "%" solto como gordura
+    const soPct = t.match(/\d{1,2}(?:[.,]\d{1,2})?\s*%/);
+    if (soPct && balancaAplicar(out, "gorduraPct", soPct[0], "%", peso)) return { dados: out, naoReconhecido };
+    return { dados: out, naoReconhecido: [bruto] };
+  }
+  achados.sort((a, b) => a.ini - b.ini);
+
+  // de-duplicar rótulos sobrepostos (ex.: "massa muscular esquelética" casa em 2 regex)
+  const finais = [];
+  for (const a of achados) {
+    const ult = finais[finais.length - 1];
+    if (ult && a.ini < ult.fim) {
+      // escolhe o mais específico (maior trecho) e mantém a posição inicial
+      if (a.fim - a.ini > ult.fim - ult.ini) { ult.campo = a.campo; ult.fim = a.fim; }
+      continue;
+    }
+    finais.push({ ...a });
+  }
+
+  for (let k = 0; k < finais.length; k++) {
+    const atual = finais[k];
+    const prox = finais[k + 1];
+    const trecho = t.slice(atual.fim, prox ? prox.ini : t.length);
+    // IMC e peso NUNCA vêm do texto colado: o app calcula a partir do peso + altura do perfil
+    if (atual.campo === "imcIgnorar") { imcIgnorados.push(true); continue; }
+    const campo = atual.campo;
+    // números do trecho: pega primeiro com unidade, senão o primeiro número
+    const mUnid = trecho.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(kg|%|kcal\/dia|kcal|cm)/i);
+    const mNum = trecho.match(/\d{1,4}(?:[.,]\d{1,2})?/);
+    const escolha = mUnid || mNum;
+    if (!escolha) { continue; }
+    const valor = mUnid ? mUnid[1] : escolha[0];
+    const unid = mUnid ? (mUnid[2] || "") : "";
+    if (!campo) continue;   // IMC / ignorado
+    balancaAplicar(out, campo, valor, unid, peso);
+  }
+
   if (out.aguaKg != null && peso) out.aguaPct = Math.round(out.aguaKg / peso * 1000) / 10;
   if (out.mmeKg != null && peso) out.mmePct = Math.round(out.mmeKg / peso * 1000) / 10;
-  return { dados: out, naoReconhecido };
+  // gordura em kg sem %: calcula o %
+  if (out.gorduraPct == null && out.gorduraKg != null && peso) out.gorduraPct = Math.round(out.gorduraKg / peso * 1000) / 10;
+  return { dados: out, naoReconhecido, imcIgnorado: imcIgnorados.length > 0 };
 }
 function gravouNada(o) { return !o || !Object.keys(o).length; }
 /** valores reconhecidos de um bloco colado → objeto profissional{} compatível */
 function profDeDadosBalanca(d) {
   const prof = {};
   if (d.gorduraPct != null) prof.gorduraPct = d.gorduraPct;
+  if (d.gorduraKg != null) prof.gorduraKg = d.gorduraKg;
   if (d.massaMagraKg != null) prof.massaMagraKg = d.massaMagraKg;
   if (d.mmeKg != null) prof.massaMuscularKg = d.mmeKg;
+  if (d.massaMuscularTotalPct != null) prof.massaMuscularTotalPct = d.massaMuscularTotalPct;
   if (d.visceral != null) prof.gorduraVisceral = d.visceral;
   if (d.tmb != null) prof.tmbKcal = d.tmb;
   if (d.aguaKg != null) prof.aguaKg = d.aguaKg;
@@ -3021,6 +3093,7 @@ function textoDadosBalanca(d, peso) {
   if (d.gorduraPct != null) partes.push(`gordura ${fmtN(d.gorduraPct, 1)} %`);
   if (d.massaMagraKg != null) partes.push(`massa magra ${fmtN(d.massaMagraKg, 1)} kg`);
   if (d.mmeKg != null) partes.push(`MME ${fmtN(d.mmeKg, 1)} kg${d.mmePct != null ? " (" + fmtN(d.mmePct, 1) + " %)" : ""}`);
+  if (d.massaMuscularTotalKg != null) partes.push(`massa muscular ${fmtN(d.massaMuscularTotalKg, 1)} kg`);
   if (d.aguaKg != null) partes.push(`água ${fmtN(d.aguaKg, 1)} kg${d.aguaPct != null ? " (" + fmtN(d.aguaPct, 1) + " %)" : ""}`);
   if (d.visceral != null) partes.push(`visceral ${fmtN(d.visceral, Number.isInteger(d.visceral) ? 0 : 1)}`);
   if (d.tmb != null) partes.push(`TMB ${fmtN(d.tmb, 0)} kcal`);
@@ -3132,7 +3205,10 @@ function renderMedicaoForm(v) {
         ? `<span style="color:#fde68a">\u26a0 N\u00e3o reconheci nenhum dado nesse texto. Voc\u00ea pode salvar assim mesmo \u2014 ou informe o % de gordura ao lado.</span>`
         : `<span>Cole acima \u2014 a pr\u00e9via aparece aqui antes de salvar.</span>`;
     } else {
-      prevBal.innerHTML = `<b style="color:var(--txt)">Reconhecido:</b> <span style="color:#4ade80">${esc(txt)}</span>`;
+      const pesoV = num($c("#md-peso").value), altV = num(p && p.alturaCm);
+      const imcV = (pesoV && altV) ? fmtN(pesoV / Math.pow(altV / 100, 2), 1) : null;
+      prevBal.innerHTML = `<b style="color:var(--txt)">Reconhecido:</b> <span style="color:#4ade80">${esc(txt)}</span>` +
+        (imcV ? `<div class="tiny" style="margin-top:4px">IMC calculado pelo app: <b style="color:var(--txt)">${imcV}</b> (peso ÷ altura²) — o valor digitado é ignorado.</div>` : "");
     }
     return r.dados;
   };
