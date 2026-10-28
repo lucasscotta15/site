@@ -2771,16 +2771,18 @@ function renderCorpo(v) {
   stopTick();
   const p = perfil();
   if (!perfilCompleto()) {
+    // Perfil incompleto NÃO bloqueia a aba: mostra o que já existe (peso e medições
+    // funcionam sem altura) e pede os dados que faltam logo no topo.
     CORPO_ACAO = null;
     MEDICAO_EDIT = null;
     const intro = el("div", { class: "card", style: "margin-top:14px" });
     intro.innerHTML = `<h2 style="font-size:17px">Corpo</h2>
-      <p class="muted" style="font-size:13.5px; margin:4px 0 0">Peso, medidas, IMC e gordura corporal estimada \u2014 tudo com um aviso honesto: isto n\u00e3o substitui avalia\u00e7\u00e3o profissional.</p>`;
+      <p class="muted" style="font-size:13.5px; margin:4px 0 0">Peso, medidas, IMC e gordura corporal estimada \u2014 tudo com um aviso honesto: isto n\u00e3o substitui avalia\u00e7\u00e3o profissional.</p>
+      <p class="tiny" style="margin:8px 0 0; color:#fbbf24">Falta completar o perfil para calcular IMC, RCE e % de gordura. O peso e as medições já funcionam abaixo.</p>`;
     v.appendChild(intro);
     v.appendChild(editorPerfil());
-    v.appendChild(rodapeAviso());
     if (!state.data.aceitouAvisoMedico) setTimeout(abrirAvisoMedico, 60);
-    return;
+    // segue para o conteúdo normal (números, gráficos e lista) em vez de parar aqui
   }
   if (CORPO_ACAO === "perfil") { v.appendChild(editorPerfil()); v.appendChild(rodapeAviso()); return; }
   if (CORPO_ACAO === "config") { v.appendChild(cardConfigCorpo(p)); v.appendChild(rodapeAviso()); return; }
@@ -2795,8 +2797,8 @@ function renderCorpo(v) {
   const top = el("div", { class: "card", style: "margin-top:14px" });
   top.innerHTML = `<div class="row">
       <div style="flex:1; min-width:0">
-        <div class="tiny">${esc(p.sexo === "F" ? "Feminino" : "Masculino")}${p.idade ? " \u00b7 " + p.idade + " anos" : ""} \u00b7 <b style="color:var(--txt)">${fmtN(p.alturaCm, 0)} cm</b></div>
-        <div class="tiny">Perfil completo${ult ? " \u00b7 última medi\u00e7\u00e3o " + fmtBR(ult.data) : ""}</div>
+        <div class="tiny">${p.sexo ? (p.sexo === "F" ? "Feminino" : "Masculino") : "Sexo não informado"}${p.idade ? " \u00b7 " + p.idade + " anos" : ""}${num(p.alturaCm) ? " \u00b7 <b style=\"color:var(--txt)\">" + fmtN(p.alturaCm, 0) + " cm</b>" : " \u00b7 <b style=\"color:#fbbf24\">altura não informada</b>"}</div>
+        <div class="tiny">${perfilCompleto() ? "Perfil completo" : "Perfil incompleto"}${ult ? " \u00b7 última medi\u00e7\u00e3o " + fmtBR(ult.data) : ""}</div>
       </div>
       <button class="btn sm" id="corpo-editar-perfil" aria-label="Configurações do Corpo">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
