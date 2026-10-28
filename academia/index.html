@@ -345,6 +345,37 @@
   .pf-badge{font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; background:rgba(251,191,36,.14);
     color:#fde68a; border:1px solid rgba(251,191,36,.35); white-space:nowrap}
   .legend-methods{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px}
+
+  /* ===== Análise Músculo-Gordura ===== */
+  .mg-legenda{display:flex;gap:12px;margin:10px 0 12px;font-size:11px;color:var(--mut)}
+  .mg-legenda span{display:flex;align-items:center;gap:5px}
+  .mg-dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .mg-dot-abaixo{background:#6b7280}.mg-dot-normal{background:#22c55e}.mg-dot-acima{background:#f59e0b}
+  .mg-row{display:grid;grid-template-columns:86px 1fr 110px;align-items:center;gap:9px;margin-bottom:12px}
+  .mg-nome{font-size:12px;color:var(--mut);line-height:1.2}
+  .mg-barra{position:relative;height:16px;display:flex;border-radius:4px;overflow:visible;background:#1b1f27}
+  .mg-vazia{background:#1b1f27;height:16px;border-radius:4px}
+  .mg-z{display:block;height:100%;border-radius:0}
+  .mg-z:first-child{border-radius:4px 0 0 4px}
+  .mg-z:last-of-type{border-radius:0 4px 4px 0}
+  .mg-z-abaixo{background:#374151}
+  .mg-z-normal{background:rgba(34,197,94,.6)}
+  .mg-z-acima{background:rgba(245,158,11,.45)}
+  .mg-marca{position:absolute;top:-4px;height:24px;width:3px;background:#fff;border-radius:2px;transform:translateX(-50%);box-shadow:0 0 5px rgba(0,0,0,.9);z-index:2}
+  .mg-marca.mg-normal{background:#4ade80}
+  .mg-marca.mg-acima{background:#fbbf24}
+  .mg-marca.mg-abaixo{background:#9ca3af}
+  .mg-val{font-size:11.5px;text-align:right;white-space:nowrap;color:var(--txt)}
+  .mg-tag{display:inline-block;margin-left:5px;font-size:9px;padding:1px 5px;border-radius:6px;vertical-align:middle;font-weight:600}
+  .mg-tag.mg-normal{background:rgba(34,197,94,.18);color:#4ade80}
+  .mg-tag.mg-acima{background:rgba(245,158,11,.18);color:#fbbf24}
+  .mg-tag.mg-abaixo{background:rgba(107,114,128,.25);color:#9ca3af}
+  .mg-leitura{margin-top:12px;font-size:13px;line-height:1.45;padding:9px 11px;border-radius:8px;background:rgba(74,222,128,.08);border-left:3px solid var(--acc);color:var(--txt)}
+  .traj-tit{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);margin:16px 0 8px}
+  .traj-row{display:grid;grid-template-columns:76px 1fr 1fr;gap:6px;font-size:11.5px;padding:7px 0;border-bottom:1px solid #1b1f27;align-items:center}
+  .traj-d{color:var(--mut)}
+  .traj-v{color:var(--txt)}
+  .traj-delta{grid-column:1/-1;font-size:10.5px;color:var(--mut);padding-left:2px}
 </style>
 </head>
 <body>
@@ -3259,6 +3290,9 @@ function renderCorpo(v) {
   /* ---- % gordura: uma linha por método (NUNCA misturado) ---- */
   v.appendChild(cardGorduraMetodos());
 
+  /* ---- Análise Músculo-Gordura (modelo InBody) ---- */
+  v.appendChild(cardMusculoGordura());
+
   /* ---- histórico de medições ---- */
   const hc = el("div", { class: "card", id: "corpo-historico" });
   hc.innerHTML = `<div class="row"><h3 style="font-size:16px">Medi\u00e7\u00f5es</h3><span class="sp"></span><span class="tiny">${ms.length}</span></div>`;
@@ -3446,6 +3480,140 @@ function cardGorduraMetodos() {
   return c;
 }
 
+
+/** ===== Análise Músculo-Gordura (modelo InBody) =====
+ * Três barras — Peso, Massa Muscular Esquelética, Massa de Gordura — cada uma com
+ * as faixas Abaixo | Normal | Acima. Faixas ancoradas na média 100% do InBody
+ * (peso médio para a altura = IMC 22; ±10% = faixa normal, como nas barras do laudo).
+ * Só faz sentido para medições que trazem MME e gordura em kg (avaliação profissional).
+ */
+const MG_IMC_MEDIO = 22.0;   // referência do InBody para o "100%"
+const MG_PCT_FAIXA = 0.10;   // normal = 90% a 110% da média
+
+/** devolve {pesoMedio, mmeMedio, gordMedio, faixas...} para sexo+altura+peso */
+function mgReferencias(p, peso, mme, gord) {
+  const alt = num(p && (p.alturaCm || p.altura));
+  if (!alt) return null;
+  const pesoMedio = MG_IMC_MEDIO * Math.pow(alt / 100, 2);
+  const f = (med) => ({
+    abaixoAte: med * (1 - MG_PCT_FAIXA),
+    normalAte: med * (1 + MG_PCT_FAIXA),
+    min: med * 0.55, max: med * 1.55
+  });
+  // MME média: 47,5% do peso médio (homens 45-50%, mulheres 40-45%)
+  const pctMme = (p && /^(f|fem|feminino)$/i.test(String(p.sexo))) ? 0.425 : 0.475;
+  const mmeMedio = pesoMedio * pctMme;
+  // gordura média: 22% do peso médio para homens, 28% para mulheres (faixa "normal" do laudo)
+  const pctGord = (p && /^(f|fem|feminino)$/i.test(String(p.sexo))) ? 0.28 : 0.22;
+  const gordMedio = pesoMedio * pctGord;
+  return {
+    peso: f(pesoMedio), mme: f(mmeMedio), gordura: f(gordMedio),
+    pesoMedio, mmeMedio, gordMedio
+  };
+}
+
+/** classifica um valor dentro de uma faixa */
+function mgClasse(valor, faixa) {
+  if (valor == null || !faixa) return null;
+  if (valor < faixa.abaixoAte) return { cls: "abaixo", lbl: "Abaixo" };
+  if (valor > faixa.normalAte) return { cls: "acima", lbl: "Acima" };
+  return { cls: "normal", lbl: "Normal" };
+}
+
+/** barra horizontal com as 3 zonas e o marcador na posição do valor */
+function mgBarra(nome, valor, faixa, unidade) {
+  if (valor == null || !faixa) {
+    return `<div class="mg-row"><div class="mg-nome">${esc(nome)}</div>
+      <div class="mg-barra mg-vazia"></div>
+      <div class="mg-val">–</div></div>`;
+  }
+  const span = faixa.max - faixa.min;
+  const pos = Math.max(0, Math.min(100, ((valor - faixa.min) / span) * 100));
+  const a = ((faixa.abaixoAte - faixa.min) / span) * 100;
+  const n = ((faixa.normalAte - faixa.abaixoAte) / span) * 100;
+  const k = mgClasse(valor, faixa);
+  return `<div class="mg-row">
+    <div class="mg-nome">${esc(nome)}</div>
+    <div class="mg-barra">
+      <i class="mg-z mg-z-abaixo" style="width:${a.toFixed(1)}%"></i>
+      <i class="mg-z mg-z-normal" style="width:${n.toFixed(1)}%"></i>
+      <i class="mg-z mg-z-acima" style="width:${(100 - a - n).toFixed(1)}%"></i>
+      <b class="mg-marca mg-${k.cls}" style="left:${pos.toFixed(1)}%"></b>
+    </div>
+    <div class="mg-val">${fmtN(valor, 1)}${unidade}<span class="mg-tag mg-${k.cls}">${k.lbl}</span></div>
+  </div>`;
+}
+
+/** card completo: Análise Músculo-Gordura do perfil ativo */
+function cardMusculoGordura() {
+  const c = el("div", { class: "card", id: "corpo-mg", style: "margin-top:14px" });
+  // última medição que tenha MME e gordura em kg
+  const refs = medicoesOrdenadas().filter(m => {
+    const n = numerosMedicao(m);
+    return n.gordura != null && num(m.peso) != null && num(m.massaMuscularKg || (m.profissional && m.profissional.mmeKg)) != null;
+  });
+  if (!refs.length) {
+    c.innerHTML = `<h3 style="font-size:16px">Análise Músculo-Gordura</h3>
+      <p class="muted small" style="margin-top:8px">Aparece nas medições com avaliação profissional (InBody), que trazem massa muscular e gordura em kg. A balança de casa não fornece esses dados.</p>`;
+    return c;
+  }
+  const m = refs[refs.length - 1];
+  const n = numerosMedicao(m);
+  const mme = num(m.massaMuscularKg || (m.profissional && m.profissional.mmeKg));
+  const gordKg = n.massaGorda != null ? n.massaGorda : num(m.peso) * n.gordura / 100;
+  const perfil = perfilAtivo() || {};
+  const R = mgReferencias(perfil, num(m.peso), mme, gordKg);
+  if (!R) {
+    c.innerHTML = `<h3 style="font-size:16px">Análise Músculo-Gordura</h3>
+      <p class="muted small" style="margin-top:8px">Informe a altura do perfil para calcular as faixas de referência.</p>`;
+    return c;
+  }
+  const kPeso = mgClasse(num(m.peso), R.peso);
+  const kMme = mgClasse(mme, R.mme);
+  const kGord = mgClasse(gordKg, R.gordura);
+
+  // leitura em texto
+  let leitura = "";
+  const musculoOk = kMme.cls === "normal" || kMme.cls === "acima";
+  if (musculoOk && kGord.cls === "acima") leitura = "Massa muscular preservada · gordura acima — não é obesidade sarcopênica.";
+  else if (kMme.cls === "abaixo" && kGord.cls === "acima") leitura = "Músculo abaixo e gordura acima — atenção: possível obesidade sarcopênica.";
+  else if (kMme.cls === "acima" && kGord.cls === "normal") leitura = "Músculo acima e gordura normal — perfil atlético.";
+  else if (musculoOk && kGord.cls === "normal") leitura = "Músculo e gordura em faixa normal.";
+  else if (kMme.cls === "abaixo" && kGord.cls === "normal") leitura = "Gordura normal, mas músculo abaixo da média.";
+  else leitura = "Músculo " + kMme.lbl.toLowerCase() + " e gordura " + kGord.lbl.toLowerCase() + " da média.";
+
+  c.innerHTML = `
+    <div class="row"><h3 style="font-size:16px">Análise Músculo-Gordura</h3><span class="sp"></span>
+      <span class="muted small">${esc(m.data ? fmtBR(m.data) : "")} · ${esc(nomeFonte(m.fonte))}</span></div>
+    <div class="mg-legenda"><span><i class="mg-dot mg-dot-abaixo"></i>Abaixo</span>
+      <span><i class="mg-dot mg-dot-normal"></i>Normal</span>
+      <span><i class="mg-dot mg-dot-acima"></i>Acima</span></div>
+    ${mgBarra("Peso", num(m.peso), R.peso, " kg")}
+    ${mgBarra("Massa muscular", mme, R.mme, " kg")}
+    ${mgBarra("Massa de gordura", gordKg, R.gordura, " kg")}
+    <p class="mg-leitura">${esc(leitura)}</p>
+    <p class="muted small" style="margin-top:6px">Faixas calculadas pela média para ${num(perfil && (perfil.alturaCm || perfil.altura)) ? fmtN(perfil.alturaCm || perfil.altura, 0) + " cm" : "sua altura"}. Referência aproximada — vale o laudo do InBody.</p>`;
+
+  // trajetória: pontos anteriores de avaliação profissional
+  if (refs.length > 1) {
+    const pts = refs.map(x => {
+      const nx = numerosMedicao(x);
+      const g = nx.massaGorda != null ? nx.massaGorda : num(x.peso) * nx.gordura / 100;
+      return { d: x.data, g: g, m: num(x.massaMuscularKg || (x.profissional && x.profissional.mmeKg)) };
+    });
+    const linhas = pts.map((pt, idx) => {
+      const prev = idx > 0 ? pts[idx - 1] : null;
+      const dg = prev ? pt.g - prev.g : null;
+      const dm = prev ? pt.m - prev.m : null;
+      return `<div class="traj-row"><span class="traj-d">${fmtBR(pt.d)}</span>
+        <span class="traj-v">${fmtN(pt.m, 1)} kg músculo</span>
+        <span class="traj-v">${fmtN(pt.g, 1)} kg gordura</span>
+        <span class="traj-delta">${dg != null ? (dm >= 0 ? "músculo " + fmtDelta(dm, 1, "kg") : "músculo " + fmtDelta(dm, 1, "kg")) + " · " + (dg <= 0 ? "gordura " + fmtDelta(dg, 1, "kg") : "gordura " + fmtDelta(dg, 1, "kg")) : "primeira"}</span></div>`;
+    }).join("");
+    c.innerHTML += `<div class="traj-tit">Trajetória nas avaliações</div><div class="traj">${linhas}</div>`;
+  }
+  return c;
+}
 
 /** ajustes da aba Corpo: perfil, metas, método padrão e aviso */
 function cardConfigCorpo(p) {
