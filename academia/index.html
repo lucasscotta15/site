@@ -383,6 +383,17 @@
   .mg-painel-var{font-size:11.5px;font-weight:600}
   .mg-painel-var.baixo{color:#4ade80}
   .mg-painel-var.alto{color:#fbbf24}
+
+  /* ===== Temporizador de descanso ===== */
+  .rest-card{margin-top:12px; transition:border-color .3s, background .3s}
+  .rest-card.rest-on{border-color:rgba(251,191,36,.5); background:linear-gradient(180deg, rgba(251,191,36,.07), transparent)}
+  .rest-clock{font-size:38px; font-weight:800; letter-spacing:1px; font-variant-numeric:tabular-nums; color:var(--txt); line-height:1.1}
+  .rest-card.rest-on .rest-clock{color:#fbbf24}
+  .rest-bar{height:5px; border-radius:3px; background:#1b1f27; overflow:hidden; margin:10px 0 12px}
+  .rest-bar i{display:block; height:100%; background:#fbbf24; border-radius:3px; transition:width .25s linear}
+  .rest-presets{display:flex; flex-wrap:wrap; gap:7px}
+  .rest-chip{flex:1 1 auto; min-width:52px; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg3); color:var(--txt); font-size:12.5px; cursor:pointer}
+  .rest-chip.on{border-color:#fbbf24; color:#fbbf24; background:rgba(251,191,36,.12); font-weight:700}
 </style>
 </head>
 <body>
@@ -1639,6 +1650,9 @@ function renderSessao(v) {
   // ---- cronômetro ----
   v.appendChild(timerCard(s));
 
+  // ---- temporizador de descanso (sob demanda) ----
+  v.appendChild(restCard());
+
   // ---- contador de concluídos ----
   const prog = el("div", { class: "card", style: "padding:12px 14px" });
   prog.id = "prog-card";
@@ -1720,6 +1734,152 @@ function startTick() {
   }, 1000);
 }
 function stopTick() { if (state.tickTimer) { clearInterval(state.tickTimer); state.tickTimer = null; } }
+
+/* ================= Temporizador de descanso ================= */
+/* Botão sob demanda: escolhe o tempo, dá play, toca o som no fim.
+   Não inicia sozinho entre séries — quem decide é o usuário. */
+const REST_PADRAO = 60;                       // segundos
+const REST_OPCOES = [30, 45, 60, 90, 120, 180];
+
+function restState() {
+  if (!state.rest) state.rest = { dur: REST_PADRAO, fim: 0, rodando: false, tick: null };
+  return state.rest;
+}
+
+/** toca o som de fim de descanso (WebAudio — não depende de arquivo externo) */
+function tocaSomDescanso() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!state.audioCtx) state.audioCtx = new AC();
+    const ctx = state.audioCtx;
+    if (ctx.state === "suspended") ctx.resume();
+    // três bipes curtos, agradáveis e audíveis na academia
+    const t0 = ctx.currentTime;
+    [0, 0.28, 0.56].forEach((off, i) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(i === 2 ? 1046 : 880, t0 + off);
+      g.gain.setValueAtTime(0.0001, t0 + off);
+      g.gain.exponentialRampToValueAtTime(0.35, t0 + off + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.24);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(t0 + off); osc.stop(t0 + off + 0.26);
+    });
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  } catch (e) { /* sem áudio: ignora */ }
+}
+
+function restRestante() {
+  const r = restState();
+  if (!r.rodando) return 0;
+  return Math.max(0, Math.ceil((r.fim - Date.now()) / 1000));
+}
+
+function restFormatar(seg) {
+  const m = Math.floor(seg / 60), s2 = seg % 60;
+  return m > 0 ? `${m}:${String(s2).padStart(2, "0")}` : `${s2}s`;
+}
+
+function restPlay() {
+  const r = restState();
+  if (r.rodando) { restPausar(); return; }
+  r.fim = Date.now() + r.dur * 1000;
+  r.rodando = true;
+  restTick();
+  paintRest();
+}
+
+function restPausar() {
+  const r = restState();
+  r.rodando = false;
+  restRestante_restore = 0;
+  if (r.tick) { clearInterval(r.tick); r.tick = null; }
+  paintRest();
+}
+
+function restZerar() {
+  const r = restState();
+  r.rodando = false;
+  if (r.tick) { clearInterval(r.tick); r.tick = null; }
+  paintRest();
+}
+
+function restTick() {
+  const r = restState();
+  if (r.tick) clearInterval(r.tick);
+  r.tick = setInterval(() => {
+    const seg = restRestante();
+    if (seg <= 0) {
+      r.rodando = false;
+      if (r.tick) { clearInterval(r.tick); r.tick = null; }
+      tocaSomDescanso();
+      toast("⏰ Descanso encerrado — " + restFormatar(r.dur));
+      paintRest();
+      return;
+    }
+    paintRest();
+  }, 250);
+}
+
+/** atualiza apenas os pedaços do card (não re-renderiza a tela toda) */
+function paintRest() {
+  const r = restState();
+  const seg = r.rodando ? restRestante() : 0;
+  const el1 = document.getElementById("rest-clock");
+  const el2 = document.getElementById("rest-btn-play");
+  const el3 = document.getElementById("rest-bar-fill");
+  if (el1) el1.textContent = restFormatar(r.rodando ? seg : r.dur);
+  if (el2) el2.textContent = r.rodando ? "⏸ Pausar" : "▶ Iniciar";
+  if (el3) el3.style.width = r.rodando ? Math.round((seg / r.dur) * 100) + "%" : "100%";
+  const wrap = document.getElementById("rest-card");
+  if (wrap) wrap.classList.toggle("rest-on", !!r.rodando);
+}
+
+function restCard() {
+  const r = restState();
+  const c = el("div", { class: "card rest-card" + (r.rodando ? " rest-on" : "") });
+  c.id = "rest-card";
+  c.innerHTML = `
+    <div class="row">
+      <div style="flex:1">
+        <div class="clock-lbl">Temporizador de descanso</div>
+        <div class="rest-clock" id="rest-clock">${restFormatar(r.rodando ? restRestante() : r.dur)}</div>
+      </div>
+      <button class="btn pri" id="rest-btn-play" style="min-height:46px; min-width:104px">${r.rodando ? "⏸ Pausar" : "▶ Iniciar"}</button>
+    </div>
+    <div class="rest-bar"><i id="rest-bar-fill" style="width:${r.rodando ? Math.round((restRestante() / r.dur) * 100) : 100}%"></i></div>
+    <div class="rest-presets">${REST_OPCOES.map(v => `<button class="rest-chip${v === r.dur ? " on" : ""}" data-rest="${v}">${v >= 60 ? (v / 60) + " min" : v + "s"}</button>`).join("")}
+      <button class="rest-chip" data-rest="custom">outro…</button></div>`;
+  c.querySelector("#rest-btn-play").addEventListener("click", () => { if (r.rodando) restPausar(); else restPlay(); });
+  c.querySelectorAll("[data-rest]").forEach(b => b.addEventListener("click", () => {
+    const v = b.dataset.rest;
+    if (v === "custom") { abrirSheetRestCustom(); return; }
+    r.dur = parseInt(v, 10);
+    r.rodando = false;
+    if (r.tick) { clearInterval(r.tick); r.tick = null; }
+    render();
+  }));
+  return c;
+}
+
+function abrirSheetRestCustom() {
+  if (typeof openSheet !== "function") return;
+  const r = restState();
+  const box = el("div");
+  box.innerHTML = `<label class="lbl2" for="rest-custom">Tempo em segundos</label>
+    <input id="rest-custom" type="number" inputmode="numeric" min="5" max="1800" step="5" value="${r.dur}">`;
+  openSheet("Tempo de descanso", box, "Aplicar", () => {
+    const v = parseInt(document.getElementById("rest-custom").value, 10);
+    if (!v || v < 5 || v > 1800) { toast("Escolha entre 5 e 1800 segundos"); return false; }
+    r.dur = v; r.rodando = false;
+    if (r.tick) { clearInterval(r.tick); r.tick = null; }
+    render();
+    return true;
+  });
+}
+
 
 function exCard(ex) {
   const open = !!state.openEx[ex.exercicioId];
