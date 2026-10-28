@@ -2382,8 +2382,7 @@ function svgCorpoGordura(series, { w = 420, h = 220 } = {}) {
     mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados de gordura");
     return svg;
   }
-  // eixo com TODAS as datas das medições (inclusive as sem % de gordura) — nada de ponto fora do eixo
-  for (const m of medicoesOrdenadas()) if (!datas.includes(m.data)) datas.push(m.data);
+  // eixo X = apenas as datas dos pontos exibidos (evita eixo cheio de datas sem dado)
   datas.sort();
   const padL = 40, padR = 14, padT = 18, padB = 30;
   const iw = w - padL - padR, ih = h - padT - padB;
@@ -2435,7 +2434,7 @@ function svgCorpoGordura(series, { w = 420, h = 220 } = {}) {
   }
   const stepX = Math.max(1, Math.ceil(datas.length / 5));
   datas.forEach((d, i) => {
-    if (i % stepX !== 0) return;
+    if (datas.length > 5 && i % stepX !== 0) return;
     mk("text", { x: xi(i), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(d));
   });
   return svg;
@@ -3221,26 +3220,22 @@ function renderCorpo(v) {
   ms.forEach(m => { const x = num(m.cintura); if (x != null) cintPts[m.data] = { data: m.data, v: x }; });
   const cintSerie = Object.values(cintPts).sort((a, b) => a.data.localeCompare(b.data));
 
+  // ---- Peso (card proprio) ----
   const gc = el("div", { class: "card", id: "corpo-graficos" });
-  // Peso (kg, eixo esquerdo) + Cintura (cm, eixo direito) — duas medidas INDEPENDENTES.
-  // O IMC não entra aqui: ele é peso/altura², ou seja, a MESMA informação do peso
-  // em outra escala, e as duas curvas ficariam exatamente sobrepostas.
-  const altM = num(p.alturaCm) ? num(p.alturaCm) / 100 : null;
-  gc.innerHTML = `<h3 style="font-size:16px">Evolu\u00e7\u00e3o</h3>
-    <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:10px">
-      <span class="tiny" style="font-weight:700; color:var(--txt)">Peso e cintura</span><span class="sp"></span>
-      <span class="tiny" data-legenda="peso"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"/></svg> Peso (kg \u00b7 esq.)</span>
-      ${cintSerie.length ? `<span class="tiny" data-legenda="cintura"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 3"/></svg> Cintura (cm \u00b7 dir.)</span>` : ""}
-    </div>`;
-  gc.appendChild(svgCorpoDuplo(pesoSerie, cintSerie, { id: "peso-cintura" }));
-  if (!cintSerie.length) gc.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:6px 0 0">Meça a cintura para ver a linha junto com o peso.</p>`);
-  if (p.meta && p.meta.pesoKg != null) gc.insertAdjacentHTML("beforeend", `<div class="tiny">Meta: <b style="color:var(--txt)">${fmtN(p.meta.pesoKg, 1)} kg</b> \u00b7 faltam ${fmtN(ult.peso - p.meta.pesoKg, 1)} kg</div>`);
-  const h2 = el("div", { style: "margin-top:16px" });
-  h2.innerHTML = `<div class="tiny" style="font-weight:700; color:var(--txt)">Cintura (cm)</div>`;
-  if (cintSerie.length) h2.appendChild(svgCorpoSimples(cintSerie, { id: "cintura", cor: "#fbbf24", casas: 1 }));
-  else h2.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:6px 0 0">Sem cintura registrada \u2014 recomenda-se medir na altura do umbigo.</p>`);
-  gc.appendChild(h2);
+  gc.innerHTML = `<div class="row"><h3 style="font-size:16px">Peso (kg)</h3><span class="sp"></span>
+      <span class="tiny" data-legenda="peso"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"/></svg> peso</span></div>`;
+  if (pesoSerie.length) gc.appendChild(svgCorpoSimples(pesoSerie, { id: "peso", cor: "#4ade80", casas: 1 }));
+  else gc.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:6px 0 0">Sem peso registrado.</p>`);
+  if (p.meta && p.meta.pesoKg != null && ult && ult.peso != null) gc.insertAdjacentHTML("beforeend", `<div class="tiny">Meta: <b style="color:var(--txt)">${fmtN(p.meta.pesoKg, 1)} kg</b> \u00b7 faltam ${fmtN(ult.peso - p.meta.pesoKg, 1)} kg</div>`);
   v.appendChild(gc);
+
+  // ---- Cintura (card proprio) ----
+  const hc2 = el("div", { class: "card", id: "corpo-cintura" });
+  hc2.innerHTML = `<div class="row"><h3 style="font-size:16px">Cintura (cm)</h3><span class="sp"></span>
+      <span class="tiny" data-legenda="cintura"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"/></svg> cintura</span></div>`;
+  if (cintSerie.length) hc2.appendChild(svgCorpoSimples(cintSerie, { id: "cintura", cor: "#fbbf24", casas: 1 }));
+  else hc2.insertAdjacentHTML("beforeend", `<p class="tiny" style="margin:6px 0 0">Sem cintura registrada \u2014 recomenda-se medir na altura do umbigo.</p>`);
+  v.appendChild(hc2);
 
   /* ---- % gordura: uma linha por método (NUNCA misturado) ---- */
   v.appendChild(cardGorduraMetodos());
@@ -3360,34 +3355,39 @@ function cardComparacao(ult, ant) {
 /** card de % gordura: uma linha por método, com legenda e KPIs separados */
 function cardGorduraMetodos() {
   const c = el("div", { class: "card", id: "corpo-gordura" });
-  c.innerHTML = `<div class="row"><h3 style="font-size:16px">% de gordura por m\u00e9todo</h3><span class="sp"></span>
-      <span class="badge" style="background:rgba(251,191,36,.13); color:#fde68a">separado</span></div>
-    <p class="tiny" style="margin:4px 0 0">Cada m\u00e9todo tem a sua linha. Faulkner, Navy, InBody e balan\u00e7a divergem at\u00e9 ~18 pontos na mesma pessoa \u2014 por isso nunca s\u00e3o ligados no mesmo gr\u00e1fico.</p>`;
-  const series = metodosComGordura().map(x => ({ metodo: x.metodo, pts: x.pts }));
-  if (!series.some(s => s.pts.length)) {
-    c.insertAdjacentHTML("beforeend", `<p class="muted" style="font-size:14px; margin-top:10px" id="corpo-gordura-vazia">Nenhum % de gordura registrado ainda. Registre as dobras (Faulkner), as circunfer\u00eancias (Navy) ou o valor do InBody.</p>`);
+  const series = metodosComGordura().map(x => ({ metodo: x.metodo, pts: x.pts })).filter(x => x.pts.length);
+  if (!series.length) {
+    c.innerHTML = `<div class="row"><h3 style="font-size:16px">% de gordura</h3></div>
+      <p class="muted" style="font-size:14px; margin-top:10px" id="corpo-gordura-vazia">Nenhum % de gordura registrado ainda. Registre as dobras (Faulkner), as circunferencias (Navy) ou o valor do InBody.</p>`;
     return c;
   }
-  c.appendChild(svgCorpoGordura(series));
-  // legenda (uma entrada por método, com o tra\u00e7ado de cada linha)
-  const lg = el("div", { class: "chart-legend", id: "corpo-gordura-legenda", style: "margin-top:6px" });
-  series.forEach(s => {
-    const it = el("span");
-    it.dataset.metodo = s.metodo;
-    const cor = corMetodo(s.metodo);
-    // amostra com o mesmo traçado da linha do gráfico
-    const amostra = s.metodo === "navy"
-      ? `repeating-linear-gradient(90deg,${cor} 0 6px,transparent 6px 10px)`
-      : s.metodo === "balanca"
-        ? `repeating-linear-gradient(90deg,${cor} 0 3px,transparent 3px 6px)`
-        : cor;
-    it.innerHTML = `<i style="background:${amostra}"></i>${esc(CORPO_METODO_LBL[s.metodo])}`;
-    lg.appendChild(it);
+  const ids = series.map(x => x.metodo);
+  const sel = ids.includes(state.gorduraMetodo) ? state.gorduraMetodo : ids[0];
+  state.gorduraMetodo = sel;
+  c.innerHTML = `<div class="row"><h3 style="font-size:16px">% de gordura</h3><span class="sp"></span>
+      <span class="badge" style="background:rgba(251,191,36,.13); color:#fde68a">por metodo</span></div>
+    <p class="tiny" style="margin:4px 0 8px">Escolha um metodo. Cada um tem a sua propria linha - eles divergem ate ~18 pontos na mesma pessoa e nao podem ser comparados entre si.</p>`;
+  const seg = el("div", { class: "seg", id: "corpo-gordura-seg", role: "tablist", style: "flex-wrap:wrap; gap:6px" });
+  series.forEach(x => {
+    const b = el("button", { class: "chip" + (x.metodo === sel ? " on" : ""), type: "button", role: "tab" });
+    b.dataset.metodo = x.metodo;
+    b.setAttribute("aria-selected", x.metodo === sel ? "true" : "false");
+    b.style.borderColor = corMetodo(x.metodo) + (x.metodo === sel ? "" : "55");
+    if (x.metodo === sel) b.style.background = corMetodo(x.metodo) + "22";
+    b.innerHTML = `<i class="dot" style="background:${corMetodo(x.metodo)}"></i>${esc(CORPO_METODO_LBL[x.metodo])}`;
+    b.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if (state.gorduraMetodo === x.metodo) return;
+      state.gorduraMetodo = x.metodo;
+      render();
+    });
+    seg.appendChild(b);
   });
-  c.appendChild(lg);
-  // KPIs por método: cada um com seu pr\u00f3prio n\u00famero e varia\u00e7\u00e3o
+  c.appendChild(seg);
+  const escolhido = series.find(x => x.metodo === sel);
+  c.appendChild(svgCorpoGordura([escolhido]));
   const gr = el("div", { class: "kpi-body", id: "corpo-gordura-kpis", style: "margin-top:8px" });
-  series.forEach(s => {
+  [escolhido].forEach(s => {
     const pts = s.pts;
     const last = pts[pts.length - 1];
     const prev = pts.length > 1 ? pts[pts.length - 2] : null;
@@ -3397,8 +3397,8 @@ function cardGorduraMetodos() {
     box.dataset.gordura = String(Math.round(last.v * 10) / 10);
     box.dataset.n = String(pts.length);
     const sub = d == null
-      ? (pts.length === 1 ? "1 medição · " + fmtBRshort(last.data) : pts.length + " medições")
-      : "\u2212" + fmtN(Math.abs(d), 1) + " pp vs anterior";
+      ? (pts.length === 1 ? "1 medicao - " + fmtBRshort(last.data) : pts.length + " medicoes")
+      : (d < 0 ? "-" : "+") + fmtN(Math.abs(d), 1) + " pp vs anterior";
     box.innerHTML = `<div class="kl" style="color:${corMetodo(s.metodo)}">${esc(CORPO_METODO_LBL[s.metodo])}</div>
       <div class="kv" style="color:${corMetodo(s.metodo)}; font-size:20px">${fmtPct(last.v)}</div>
       <div class="ks">${sub}</div>`;
@@ -3407,6 +3407,7 @@ function cardGorduraMetodos() {
   c.appendChild(gr);
   return c;
 }
+
 
 /** ajustes da aba Corpo: perfil, metas, método padrão e aviso */
 function cardConfigCorpo(p) {
