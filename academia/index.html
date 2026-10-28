@@ -2064,6 +2064,8 @@ function svgCorpoGordura(series, { w = 420, h = 220 } = {}) {
     mk("text", { x: w / 2, y: h / 2, fill: "#8b98ab", "font-size": 13, "text-anchor": "middle" }, "Sem dados de gordura");
     return svg;
   }
+  // eixo com TODAS as datas das medições (inclusive as sem % de gordura) — nada de ponto fora do eixo
+  for (const m of medicoesOrdenadas()) if (!datas.includes(m.data)) datas.push(m.data);
   datas.sort();
   const padL = 40, padR = 14, padT = 18, padB = 30;
   const iw = w - padL - padR, ih = h - padT - padB;
@@ -2115,7 +2117,7 @@ function svgCorpoGordura(series, { w = 420, h = 220 } = {}) {
   }
   const stepX = Math.max(1, Math.ceil(datas.length / 5));
   datas.forEach((d, i) => {
-    if (i % stepX !== 0 && i !== datas.length - 1) return;
+    if (i % stepX !== 0) return;
     mk("text", { x: xi(i), y: h - 8, fill: "#8b98ab", "font-size": 11, "text-anchor": "middle" }, fmtBRshort(d));
   });
   return svg;
