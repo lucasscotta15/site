@@ -3189,17 +3189,23 @@ function renderCorpo(v) {
 
   /* ---- números atuais (semáforo) ---- */
   const n = numerosMedicao(ult);
-  // massa magra: se a última medição não trouxe % de gordura, mostra a última massa magra conhecida
-  // (de qualquer medição do perfil) e diz de quando é. Nunca inventa valor.
-  let massaRef = null;
-  if (n.massaMagra != null) {
-    massaRef = { kg: n.massaMagra, sub: n.massaGorda != null ? "massa gorda " + fmtN(n.massaGorda, 1) + " kg" : "desta medição" };
-  } else {
-    const comMassa = medicoesOrdenadas().filter(m => { const nn = numerosMedicao(m); return nn.massaMagra != null; });
-    if (comMassa.length) {
-      const base = comMassa[comMassa.length - 1];
+  // Gordura e massa magra: mostra SEMPRE % e kg juntos, como a balança exibe.
+  // Se a última medição não trouxe % de gordura, usa a última que trouxe e informa a data.
+  let gorduraRef = null, massaRef = null;
+  {
+    const comG = medicoesOrdenadas().filter(m => { const nn = numerosMedicao(m); return nn.gordura != null && num(m.peso) != null; });
+    if (comG.length) {
+      const base = comG[comG.length - 1];
       const nb = numerosMedicao(base);
-      massaRef = { kg: nb.massaMagra, sub: "última em " + fmtBRshort(base.data) + " (" + esc(nomeFonte(base.fonte)) + ")" };
+      const ehAtual = base.data === ult.data && base.metodo === ult.metodo && base.id === ult.id;
+      gorduraRef = {
+        pct: nb.gordura,
+        kg: nb.massaGorda != null ? nb.massaGorda : num(base.peso) * nb.gordura / 100,
+        pctMagra: 100 - nb.gordura,
+        kgMagra: nb.massaMagra,
+        sub: ehAtual ? gorduraSub(base, nb.gordura) : "última em " + fmtBRshort(base.data) + " · " + esc(nomeFonte(base.fonte))
+      };
+      massaRef = { pct: gorduraRef.pctMagra, kg: gorduraRef.kgMagra, sub: gorduraRef.sub };
     }
   }
   const kc = el("div", { class: "card", id: "corpo-atuais" });
@@ -3212,12 +3218,12 @@ function renderCorpo(v) {
         <div class="kv">${n.rce ? fmtN(n.rce.valor, 2) : "\u2013"}</div><div class="ks">${n.rce ? esc(n.rce.cls) : "sem cintura"}</div></div>
       <div class="kbox ${n.rcq ? n.rcq.tone : "na"}" id="kb-rcq"><span class="sema"></span><div class="kl">RCQ \u00b7 risco &gt; ${n.rcq ? fmtN(n.rcq.lim, 2) : "0,90"}</div>
         <div class="kv">${n.rcq ? fmtN(n.rcq.valor, 2) : "\u2013"}</div><div class="ks">${n.rcq ? esc(n.rcq.cls) : "sem quadril"}</div></div>
-      <div class="kbox ${n.gordura == null ? "na" : ""}" id="kb-gordura"><div class="kl">Gordura (${esc(ult.metodo ? CORPO_METODO_LBL[ult.metodo] : "\u2013")})</div>
-        <div class="kv">${n.gordura == null ? "\u2013" : fmtPct(n.gordura)}</div><div class="ks">${n.gordura == null ? "esta medição não trouxe % de gordura" : gorduraSub(ult, n.gordura)}</div></div>
+      <div class="kbox ${gorduraRef ? "" : "na"}" id="kb-gordura"><div class="kl">Gordura (${esc(ult.metodo ? CORPO_METODO_LBL[ult.metodo] : "\u2013")})</div>
+        <div class="kv">${gorduraRef ? fmtPct(gorduraRef.pct) + " \u00b7 " + fmtN(gorduraRef.kg, 1) + " kg" : "\u2013"}</div><div class="ks">${gorduraRef ? esc(gorduraRef.sub) : "nenhuma medição com % de gordura"}</div></div>
       <div class="kbox na"><div class="kl">Peso</div><div class="kv" id="kb-peso">${fmtN(ult.peso, 1)} kg</div>
         <div class="ks" id="kb-peso-sub">${pesoVarTxt(ult)}</div></div>
       <div class="kbox ${massaRef ? "" : "na"}" id="kb-massa"><div class="kl">Massa magra</div>
-        <div class="kv">${massaRef == null ? "\u2013" : fmtN(massaRef.kg, 1) + " kg"}</div><div class="ks">${massaRef == null ? "precisa do % de gordura" : esc(massaRef.sub)}</div></div>
+        <div class="kv">${massaRef == null ? "\u2013" : fmtN(massaRef.pct, 1) + "% \u00b7 " + fmtN(massaRef.kg, 1) + " kg"}</div><div class="ks">${massaRef == null ? "precisa do % de gordura" : esc(massaRef.sub)}</div></div>
     </div>`;
   v.appendChild(kc);
 
