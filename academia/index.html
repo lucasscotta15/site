@@ -316,6 +316,9 @@
   .folha[open] > summary::after{content:"–"}
   .folha[open] > summary{border-bottom:1px solid var(--line)}
   .folha .folha-body{padding:4px 10px 12px}
+.md-paste{width:100%; min-height:76px; background:var(--bg); border:1px solid var(--line); border-radius:10px;
+    padding:9px 11px; font-size:16px; font-family:inherit; color:var(--txt); resize:vertical; line-height:1.45}
+.md-paste:focus{outline:none; border-color:var(--acc)}
   .two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
   .legend-methods{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px}
 </style>
@@ -734,6 +737,10 @@ function normalizeData(d) {
     if (m.metodo === "inbody" && m.gorduraInbody == null) {
       const gi = num(m.profissional && m.profissional.gorduraPct);
       if (gi != null) { m.gorduraInbody = gi; if (m.gordura == null) m.gordura = gi; }
+    }
+    if (m.metodo === "balanca" && m.gorduraBalanca == null) {
+      const gb = num(m.profissional && m.profissional.gorduraPct);
+      if (gb != null) { m.gorduraBalanca = gb; if (m.gordura == null) m.gordura = gb; }
     }
   }
   const sessoes = Array.isArray(d.sessoes) ? d.sessoes : [];
@@ -1828,11 +1835,11 @@ let CORPO_ACAO = null;
 const CORPO_FONTES = {
   academia: { lbl: "Academia", metodo: "faulkner" },
   medica: { lbl: "Médica/InBody", metodo: "inbody" },
-  balanca_casa: { lbl: "Balança de casa", metodo: "balanca" },
+  balanca_casa: { lbl: "Balança", metodo: "balanca" },
   outra: { lbl: "Outra", metodo: "none" },
 };
 const CORPO_FONTE_LBL = {
-  academia: "Academia", medica: "Médica/InBody", balanca_casa: "Balança de casa", outra: "Outra",
+  academia: "Academia", medica: "Médica/InBody", balanca_casa: "Balança", outra: "Outra",
   /* aliases de dados antigos/manuais */
   "Médica/InBody": "Médica/InBody", "Balança de casa": "Balança de casa", "Balança": "Balança de casa",
 };
@@ -1919,11 +1926,32 @@ function calcFaulkner(dobras) {
  * Pontos de % gordura de um método, um por data (a medição mais recente da data).
  * gs: "gordura" | "gorduraFaulkner" | "gorduraBalanca". Método sem valor fica fora da série.
  */
-function gorduraSerie(metodo, gs = "gordura") {
+/**
+ * Campo de % de gordura de UM método, na ordem de prioridade (evita misturar réguas):
+ * InBody/balança usam o valor próprio e, se faltar, o profissional.gorduraPct.
+ */
+const CORPO_GORDURA_CAMPOS = {
+  inbody: ["gorduraInbody", "gordura"],
+  balanca: ["gorduraBalanca", "gordura"],
+  faulkner: ["gorduraFaulkner", "gordura"],
+  navy: ["gorduraNavy", "gordura"],
+};
+/** % de gordura de uma medição NO SEU método (null quando não há valor) */
+function gorduraDaMedicao(m) {
+  if (!m || !m.metodo || m.metodo === "nenhum") return null;
+  const campos = CORPO_GORDURA_CAMPOS[m.metodo] || ["gordura"];
+  for (const c of campos) {
+    const v = num(m[c]);
+    if (v != null) return v;
+  }
+  // última rede de segurança: valor da avaliação profissional (InBody/balança/DEXA)
+  return num(m.profissional && m.profissional.gorduraPct);
+}
+function gorduraSerie(metodo) {
   const porDia = new Map();
   for (const m of medicoesOrdenadas()) {
     if (m.metodo !== metodo) continue;
-    const v = num(m[gs]);
+    const v = gorduraDaMedicao(m);
     if (v == null) continue;
     porDia.set(m.data, { data: m.data, v: v, fonte: m.fonte });
   }
@@ -1934,21 +1962,16 @@ function metodosComGordura() {
   const out = [];
   for (const metodo of CORPO_METODOS) {
     const pts = gorduraPointsMetodo(metodo);
-    if (pts.length) out.push({ metodo, gs: "gordura", pts });
+    if (pts.length) out.push({ metodo, pts });
   }
   return out;
 }
 /**
- * Pontos de % gordura de UM método. A ordem de prioridade do campo evita misturar
- * réguas diferentes: o valor padrão da medição vem primeiro (Faulkner calculado da
- * dobra, InBody do profissional, Navy das circunferências, balança do aparelho).
+ * Pontos de % gordura de UM método (ver gorduraDaMedicao). Toda medição do método
+ * que tenha o valor entra na série — inclusive a da balança vinda da avaliação.
  */
 function gorduraPointsMetodo(metodo) {
-  for (const gs of ["gordura", "gorduraFaulkner", "gorduraNavy", "gorduraInbody", "gorduraBalanca"]) {
-    const pts = gorduraSerie(metodo, gs);
-    if (pts.length) return pts;
-  }
-  return [];
+  return gorduraSerie(metodo);
 }
 function fmtPct(v, casas = 1) { return v == null || !isFinite(v) ? "–" : (Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas)).toFixed(casas).replace(".", ",") + " %"; }
 function fmtN(v, casas = 1) { return v == null || !isFinite(v) ? "–" : (Number((Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas)).toFixed(casas))).toFixed(casas).replace(".", ","); }
@@ -2233,9 +2256,118 @@ function recalcularMedicao(m) {
     if (n) m.gordura = m.gorduraNavy;
   } else if (m.metodo === "balanca") {
     if (m.gorduraBalanca == null) m.gorduraBalanca = num(m.gordura);
+    if (m.gorduraBalanca == null) m.gorduraBalanca = num(m.profissional && m.profissional.gorduraPct);
+    if (m.gordura == null) m.gordura = m.gorduraBalanca;
   }
   if (m.gordura != null) m.gordura = Math.round(num(m.gordura) * 10) / 10;
   return m;
+}
+
+/* -------------------- dados da balança: parser tolerante -------------------- */
+/**
+ * Lê os números que a balança mostra, colados num campo de texto só, e reconhece
+ * POR RÓTULO (nunca por posição). Aceita vírgula ou ponto decimal, com ou sem unidade,
+ * separadores "·", ";", ",", "|", quebra de linha ou dois espaços. Rótulos
+ * desconhecidos (IMC, data, hora, idade…) são ignorados — o IMC o app calcula.
+ */
+const BALANCA_SEP_ANTES = /[·•;|\n\r\t]+|\s[;,]\s|[,;](?=\s*[A-Za-zÀ-ÿ%])|\s{2,}/;
+/** rótulos reconhecidos, ancorados no início do token */
+const BALANCA_LABEL = {
+  massaMagraKg: /^(?:massa\s*magra|livre\s*de\s*gordura|fat\s*free)/,
+  mmeKg: /^(?:\bmme\b|\bmm\b|massa\s*muscular|muscular|musculo|m[uú]sculo)/,
+  visceral: /^visceral/,
+  tmb: /^(?:\btmb\b|metabol|basal|\bget\b|taxa\s*metabolica)/,
+  aguaKg: /^(?:peso\s*da\s*agua|\bagua\b|hidrat|water)/,
+  gorduraPct: /^(?:gordura|%\s*g\b|\bgc\b|\bpg\b|\bgord\b|\bfat\b)/,
+};
+/** um novo rótulo no meio de um token (ex.: "Peso 80 MME 40 Gordura 20%"); "gordura visceral" não conta */
+const BALANCA_OUTRO_ROTULO = "massa\\s*magra|livre\\s*de\\s*gordura|\\bmme\\b|massa\\s*muscular(?:\\s*esqueletica)?|musculo|visceral|\\btmb\\b|taxa\\s*metabolica|metabol\\w*|basal|peso\\s*da\\s*agua|\\bagua\\b|hidrat\\w*|gordura(?!\\s*visceral)|%\\s*g\\b|\\bgc\\b|\\bpg\\b";
+// corta antes de um novo rótulo: com espaço ("40 kg Gordura") ou colado na unidade ("80kg MME")
+const BALANCA_CORTE = new RegExp("(?:(?<=\\d{1,2}(?:[.,]\\d{1,2})?\\s*(?:kg|%|kcal|cm|\\.))|\\s+)(?=" + BALANCA_OUTRO_ROTULO + ")", "gi");
+/** "resíduo" que não é dado numérico útil (peso, IMC, data, hora, marca do aparelho) */
+const BALANCA_RUIDO = /^(?:peso(?:\s*(?:kg|atual))?|imc|data|hora|idade|altura|%|marca|modelo)\b/;
+const BALANCA_UNID = /(kcal\/dia|kcal|kg|%|cm)/i;
+function balancaNorm(t) {
+  return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+function balancaCampo(label) {
+  if (/^massa\b/.test(label)) return /muscul|m[uú]sculo/.test(label) ? "mmeKg" : (BALANCA_LABEL.massaMagraKg.test(label) ? "massaMagraKg" : null);
+  return ["mmeKg", "visceral", "tmb", "aguaKg", "gorduraPct", "massaMagraKg"].find(k => BALANCA_LABEL[k].test(label)) || null;
+}
+/** aplica valor/unidade de um rótulo; devolve true se virou campo */
+function balancaAplicar(out, campo, valor, unidade, peso) {
+  const v = num(String(valor).replace(".", ","));
+  if (v == null || !isFinite(v)) return false;
+  const u = String(unidade || "").toLowerCase();
+  if (campo === "gorduraPct") {
+    if (u === "kg") return false;                    // "gordura" em kg não é %
+    if (!(v > 0 && v < 75)) return false;
+    out.gorduraPct = Math.round(v * 10) / 10;
+  } else if (campo === "aguaKg") {
+    if (u === "%" || (u !== "kg" && v > 100)) {      // água em % do peso → kg
+      if (!peso || !(v > 0 && v < 100)) return false;
+      out.aguaKg = Math.round(v * peso) / 100;
+    } else { if (!(v > 0 && v <= 200)) return false; out.aguaKg = Math.round(v * 10) / 10; }
+  } else if (campo === "mmeKg") {
+    if (u === "%" || (u !== "kg" && v < 100)) {      // MME em % do peso → kg
+      if (!peso || !(v > 0 && v < 100)) return false;
+      out.mmeKg = Math.round(v * peso) / 100;
+    } else { if (!(v > 0 && v <= 200)) return false; out.mmeKg = Math.round(v * 10) / 10; }
+  } else if (campo === "visceral") { if (!(v >= 0 && v <= 60)) return false; out.visceral = Math.round(v * 10) / 10; }
+  else if (campo === "tmb") { if (!(v >= 500 && v <= 6000)) return false; out.tmb = Math.round(v); }
+  else if (campo === "massaMagraKg") { if (!(v > 0 && v <= 200)) return false; out.massaMagraKg = Math.round(v * 10) / 10; }
+  else return false;
+  return true;
+}
+function parseDadosBalanca(txt, pesoKg) {
+  const out = {};
+  const naoReconhecido = [];
+  const bruto = String(txt == null ? "" : txt).trim();
+  if (!bruto) return { dados: out, naoReconhecido };
+  const peso = num(pesoKg);
+  const partes = bruto.split(BALANCA_SEP_ANTES).flatMap(p => p.split(BALANCA_CORTE));
+  let pend = null;   // rótulo sem número no mesmo token ("Gordura" e "31,5%" em linhas diferentes)
+  for (const parte of partes) {
+    const t = String(parte).trim().replace(/^[:=.\s]+|[:=]+$/g, "");
+    if (!t || t === "-" || t === "–") continue;
+    const label = balancaNorm(t);
+    const nums = t.match(/\d{1,4}(?:[.,]\d{1,2})?/g) || [];
+    const unid = ((t.match(BALANCA_UNID) || [])[1] || "").toLowerCase();
+    const campo = balancaCampo(label);
+    if (!nums.length) {
+      if (campo) pend = campo; else naoReconhecido.push(t);
+      continue;
+    }
+    if (!campo) {
+      // número sem rótulo: só "%" solto é aceito como gordura — nunca por posição
+      const soPct = nums.length === 1 && unid === "%" && !/[a-z]/i.test(t.replace(/%/g, ""));
+      if (soPct) {
+        const alvo = pend || "gorduraPct";
+        if (!balancaAplicar(out, alvo, nums[0], "%", peso)) naoReconhecido.push(t);
+        pend = null;
+      } else if (!BALANCA_RUIDO.test(label)) naoReconhecido.push(t);   // peso, IMC, data… (o app calcula)
+      continue;
+    }
+    pend = null;
+    let ok = false;
+    for (const n of nums) if (balancaAplicar(out, campo, n, unid, peso)) { ok = true; break; }
+    if (!ok) naoReconhecido.push(t);
+  }
+  if (out.aguaKg != null && peso) out.aguaPct = Math.round(out.aguaKg / peso * 1000) / 10;
+  if (out.mmeKg != null && peso) out.mmePct = Math.round(out.mmeKg / peso * 1000) / 10;
+  return { dados: out, naoReconhecido };
+}
+function gravouNada(o) { return !o || !Object.keys(o).length; }
+/** valores reconhecidos de um bloco colado → objeto profissional{} compatível */
+function profDeDadosBalanca(d) {
+  const prof = {};
+  if (d.gorduraPct != null) prof.gorduraPct = d.gorduraPct;
+  if (d.massaMagraKg != null) prof.massaMagraKg = d.massaMagraKg;
+  if (d.mmeKg != null) prof.massaMuscularKg = d.mmeKg;
+  if (d.visceral != null) prof.gorduraVisceral = d.visceral;
+  if (d.tmb != null) prof.tmbKcal = d.tmb;
+  if (d.aguaKg != null) prof.aguaKg = d.aguaKg;
+  return prof;
 }
 
 /* -------------------- formulário de medição (navio) -------------------- */
@@ -2249,10 +2381,13 @@ const CORPO_DOBRAS = [
   ["peitoral", "Peitoral"], ["axilarMedia", "Axilar m\u00e9dia"], ["coxa", "Coxa"], ["bicipital", "Bicipital"], ["panturrilha", "Panturrilha"],
 ];
 const CORPO_POLLOCK3 = [["peitoral", "Peitoral"], ["abdominal", "Abdominal"], ["coxa", "Coxa"]];
+/** rótulos do profissional{} no detalhe da medição (compatível com dados antigos) */
+/** rótulos do profissional{} no detalhe da medição (aceita os nomes antigos e os novos) */
 const CORPO_PROF = [
-  ["gorduraPct", "% gordura", "0.1"], ["massaMagraKg", "Massa magra (kg)", "0.1"],
-  ["massaMuscularKg", "Massa muscular esquel\u00e9tica (kg)", "0.1"], ["gorduraVisceral", "Gordura visceral", "1"],
-  ["tmbKcal", "TMB (kcal)", "1"],
+  ["gorduraPct", "% gordura"], ["massaMagraKg", "Massa magra (kg)"],
+  ["mmeKg", "MME (kg)"], ["massaMuscularKg", "MME (kg)"],
+  ["visceral", "Gordura visceral"], ["gorduraVisceral", "Gordura visceral"],
+  ["tmb", "TMB (kcal)"], ["tmbKcal", "TMB (kcal)"], ["aguaKg", "Água (kg)"],
 ];
 function campoNum(id, lb, ph, val, extra = "") {
   return `<div class="ccell"><span class="lb">${lb}</span><input type="number" inputmode="decimal" id="${id}" placeholder="${ph}" value="${val ?? ""}" aria-label="${lb.replace(/<[^>]+>/g, "")}" ${extra}></div>`;
@@ -2265,6 +2400,17 @@ function ultVal(f, campo, casas = 1) {
   return v == null ? "" : String(Math.round(v * Math.pow(10, casas)) / Math.pow(10, casas));
 }
 
+/** prévia legível do que o parser da balança reconheceu */
+function textoDadosBalanca(d, peso) {
+  const partes = [];
+  if (d.gorduraPct != null) partes.push(`gordura ${fmtN(d.gorduraPct, 1)} %`);
+  if (d.massaMagraKg != null) partes.push(`massa magra ${fmtN(d.massaMagraKg, 1)} kg`);
+  if (d.mmeKg != null) partes.push(`MME ${fmtN(d.mmeKg, 1)} kg${d.mmePct != null ? " (" + fmtN(d.mmePct, 1) + " %)" : ""}`);
+  if (d.aguaKg != null) partes.push(`água ${fmtN(d.aguaKg, 1)} kg${d.aguaPct != null ? " (" + fmtN(d.aguaPct, 1) + " %)" : ""}`);
+  if (d.visceral != null) partes.push(`visceral ${fmtN(d.visceral, Number.isInteger(d.visceral) ? 0 : 1)}`);
+  if (d.tmb != null) partes.push(`TMB ${fmtN(d.tmb, 0)} kcal`);
+  return partes.join(" · ");
+}
 function renderMedicaoForm(v) {
   const p = perfil();
   const ed = MEDICAO_EDIT;
@@ -2276,49 +2422,59 @@ function renderMedicaoForm(v) {
   const dobras = f.dobras || {};
   const peri = f.perimetros || {};
   const prof = f.profissional || {};
+  const gorduraEd = f.metodo === "balanca"
+    ? (num(f.gorduraBalanca) != null ? num(f.gorduraBalanca) : (num(f.gordura) != null ? num(f.gordura) : prof.gorduraPct))
+    : prof.gorduraPct;
   const box = el("div", { class: "card av-form", style: "margin-top:14px", id: "medicao-form" });
   box.innerHTML = `<div class="row"><h2 style="font-size:17px">${ed ? "Editar medi\u00e7\u00e3o" : "Nova medi\u00e7\u00e3o"}</h2><span class="sp"></span>
       <button class="btn sm" id="md-cancelar">Cancelar</button></div>
 
-    <div class="field" style="margin-top:12px"><label for="md-data">Data</label>
-      <input type="date" id="md-data" value="${esc(f.data || todayISO())}" aria-label="Data da medi\u00e7\u00e3o"></div>
-
-    <div class="two" style="margin-top:6px">
-      <div class="ccell"><span class="lb">Peso (kg) <span class="reqdot">*</span></span>
-        <input type="number" inputmode="decimal" id="md-peso" step="0.1" min="20" max="400" value="${ed ? (f.peso ?? "") : ultVal(0, "peso")}" placeholder="ex.: 102,0" aria-label="Peso em quilos"></div>
+    <div class="two" style="margin-top:12px">
+      <div class="ccell"><span class="lb">Data <span class="reqdot">*</span></span>
+        <input type="date" id="md-data" value="${esc(f.data || todayISO())}" aria-label="Data da medi\u00e7\u00e3o"></div>
       <div class="ccell"><span class="lb">Fonte <span class="reqdot">*</span></span>
         <select id="md-fonte" aria-label="Fonte da medi\u00e7\u00e3o">
           ${Object.entries(CORPO_FONTES).map(([k, o]) => `<option value="${k}"${(f.fonte || "academia") === k ? " selected" : ""}>${esc(o.lbl)}</option>`).join("")}
         </select></div>
     </div>
+
     <div class="two" style="margin-top:8px">
+      <div class="ccell"><span class="lb">Peso (kg) <span class="reqdot">*</span></span>
+        <input type="number" inputmode="decimal" id="md-peso" step="0.1" min="20" max="400" value="${ed ? (f.peso ?? "") : ultVal(0, "peso")}" placeholder="ex.: 102,0" aria-label="Peso em quilos"></div>
       <div class="ccell"><span class="lb">Cintura (cm)</span>
         <input type="number" inputmode="decimal" id="md-cintura" step="0.1" value="${ed ? (f.cintura ?? "") : ultVal(0, "cintura")}" placeholder="recomendado" aria-label="Cintura em cent\u00edmetros"></div>
-      <div class="ccell"><span class="lb">Quadril (cm)</span>
-        <input type="number" inputmode="decimal" id="md-quadril" step="0.1" value="${ed ? (f.quadril ?? "") : ultVal(0, "quadril")}" placeholder="recomendado" aria-label="Quadril em cent\u00edmetros"></div>
     </div>
     <div class="two" style="margin-top:8px">
+      <div class="ccell"><span class="lb">Quadril (cm)</span>
+        <input type="number" inputmode="decimal" id="md-quadril" step="0.1" value="${ed ? (f.quadril ?? "") : ultVal(0, "quadril")}" placeholder="recomendado" aria-label="Quadril em cent\u00edmetros"></div>
       <div class="ccell"><span class="lb">Pesco\u00e7o (cm)</span>
         <input type="number" inputmode="decimal" id="md-pescoco" step="0.1" value="${ed ? (f.pescoco ?? "") : ultVal(0, "pescoco")}" placeholder="recomendado" aria-label="Pesco\u00e7o em cent\u00edmetros"></div>
-      <div class="ccell"><span class="lb">M\u00e9todo</span>
-        <select id="md-metodo" aria-label="M\u00e9todo de c\u00e1lculo">
-          ${CORPO_METODOS.concat(["nenhum"]).map(k => `<option value="${k}"${(f.metodo || "faulkner") === k ? " selected" : ""}>${esc(CORPO_METODO_LBL[k])}</option>`).join("")}
-        </select></div>
     </div>
-    <div class="two" id="md-bal-wrap" style="margin-top:8px">
-      <div class="ccell"><span class="lb">% gordura da balança</span>
-        <input type="number" inputmode="decimal" id="md-gordura-balanca" step="0.1" min="0" max="70" value="${ed && (f.gorduraBalanca != null ? f.gorduraBalanca : (f.metodo === "balanca" && f.gordura != null ? f.gordura : "")) || ""}" placeholder="ex.: 33,5" aria-label="Gordura da balança"></div>
-    </div>
-    <p class="tiny" style="margin:6px 0 0" id="md-metodo-hint"></p>
 
-    <details class="folha" id="folha-perimetros"><summary>Per\u00edmetros completos <span class="tiny">(opcional)</span></summary>
+    <details class="folha" id="folha-balanca"><summary>Dados da balança / avalia\u00e7\u00e3o <span class="tiny">(colar)</span></summary>
+      <div class="folha-body">
+        <p class="tiny" style="margin:2px 0 6px">Cole os n\u00fameros que a balança mostra (ou a ficha da avalia\u00e7\u00e3o). O app reconhece pelos rótulos: gordura, água, MME, visceral, TMB e massa magra — peso e IMC ele calcula.</p>
+        <textarea id="md-balança-txt" rows="3" maxlength="600" class="md-paste" placeholder="ex.: Peso 100,95 \u00b7 IMC 31,5 \u00b7 Gordura 31,5% \u00b7 \u00c1gua 50,1% \u00b7 MME 35,0 kg \u00b7 Metab\u00f3lica 1972 \u00b7 Gordura visceral 21,5" aria-label="Colar dados da balan\u00e7a">${esc(f.textoBalanca || "")}</textarea>
+        <div class="tiny" id="md-balanca-prev" style="margin-top:6px" aria-live="polite"></div>
+        <div class="two" style="margin-top:8px">
+          <div class="ccell"><span class="lb">M\u00e9todo do % gordura</span>
+            <select id="md-metodo" aria-label="M\u00e9todo de c\u00e1lculo">
+              ${CORPO_METODOS.concat(["nenhum"]).map(k => `<option value="${k}"${(f.metodo || "faulkner") === k ? " selected" : ""}>${esc(CORPO_METODO_LBL[k])}</option>`).join("")}
+            </select></div>
+          <div class="ccell"><span class="lb">% gordura (ajustar)</span>
+            <input type="number" inputmode="decimal" id="md-gordura" step="0.1" min="0" max="70" value="${gorduraEd ?? ""}" placeholder="ex.: 31,5" aria-label="Percentual de gordura"></div>
+        </div>
+        <p class="tiny" style="margin:6px 0 0" id="md-metodo-hint"></p>
+      </div></details>
+
+    <details class="folha" id="folha-perimetros"${peri && Object.keys(peri).length ? " open" : ""}><summary>Per\u00edmetros completos <span class="tiny">(opcional)</span></summary>
       <div class="folha-body"><div class="perfil-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
         ${CORPO_PERIM.map(([k, lb]) => campoNum("md-p-" + k, lb, "cm", peri[k], 'step="0.1" min="0"')).join("")}
       </div></div></details>
 
-    <details class="folha" id="folha-dobras"><summary>Dobras cut\u00e2neas (mm) <span class="tiny">(opcional)</span></summary>
+    <details class="folha" id="folha-dobras"${dobras && Object.keys(dobras).length ? " open" : ""}><summary>Dobras cut\u00e2neas (mm) <span class="tiny">(opcional)</span></summary>
       <div class="folha-body">
-        <p class="tiny" style="margin:2px 0 6px">Faulkner usa <b>Subescapular + Tricipital + Suprail\u00edaca + Abdominal</b>.</p>
+        <p class="tiny" style="margin:2px 0 6px">Faulkner usa <b>Subescapular + Tricipital + Suprail\u00edaca + Abdominal</b>. Com as 4 preenchidas e m\u00e9todo Faulkner, o app calcula a gordura.</p>
         <div class="perfil-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
           ${CORPO_DOBRAS.map(([k, lb]) => campoNum("md-d-" + k, lb, "mm", dobras[k], 'step="0.5" min="0"')).join("")}
         </div>
@@ -2327,13 +2483,6 @@ function renderMedicaoForm(v) {
           ${CORPO_POLLOCK3.map(([k, lb]) => campoNum("md-p3-" + k, lb, "mm", (f.pollock || {})[k], 'step="0.5" min="0"')).join("")}
         </div>
         <div class="tiny" id="md-faulkner-prev" style="margin-top:8px"></div>
-      </div></details>
-
-    <details class="folha" id="folha-prof"><summary>Avalia\u00e7\u00e3o profissional <span class="tiny">(InBody/DEXA)</span></summary>
-      <div class="folha-body">
-        <div class="perfil-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-          ${CORPO_PROF.map(([k, lb, st]) => campoNum("md-prof-" + k, lb, "\u2013", prof[k], `step="${st}" min="0"`)).join("")}
-        </div>
       </div></details>
 
     <div class="field"><label for="md-obs">Observa\u00e7\u00f5es</label>
@@ -2345,29 +2494,63 @@ function renderMedicaoForm(v) {
   v.appendChild(box);
 
   const $c = (id) => $(id, box);
+  // dados reconhecidos do bloco colado (fonte da verdade do bloco profissional)
+  let dadosBalança = {};
   const hint = $c("#md-metodo-hint");
   const hintTxt = () => {
     const m = $c("#md-metodo").value;
-    if (m === "faulkner") return "Faulkner: dobradas Subescapular, Tricipital, Suprail\u00edaca e Abdominal (mm).";
+    if (m === "faulkner") return "Faulkner: precisa das dobras Subescapular, Tricipital, Suprail\u00edaca e Abdominal (mm).";
     if (m === "navy") return "Navy: precisa de cintura, pesco\u00e7o e altura" + (p.sexo === "F" ? " e quadril" : "") + ".";
-    if (m === "inbody") return "InBody/DEXA: informe o % de gordura em \u201cAvalia\u00e7\u00e3o profissional\u201d.";
-    if (m === "balanca") return "Balan\u00e7a: informe o % de gordura que a balan\u00e7a mostrou.";
+    if (m === "inbody") return "InBody/DEXA: o % de gordura vem do que voc\u00ea colar em \u201cDados da balan\u00e7a / avalia\u00e7\u00e3o\u201d.";
+    if (m === "balanca") return "Balan\u00e7a: cole os dados da balan\u00e7a ou informe o % de gordura.";
     return "Sem c\u00e1lculo de gordura \u2014 s\u00f3 peso e medidas.";
   };
   const updHint = () => { hint.textContent = hintTxt(); };
-  // ao trocar a fonte, sugere o método correspondente (editável)
-  $c("#md-fonte").addEventListener("change", () => {
+  const prevBal = $c("#md-balanca-prev");
+  const lerBalança = () => {
+    const r = parseDadosBalanca($c("#md-balança-txt").value, $c("#md-peso").value);
+    const txt = textoDadosBalanca(r.dados, num($c("#md-peso").value));
+    if (!txt) {
+      prevBal.innerHTML = $c("#md-balança-txt").value.trim()
+        ? `<span style="color:#fde68a">\u26a0 N\u00e3o reconheci nenhum dado nesse texto. Voc\u00ea pode salvar assim mesmo \u2014 ou informe o % de gordura ao lado.</span>`
+        : `<span>Cole acima \u2014 a pr\u00e9via aparece aqui antes de salvar.</span>`;
+    } else {
+      prevBal.innerHTML = `<b style="color:var(--txt)">Reconhecido:</b> <span style="color:#4ade80">${esc(txt)}</span>`;
+    }
+    return r.dados;
+  };
+  // ao trocar a fonte, sugere o método correspondente (editável) e abre o bloco da balança
+  const sugerirMetodo = () => {
     const sug = CORPO_FONTES[$c("#md-fonte").value].metodo;
     if (sug !== "none") $c("#md-metodo").value = sug;
+    if (sug === "balanca" || sug === "inbody") $c("#folha-balanca").open = true;
+    if (sug === "faulkner" && !Object.keys(dobras).length) $c("#folha-dobras").open = false;
     updHint(); preview();
+  };
+  $c("#md-fonte").addEventListener("change", sugerirMetodo);
+  $c("#md-metodo").addEventListener("change", () => { updHint(); preview(); });
+  $c("#md-balança-txt").addEventListener("input", () => {
+    const antes = dadosBalança;
+    dadosBalança = lerBalança();
+    // o % reconhecido preenche o campo de gordura — enquanto o usuário não digitar o dele
+    const gEl = $c("#md-gordura");
+    // colar/altera os dados da balança → o % acompanha (e a pessoa pode ajustar depois)
+    // input[type=number] só aceita ponto decimal (a exibição ao usuário continua pt-BR)
+    if (dadosBalança.gorduraPct != null) { gEl.value = String(dadosBalança.gorduraPct).replace(",", "."); gEl.dataset.auto = "1"; }
+    else if (antes && antes.gorduraPct != null) gEl.value = "";
+    preview();
   });
-  $c("#md-metodo").addEventListener("change", () => {
-    if ($c("#md-metodo").value === "faulkner") $c("#folha-dobras").open = true;
-    if ($c("#md-metodo").value === "navy") { $c("#folha-perimetros").open = true; $c("#folha-dobras").open = false; }
-    if ($c("#md-metodo").value === "inbody" || $c("#md-metodo").value === "balanca") $c("#folha-prof").open = true;
-    updHint(); preview();
-  });
+  // o % de gordura é "manual" só depois que a pessoa edita nele; a colagem volta ao automático
+  const gAuto = () => { $c("#md-gordura").dataset.auto = "0"; preview(); };
+  $c("#md-gordura").addEventListener("input", (ev) => { if (ev.isTrusted) gAuto(); });
+  $c("#md-gordura").addEventListener("change", gAuto);
   updHint();
+  dadosBalança = lerBalança();
+  if (gorduraEd == null) $c("#md-gordura").dataset.auto = "1";
+  // edição: medições antigas só têm profissional{} — mostra na prévia para não sumir ao salvar
+  if (ed && !textoDadosBalanca(dadosBalança, num($c("#md-peso").value)) && Object.keys(prof).length) {
+    prevBal.innerHTML = `<span>Já gravado: <b style="color:var(--txt)">${esc(textoDadosBalanca(prof, num($c("#md-peso").value)) || JSON.stringify(prof))}</b><br>Cole de novo aqui (ou edite o % ao lado) para atualizar.</span>`;
+  }
 
   // helper: monta o objeto da medição a partir do formulário
   const coletar = () => {
@@ -2376,8 +2559,10 @@ function renderMedicaoForm(v) {
     CORPO_DOBRAS.forEach(([k]) => { const x = g("#md-d-" + k); if (x != null) dobrasOut[k] = x; });
     CORPO_POLLOCK3.forEach(([k]) => { const x = g("#md-p3-" + k); if (x != null) pollockOut[k] = x; });
     CORPO_PERIM.forEach(([k]) => { const x = g("#md-p-" + k); if (x != null) periOut[k] = x; });
-    const profOut = {};
-    CORPO_PROF.forEach(([k]) => { const x = g("#md-prof-" + k); if (x != null) profOut[k] = x; });
+    // compat: preserva o profissional{} que já existia e mescla o que veio colado
+    const profOut = Object.assign({}, (ed && ed.profissional) || {}, profDeDadosBalanca(dadosBalança));
+    const gManual = g("#md-gordura");
+    if (gManual != null) profOut.gorduraPct = gManual; else delete profOut.gorduraPct;
     const metodo = $c("#md-metodo").value;
     const o = {
       id: ed && ed.id ? ed.id : uid("med"),
@@ -2387,10 +2572,15 @@ function renderMedicaoForm(v) {
       perimetros: periOut, dobras: dobrasOut, pollock: pollockOut, profissional: profOut,
       fonte: $c("#md-fonte").value, metodo,
       obs: $c("#md-obs").value.trim(),
+      textoBalanca: $c("#md-balança-txt").value.trim(),
       gordura: null, gorduraFaulkner: null, gorduraNavy: null, gorduraBalanca: null, gorduraInbody: null,
     };
+    // o % de gordura vale para o MÉTODO da medição (Faulkner/Navy são recalculados abaixo)
     if (metodo === "inbody" && profOut.gorduraPct != null) { o.gordura = profOut.gorduraPct; o.gorduraInbody = profOut.gorduraPct; }
-    if (metodo === "balanca") { o.gordura = g("#md-gordura-balanca"); o.gorduraBalanca = o.gordura; }
+    if (metodo === "balanca") {
+      o.gorduraBalanca = profOut.gorduraPct != null ? profOut.gorduraPct : null;
+      o.gordura = o.gorduraBalanca;
+    }
     if (metodo === "faulkner") {
       const fa = calcFaulkner(dobrasOut);
       o.gorduraFaulkner = fa ? Math.round(fa.valor * 10) / 10 : null;
@@ -2403,10 +2593,6 @@ function renderMedicaoForm(v) {
     }
     return o;
   };
-  const syncBal = () => { const w = $c("#md-bal-wrap"); if (w) w.style.display = $c("#md-metodo").value === "balanca" ? "" : "none"; };
-  $c("#md-metodo").addEventListener("change", syncBal);
-  $c("#md-fonte").addEventListener("change", syncBal);
-  syncBal();
 
   const preview = () => {
     const el2 = $c("#md-preview");
@@ -2416,6 +2602,7 @@ function renderMedicaoForm(v) {
     const partes = [];
     if (imc) partes.push(`IMC ${fmtN(imc.valor, 1)} (${imc.cls})`);
     if (rce) partes.push(`RCE ${fmtN(rce.valor, 2)}`);
+    if (o.gordura != null) partes.push(`gordura ${fmtPct(o.gordura)} (${CORPO_METODO_LBL[o.metodo]})`);
     const fa = $c("#md-faulkner-prev");
     if (fa) {
       const fv = calcFaulkner(o.dobras);
@@ -2424,10 +2611,10 @@ function renderMedicaoForm(v) {
         ? `Faulkner com essas dobras: <b style="color:${m === "faulkner" ? "var(--acc)" : "#fde68a"}">${fmtPct(fv.valor)}</b>${m === "faulkner" ? " (este \u00e9 o valor salvo)" : " \u2014 mude o m\u00e9todo para Faulkner para usar"}.`
         : `Faulkner: faltam dobras (SE, TR, SI, AB).`;
     }
-    el2.innerHTML = o.peso != null ? `<b style="color:var(--txt)">${partes.join(" \u00b7 ") || ""}</b>` : "";
+    el2.innerHTML = o.peso != null ? `<b style="color:var(--txt)">${partes.join(" \u00b7 ")}</b>` : "";
   };
-  box.querySelectorAll("input,select").forEach(i => i.addEventListener("input", preview));
-  box.querySelectorAll("input,select").forEach(i => i.addEventListener("change", preview));
+  box.querySelectorAll("input,select,textarea").forEach(i => i.addEventListener("input", preview));
+  box.querySelectorAll("input,select,textarea").forEach(i => i.addEventListener("change", preview));
   preview();
 
   $c("#md-cancelar").addEventListener("click", () => { MEDICAO_EDIT = null; state.corpoForm = false; render(); });
@@ -2445,6 +2632,7 @@ function renderMedicaoForm(v) {
     if (!$c("#md-fonte").value) return fail("Escolha a fonte");
     if (o.metodo === "faulkner" && o.gorduraFaulkner == null) toast("Faulkner sem as 4 dobras \u2014 gordura n\u00e3o calculada");
     if (o.metodo === "navy" && o.gorduraNavy == null) toast("Navy com dados insuficientes \u2014 gordura n\u00e3o calculada");
+    if ((o.metodo === "balanca" || o.metodo === "inbody") && o.gordura == null) toast("Sem % de gordura \u2014 salvo peso e medidas");
     err.style.display = "none";
     salvarMedicao(o);
   });
@@ -2625,11 +2813,7 @@ function numerosMedicao(m) {
   const rce = calcRCE(m.cintura, alt);
   const rcq = calcRCQ(m.cintura, m.quadril, p.sexo);
   const metodo = m.metodo;
-  let gordura = null;
-  if (metodo === "inbody") gordura = num(m.gorduraInbody) != null ? num(m.gorduraInbody) : (num(m.gordura) != null ? num(m.gordura) : num(m.profissional && m.profissional.gorduraPct));
-  else if (metodo === "balanca") gordura = num(m.gorduraBalanca) != null ? num(m.gorduraBalanca) : num(m.gordura);
-  else if (metodo === "faulkner") gordura = num(m.gorduraFaulkner) != null ? num(m.gorduraFaulkner) : num(m.gordura);
-  else if (metodo === "navy") gordura = num(m.gorduraNavy) != null ? num(m.gorduraNavy) : num(m.gordura);
+  const gordura = gorduraDaMedicao(m);
   let massaMagra = null, massaGorda = null;
   if (gordura != null && num(m.peso) != null) {
     massaMagra = num(m.peso) * (1 - gordura / 100);
@@ -2711,7 +2895,7 @@ function cardGorduraMetodos() {
   c.innerHTML = `<div class="row"><h3 style="font-size:16px">% de gordura por m\u00e9todo</h3><span class="sp"></span>
       <span class="badge" style="background:rgba(251,191,36,.13); color:#fde68a">separado</span></div>
     <p class="tiny" style="margin:4px 0 0">Cada m\u00e9todo tem a sua linha. Faulkner, Navy, InBody e balan\u00e7a divergem at\u00e9 ~18 pontos na mesma pessoa \u2014 por isso nunca s\u00e3o ligados no mesmo gr\u00e1fico.</p>`;
-  const series = metodosComGordura().map(x => ({ metodo: x.metodo, gs: x.gs, pts: gorduraSerie(x.metodo, x.gs) }));
+  const series = metodosComGordura().map(x => ({ metodo: x.metodo, pts: x.pts }));
   if (!series.some(s => s.pts.length)) {
     c.insertAdjacentHTML("beforeend", `<p class="muted" style="font-size:14px; margin-top:10px" id="corpo-gordura-vazia">Nenhum % de gordura registrado ainda. Registre as dobras (Faulkner), as circunfer\u00eancias (Navy) ou o valor do InBody.</p>`);
     return c;
