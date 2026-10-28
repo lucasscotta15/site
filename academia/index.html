@@ -376,6 +376,13 @@
   .traj-d{color:var(--mut)}
   .traj-v{color:var(--txt)}
   .traj-delta{grid-column:1/-1;font-size:10.5px;color:var(--mut);padding-left:2px}
+
+  .mg-painel{margin-top:14px;padding:10px 0 2px;border-top:1px solid #1b1f27}
+  .mg-painel-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .mg-painel-tit{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+  .mg-painel-var{font-size:11.5px;font-weight:600}
+  .mg-painel-var.baixo{color:#4ade80}
+  .mg-painel-var.alto{color:#fbbf24}
 </style>
 </head>
 <body>
@@ -3594,23 +3601,35 @@ function cardMusculoGordura() {
     <p class="mg-leitura">${esc(leitura)}</p>
     <p class="muted small" style="margin-top:6px">Faixas calculadas pela média para ${num(perfil && (perfil.alturaCm || perfil.altura)) ? fmtN(perfil.alturaCm || perfil.altura, 0) + " cm" : "sua altura"}. Referência aproximada — vale o laudo do InBody.</p>`;
 
-  // trajetória: pontos anteriores de avaliação profissional
+  // trajetória em 3 painéis separados (cada métrica com sua própria escala)
   if (refs.length > 1) {
-    const pts = refs.map(x => {
+    const mk = (campo) => refs.map(x => {
       const nx = numerosMedicao(x);
       const g = nx.massaGorda != null ? nx.massaGorda : num(x.peso) * nx.gordura / 100;
-      return { d: x.data, g: g, m: num(x.massaMuscularKg || (x.profissional && x.profissional.mmeKg)) };
-    });
-    const linhas = pts.map((pt, idx) => {
-      const prev = idx > 0 ? pts[idx - 1] : null;
-      const dg = prev ? pt.g - prev.g : null;
-      const dm = prev ? pt.m - prev.m : null;
-      return `<div class="traj-row"><span class="traj-d">${fmtBR(pt.d)}</span>
-        <span class="traj-v">${fmtN(pt.m, 1)} kg músculo</span>
-        <span class="traj-v">${fmtN(pt.g, 1)} kg gordura</span>
-        <span class="traj-delta">${dg != null ? (dm >= 0 ? "músculo " + fmtDelta(dm, 1, "kg") : "músculo " + fmtDelta(dm, 1, "kg")) + " · " + (dg <= 0 ? "gordura " + fmtDelta(dg, 1, "kg") : "gordura " + fmtDelta(dg, 1, "kg")) : "primeira"}</span></div>`;
-    }).join("");
-    c.innerHTML += `<div class="traj-tit">Trajetória nas avaliações</div><div class="traj">${linhas}</div>`;
+      const mmeV = num(x.massaMuscularKg || (x.profissional && x.profissional.mmeKg));
+      if (campo === "peso") return { data: x.data, v: num(x.peso) };
+      if (campo === "mme") return { data: x.data, v: mmeV };
+      return { data: x.data, v: g };
+    }).filter(pt => pt.v != null);
+
+    const seriePeso = mk("peso"), serieMme = mk("mme"), serieGord = mk("gordura");
+    const painel = (titulo, serie, cor, pid, unid) => {
+      const box = el("div", { class: "mg-painel" });
+      if (serie.length < 2) return box;
+      const a = serie[0], b = serie[serie.length - 1];
+      const d = b.v - a.v;
+      box.innerHTML = `<div class="mg-painel-top"><span class="mg-painel-tit">${esc(titulo)}</span>
+          <span class="mg-painel-var ${d <= 0 ? "baixo" : "alto"}">${fmtDelta(d, 1, unid)}</span></div>`;
+      box.appendChild(svgCorpoSimples(serie.map(pt => ({ data: pt.data, v: pt.v })),
+        { h: 130, casas: 1, cor: cor, id: pid }));
+      return box;
+    };
+    const titTraj = el("div", { class: "traj-tit" });
+    titTraj.textContent = "Trajetória nas avaliações";
+    c.appendChild(titTraj);
+    c.appendChild(painel("Peso", seriePeso, "#4ade80", "mg-peso", "kg"));
+    c.appendChild(painel("Massa muscular", serieMme, "#60a5fa", "mg-mme", "kg"));
+    c.appendChild(painel("Massa de gordura", serieGord, "#fbbf24", "mg-gord", "kg"));
   }
   return c;
 }
