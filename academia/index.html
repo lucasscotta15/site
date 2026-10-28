@@ -2460,10 +2460,51 @@ function svgCorpoSimples(points, { w = 420, h = 200, casas = 1, ref = null, cor 
     const d = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
     mk("path", { d, fill: "none", stroke: cor, "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" });
   }
+  // pontos + área de toque por data (faixa larga: acerta o ponto certo, não o maior valor)
+  const hitW = points.length > 1 ? Math.max(18, iw / (points.length - 1)) : iw;
+  const tip = document.createElementNS(ns, "g");
+  const tipBg = document.createElementNS(ns, "rect");
+  tipBg.setAttribute("rx", "5"); tipBg.setAttribute("fill", "#1e242e");
+  tipBg.setAttribute("stroke", "#2a3240"); tipBg.setAttribute("stroke-width", "1");
+  tipBg.setAttribute("opacity", "0");
+  const tipTxt = document.createElementNS(ns, "text");
+  tipTxt.setAttribute("fill", "#e9edf4"); tipTxt.setAttribute("font-size", "11.5");
+  tipTxt.setAttribute("text-anchor", "middle"); tipTxt.setAttribute("opacity", "0");
+  tip.appendChild(tipBg); tip.appendChild(tipTxt); svg.appendChild(tip);
+
+  const mostrar = (i) => {
+    const px = x(i), py = y(points[i].v);
+    const rot = `${fmtBR(points[i].data)} · ${fmtN(points[i].v, casas)}`;
+    tipTxt.textContent = rot;
+    const tw = rot.length * 6.1 + 14, th = 20;
+    let tx = Math.min(Math.max(px, padL + tw / 2), w - padR - tw / 2);
+    const ty = Math.max(padT + th / 2, py - 16);
+    tipBg.setAttribute("x", tx - tw / 2); tipBg.setAttribute("y", ty - th / 2);
+    tipBg.setAttribute("width", tw); tipBg.setAttribute("height", th);
+    tipBg.setAttribute("opacity", "1");
+    tipTxt.setAttribute("x", tx); tipTxt.setAttribute("y", ty + 4);
+    tipTxt.setAttribute("opacity", "1");
+  };
+  const esconder = () => { tipBg.setAttribute("opacity", "0"); tipTxt.setAttribute("opacity", "0"); };
+
   points.forEach((p, i) => {
+    // bolinha visível
     mk("circle", { cx: x(i), cy: y(p.v), r: 4.5, fill: "#121214", stroke: cor, "stroke-width": 2.5 });
-    mk("title", {}, `${fmtBR(p.data)}: ${fmtN(p.v, casas)}`);
+    // faixa de toque, cobrindo metade do caminho até os vizinhos
+    const hit = document.createElementNS(ns, "rect");
+    hit.setAttribute("x", Math.max(padL - 6, x(i) - hitW / 2));
+    hit.setAttribute("y", padT);
+    hit.setAttribute("width", Math.min(iw + 12, hitW));
+    hit.setAttribute("height", ih);
+    hit.setAttribute("fill", "transparent");
+    hit.setAttribute("style", "cursor:pointer");
+    hit.addEventListener("mouseenter", () => mostrar(i));
+    hit.addEventListener("mouseleave", esconder);
+    hit.addEventListener("touchstart", (e) => { e.preventDefault(); mostrar(i); }, { passive: false });
+    hit.addEventListener("click", () => mostrar(i));
+    svg.appendChild(hit);
   });
+  svg.addEventListener("mouseleave", esconder);
   const stepX = Math.max(1, Math.ceil(points.length / 5));
   points.forEach((p, i) => {
     if (i % stepX !== 0 && i !== points.length - 1) return;
