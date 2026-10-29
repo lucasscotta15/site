@@ -394,6 +394,17 @@
   .rest-presets{display:flex; flex-wrap:wrap; gap:7px}
   .rest-chip{flex:1 1 auto; min-width:52px; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg3); color:var(--txt); font-size:12.5px; cursor:pointer}
   .rest-chip.on{border-color:#fbbf24; color:#fbbf24; background:rgba(251,191,36,.12); font-weight:700}
+
+  .mg-aviso{margin:8px 0 0; font-size:12px; line-height:1.4; padding:8px 10px; border-radius:8px;
+    background:rgba(251,191,36,.12); border-left:3px solid #fbbf24; color:#fde68a}
+
+  .rest-alerta{position:fixed; top:0; left:0; right:0; z-index:9999; display:flex; flex-direction:column;
+    align-items:center; gap:2px; padding:12px 16px calc(12px + env(safe-area-inset-top, 0px));
+    background:#dc2626; color:#fff; box-shadow:0 4px 18px rgba(220,38,38,.5); cursor:pointer;
+    animation:pulsa 1s ease-in-out infinite}
+  .rest-alerta b{font-size:15px}
+  .rest-alerta span{font-size:12px; opacity:.92}
+  @keyframes pulsa{0%,100%{background:#dc2626}50%{background:#ef4444}}
 </style>
 </head>
 <body>
@@ -1754,21 +1765,60 @@ function tocaSomDescanso() {
     if (!state.audioCtx) state.audioCtx = new AC();
     const ctx = state.audioCtx;
     if (ctx.state === "suspended") ctx.resume();
-    // três bipes curtos, agradáveis e audíveis na academia
-    const t0 = ctx.currentTime;
-    [0, 0.28, 0.56].forEach((off, i) => {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(i === 2 ? 1046 : 880, t0 + off);
-      g.gain.setValueAtTime(0.0001, t0 + off);
-      g.gain.exponentialRampToValueAtTime(0.35, t0 + off + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.24);
-      osc.connect(g); g.connect(ctx.destination);
-      osc.start(t0 + off); osc.stop(t0 + off + 0.26);
-    });
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+    // Academia = ruído alto. Onda quadrada + volume 0.9 atravessa o som ambiente
+    // muito melhor que seno baixo. Padrão de alarme: dois tons alternados, 5 vezes.
+    const toca = () => {
+      const t0 = ctx.currentTime;
+      const seq = [1046, 1318, 1046, 1318, 1046, 1318, 1568];   // agudo, agudo, agudo…
+      seq.forEach((freq, i) => {
+        const off = i * 0.17;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, t0 + off);
+        g.gain.setValueAtTime(0.0001, t0 + off);
+        g.gain.exponentialRampToValueAtTime(0.9, t0 + off + 0.015);
+        g.gain.setValueAtTime(0.9, t0 + off + 0.11);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.16);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t0 + off); osc.stop(t0 + off + 0.18);
+      });
+    };
+    toca();
+    // repete o alarme enquanto ninguém toca na tela (máx. 12 vezes ≈ 2 min)
+    let n = 0;
+    if (state.somRepetir) clearInterval(state.somRepetir);
+    state.somRepetir = setInterval(() => {
+      if (++n >= 12) { clearInterval(state.somRepetir); state.somRepetir = null; return; }
+      toca();
+      if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    }, 2500);
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    // o primeiro toque/tecla em qualquer lugar silencia o alarme
+    const parar = () => {
+      if (state.somRepetir) { clearInterval(state.somRepetir); state.somRepetir = null; }
+      document.removeEventListener("pointerdown", parar, true);
+      document.removeEventListener("keydown", parar, true);
+      document.getElementById("rest-alerta")?.remove();
+    };
+    document.addEventListener("pointerdown", parar, true);
+    document.addEventListener("keydown", parar, true);
+    setTimeout(() => { document.removeEventListener("pointerdown", parar, true); document.removeEventListener("keydown", parar, true); }, 130000);
   } catch (e) { /* sem áudio: ignora */ }
+}
+
+/** faixa vermelha fixa no topo enquanto o alarme toca */
+function mostrarAlertaDescanso(seg) {
+  document.getElementById("rest-alerta")?.remove();
+  const b = el("div", { id: "rest-alerta", class: "rest-alerta" });
+  b.innerHTML = `<b>⏰ Descanso encerrado</b><span>${esc(restFormatar(seg))} concluído — toque para silenciar</span>`;
+  b.addEventListener("click", () => {
+    if (state.somRepetir) { clearInterval(state.somRepetir); state.somRepetir = null; }
+    b.remove();
+  });
+  document.body.appendChild(b);
+  if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
 }
 
 function restRestante() {
@@ -1815,6 +1865,7 @@ function restTick() {
       r.rodando = false;
       if (r.tick) { clearInterval(r.tick); r.tick = null; }
       tocaSomDescanso();
+      mostrarAlertaDescanso(r.dur);
       toast("⏰ Descanso encerrado — " + restFormatar(r.dur));
       paintRest();
       return;
@@ -3807,6 +3858,10 @@ function cardMusculoGordura() {
   }
   const m = refs[refs.length - 1];
   const n = numerosMedicao(m);
+  // a medição mais RECENTE do perfil pode não ter gordura/MME — nesse caso avisa
+  const todas = medicoesOrdenadas();
+  const ultima = todas[todas.length - 1];
+  const faltaAtual = ultima && ultima.id !== m.id;
   const mme = num(m.massaMuscularKg || (m.profissional && m.profissional.mmeKg));
   const gordKg = n.massaGorda != null ? n.massaGorda : num(m.peso) * n.gordura / 100;
   const perfil = perfilAtivo() || {};
@@ -3833,6 +3888,7 @@ function cardMusculoGordura() {
   c.innerHTML = `
     <div class="row"><h3 style="font-size:16px">Análise Músculo-Gordura</h3><span class="sp"></span>
       <span class="muted small">${esc(m.data ? fmtBR(m.data) : "")} · ${esc(nomeFonte(m.fonte))}</span></div>
+    ${faltaAtual ? `<p class="mg-aviso">⚠ A medição de ${esc(fmtBR(ultima.data))} não trouxe % de gordura nem massa muscular — mostrando a última completa (${esc(fmtBRshort(m.data))}).</p>` : ""}
     <div class="mg-legenda"><span><i class="mg-dot mg-dot-abaixo"></i>Abaixo</span>
       <span><i class="mg-dot mg-dot-normal"></i>Normal</span>
       <span><i class="mg-dot mg-dot-acima"></i>Acima</span></div>
