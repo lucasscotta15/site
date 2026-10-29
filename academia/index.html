@@ -405,6 +405,16 @@
   .rest-alerta b{font-size:15px}
   .rest-alerta span{font-size:12px; opacity:.92}
   @keyframes pulsa{0%,100%{background:#dc2626}50%{background:#ef4444}}
+
+  .card-crono-ext{position:sticky; top:8px; z-index:60; border-color:rgba(251,191,36,.55);
+    background:linear-gradient(180deg, rgba(251,191,36,.14), rgba(251,191,36,.05)); margin-top:14px}
+  .card-crono-ext .ce-ico{font-size:26px; line-height:1; margin-bottom:6px}
+  .card-crono-ext .ce-txt{display:flex; flex-direction:column; gap:3px}
+  .card-crono-ext .ce-txt b{font-size:15px; color:var(--txt)}
+  .card-crono-ext .ce-txt span{font-size:13px; color:#fde68a; line-height:1.35}
+  .card-crono-ext .ce-acoes{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
+  .card-crono-ext .ce-acoes .btn{flex:1 1 auto; min-width:96px}
+  .btn.ghost{background:none; border-color:transparent; color:var(--mut); font-size:12.5px; box-shadow:none}
 </style>
 </head>
 <body>
@@ -1658,6 +1668,11 @@ function renderSessao(v) {
     inp.style.pointerEvents = "auto"; inp.focus(); inp.click();
   });
 
+  // ---- aviso de cronômetro externo (relógio/pulseira) antes de finalizar ----
+  if (state.cronometroExterno) {
+    v.insertBefore(cardCronometroExterno(), v.firstChild);
+  }
+
   // ---- cronômetro ----
   v.appendChild(timerCard(s));
 
@@ -1693,6 +1708,38 @@ function renderSessao(v) {
   v.appendChild(act);
 
   startTick();
+}
+
+/** card de confirmação: lembra de parar relógio/pulseira antes de fechar o treino */
+function cardCronometroExterno() {
+  const c = el("div", { class: "card card-crono-ext", id: "crono-ext" });
+  c.innerHTML = `
+    <div class="ce-ico" aria-hidden="true">⌚</div>
+    <div class="ce-txt">
+      <b>Está usando relógio ou pulseira?</b>
+      <span>Pare a medição do tempo lá antes de finalizar o treino.</span>
+    </div>`;
+  const acoes = el("div", { class: "ce-acoes" });
+  const bOk = el("button", { class: "btn pri" }, "Já parei");
+  bOk.addEventListener("click", () => {
+    const fn = state.cronometroExterno && state.cronometroExterno.aoConfirmar;
+    state.cronometroExterno = null;
+    render();
+    if (typeof fn === "function") fn();
+  });
+  const bNao = el("button", { class: "btn" }, "Não uso");
+  bNao.addEventListener("click", () => {
+    const fn = state.cronometroExterno && state.cronometroExterno.aoConfirmar;
+    state.cronometroExterno = null;
+    render();
+    if (typeof fn === "function") fn();
+  });
+  const bVolta = el("button", { class: "btn ghost" }, "Voltar ao treino");
+  bVolta.addEventListener("click", () => { state.cronometroExterno = null; render(); });
+  acoes.appendChild(bOk); acoes.appendChild(bNao); acoes.appendChild(bVolta);
+  c.appendChild(acoes);
+  setTimeout(() => { try { c.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} }, 60);
+  return c;
 }
 
 /* ---------- cronômetro ---------- */
@@ -2219,7 +2266,14 @@ function finalizarTreino() {
       return;
     }
   }
-  concluirSessao(s, faltando.length > 0);
+  // lembrete: o cronômetro do app não é o único — relógio/pulseira também conta
+  avisoCronometroExterno(() => concluirSessao(s, faltando.length > 0));
+}
+
+/** aviso antes de finalizar: quem usa relógio/pulseira precisa parar a medição lá também */
+function avisoCronometroExterno(aoConfirmar) {
+  state.cronometroExterno = { aoConfirmar };
+  render();
 }
 
 function concluirSessao(s, forcar) {
