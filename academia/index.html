@@ -3346,8 +3346,11 @@ function renderMedicaoForm(v) {
     CORPO_PERIM.forEach(([k]) => { const x = g("#md-p-" + k); if (x != null) periOut[k] = x; });
     // compat: preserva o profissional{} que já existia e mescla o que veio colado
     const profOut = Object.assign({}, (ed && ed.profissional) || {}, profDeDadosBalanca(dadosBalança));
+    // O campo "% gordura (ajustar)" só SOBRESCREVE quando o usuário digita algo.
+    // Vazio = preserva o que veio colado em "Dados da balança / avaliação".
     const gManual = g("#md-gordura");
-    if (gManual != null) profOut.gorduraPct = gManual; else delete profOut.gorduraPct;
+    if (gManual != null) profOut.gorduraPct = gManual;
+    // sem valor manual e sem valor colado: não inventa (deixa undefined)
     const metodo = $c("#md-metodo").value;
     const o = {
       id: ed && ed.id ? ed.id : uid("med"),
@@ -3418,7 +3421,10 @@ function renderMedicaoForm(v) {
     if (!$c("#md-fonte").value) return fail("Escolha a fonte");
     if (o.metodo === "faulkner" && o.gorduraFaulkner == null) toast("Faulkner sem as 4 dobras \u2014 gordura n\u00e3o calculada");
     if (o.metodo === "navy" && o.gorduraNavy == null) toast("Navy com dados insuficientes \u2014 gordura n\u00e3o calculada");
-    if ((o.metodo === "balanca" || o.metodo === "inbody") && o.gordura == null) toast("Sem % de gordura \u2014 salvo peso e medidas");
+    if ((o.metodo === "balanca" || o.metodo === "inbody") && o.gordura == null) {
+      // não bloqueia, mas deixa claro que essa medição vai ficar incompleta
+      toast("⚠ Sem % de gordura — salvo só peso e medidas");
+    }
     err.style.display = "none";
     salvarMedicao(o);
   });
@@ -3849,7 +3855,10 @@ function cardMusculoGordura() {
   // última medição que tenha MME e gordura em kg
   const refs = medicoesOrdenadas().filter(m => {
     const n = numerosMedicao(m);
-    return n.gordura != null && num(m.peso) != null && num(m.massaMuscularKg || (m.profissional && m.profissional.mmeKg)) != null;
+    const pr = m.profissional || {};
+    // MME pode estar em qualquer um destes campos, dependendo de como foi cadastrada
+    const mmeV = num(m.massaMuscularKg ?? pr.massaMuscularKg ?? pr.mmeKg ?? m.mmeKg);
+    return n.gordura != null && num(m.peso) != null && mmeV != null;
   });
   if (!refs.length) {
     c.innerHTML = `<h3 style="font-size:16px">Análise Músculo-Gordura</h3>
@@ -3862,7 +3871,8 @@ function cardMusculoGordura() {
   const todas = medicoesOrdenadas();
   const ultima = todas[todas.length - 1];
   const faltaAtual = ultima && ultima.id !== m.id;
-  const mme = num(m.massaMuscularKg || (m.profissional && m.profissional.mmeKg));
+  const pr = m.profissional || {};
+  const mme = num(m.massaMuscularKg ?? pr.massaMuscularKg ?? pr.mmeKg ?? m.mmeKg);
   const gordKg = n.massaGorda != null ? n.massaGorda : num(m.peso) * n.gordura / 100;
   const perfil = perfilAtivo() || {};
   const R = mgReferencias(perfil, num(m.peso), mme, gordKg);
