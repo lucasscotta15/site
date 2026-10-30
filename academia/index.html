@@ -1856,10 +1856,13 @@ function tocaSomDescanso() {
 }
 
 /** faixa vermelha fixa no topo enquanto o alarme toca */
-function mostrarAlertaDescanso(seg) {
+function mostrarAlertaDescanso(seg, atrasoSeg) {
   document.getElementById("rest-alerta")?.remove();
   const b = el("div", { id: "rest-alerta", class: "rest-alerta" });
-  b.innerHTML = `<b>⏰ Descanso encerrado</b><span>${esc(restFormatar(seg))} concluído — toque para silenciar</span>`;
+  const sub = (atrasoSeg && atrasoSeg > 1)
+    ? `Venceu há ${esc(restFormatar(atrasoSeg))} (app estava fechado) — toque para silenciar`
+    : `${esc(restFormatar(seg))} concluído — toque para silenciar`;
+  b.innerHTML = `<b>⏰ Descanso encerrado</b><span>${sub}</span>`;
   b.addEventListener("click", () => {
     if (state.somRepetir) { clearInterval(state.somRepetir); state.somRepetir = null; }
     b.remove();
@@ -1891,7 +1894,7 @@ function restPlay() {
 function restPausar() {
   const r = restState();
   r.rodando = false;
-  restRestante_restore = 0;
+  restManterAcordado(false);
   if (r.tick) { clearInterval(r.tick); r.tick = null; }
   paintRest();
 }
@@ -1899,6 +1902,7 @@ function restPausar() {
 function restZerar() {
   const r = restState();
   r.rodando = false;
+  restManterAcordado(false);
   if (r.tick) { clearInterval(r.tick); r.tick = null; }
   paintRest();
 }
@@ -1908,17 +1912,50 @@ function restTick() {
   if (r.tick) clearInterval(r.tick);
   r.tick = setInterval(() => {
     const seg = restRestante();
-    if (seg <= 0) {
-      r.rodando = false;
-      if (r.tick) { clearInterval(r.tick); r.tick = null; }
-      tocaSomDescanso();
-      mostrarAlertaDescanso(r.dur);
-      toast("⏰ Descanso encerrado — " + restFormatar(r.dur));
-      paintRest();
-      return;
-    }
+    if (seg <= 0) { restFinalizar(false); return; }
     paintRest();
   }, 250);
+  // enquanto o descanso roda, pede ao sistema para não apagar a tela
+  restManterAcordado(true);
+}
+
+/** encerra o descanso: toca o alarme e avisa (avisoAtrasado = venceu com o app suspenso) */
+function restFinalizar(atrasado, segAtraso) {
+  const r = restState();
+  r.rodando = false;
+  if (r.tick) { clearInterval(r.tick); r.tick = null; }
+  tocaSomDescanso();
+  mostrarAlertaDescanso(r.dur, atrasado ? segAtraso : null);
+  toast(atrasado
+    ? "⏰ Descanso venceu enquanto o app estava fora"
+    : "⏰ Descanso encerrado — " + restFormatar(r.dur));
+  paintRest();
+  restManterAcordado(false);
+}
+
+/* ---- Wake Lock: impede a tela de apagar durante o descanso ---- */
+let _wakeLock = null;
+async function restManterAcordado(ligar) {
+  try {
+    if (ligar) {
+      if (!("wakeLock" in navigator) || _wakeLock) return;
+      _wakeLock = await navigator.wakeLock.request("screen");
+      _wakeLock.addEventListener("release", () => { _wakeLock = null; });
+    } else {
+      if (_wakeLock) { await _wakeLock.release(); _wakeLock = null; }
+    }
+  } catch (e) { _wakeLock = null; /* sem suporte ou negado: segue sem */ }
+}
+
+/** ao voltar para o app: se o descanso venceu enquanto estava suspenso, toca agora */
+function restChecarAoVoltar() {
+  const r = restState();
+  if (!r.rodando) return;
+  const seg = restRestante();
+  if (seg > 0) { restManterAcordado(true); paintRest(); return; }
+  // venceu enquanto estava fora: quanto tempo passou?
+  const atraso = Math.max(0, Math.round((Date.now() - r.fim) / 1000));
+  restFinalizar(true, atraso);
 }
 
 /** atualiza apenas os pedaços do card (não re-renderiza a tela toda) */
@@ -4797,8 +4834,14 @@ window.addEventListener("online", () => {
 });
 window.addEventListener("offline", () => setSync("offline"));
 document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    // descanso pode ter vencido com o app suspenso (tela bloqueada / economia de energia)
+    try { restChecarAoVoltar(); } catch (e) {}
+  }
   if (document.visibilityState === "visible" && state.dirty && hasToken() && navigator.onLine) scheduleSync(300);
 });
+window.addEventListener("focus", () => { try { restChecarAoVoltar(); } catch (e) {} });
+window.addEventListener("pageshow", () => { try { restChecarAoVoltar(); } catch (e) {} });
 
 /* service worker */
 if ("serviceWorker" in navigator) {
