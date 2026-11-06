@@ -226,7 +226,10 @@
   .up{color:var(--acc)} .down{color:var(--err)} .flat{color:var(--mut)}
   .mes-empty{font-size:12px; color:var(--mut); margin-top:8px}
   /* evolução: quebra por ficha */
-  .fichas-mes .fh{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--line)}
+  .fichas-mes .fh{display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--line); cursor:pointer; transition:background .15s}
+  .fichas-mes .fh:active{background:rgba(74,222,128,.08)}
+  .fichas-mes .fh.on .lt{background:var(--brand); border-color:var(--brand); color:#121214}
+  .fichas-mes .fh.on .fn{color:var(--acc)}
   .fichas-mes .fh:last-child{border-bottom:0}
   .fichas-mes .lt{width:28px; height:28px; flex:none; border-radius:9px; background:var(--bg3); border:1px solid var(--line);
     display:grid; place-items:center; font-weight:800; font-size:13px}
@@ -4546,9 +4549,28 @@ function renderGraficos(v) {
       const fid = String(t.id).trim().toUpperCase();
       const r = el("div", { class: "fh" });
       r.dataset.ficha = fid;
+      if (sel.treinoId && String(sel.treinoId).trim().toUpperCase() === fid) r.classList.add("on");
+      r.setAttribute("role", "button");
+      r.setAttribute("tabindex", "0");
+      r.style.cursor = "pointer";
+      r.title = `Ver evolução da ficha ${fid} — ${t.nome}`;
       r.innerHTML = `<div class="lt">${esc(t.id)}</div><div class="fx">
         <div class="fn">${esc(t.nome)}</div>
         <div class="fd">${linhaFichaMes(agora, ant, fid)}</div></div>`;
+      // clicar na ficha seleciona o primeiro exercício (com dados) dela
+      const irParaFicha = () => {
+        const doTreino = exs.filter(e => String(e.treinoId).trim().toUpperCase() === fid);
+        if (!doTreino.length) return;
+        const comDado = doTreino.find(e => seriesForChart(e.id).length);
+        state.chartEx.sel = (comDado || doTreino[0]).id;
+        render();
+        const alvo = document.getElementById("sel-ex");
+        if (alvo) { try { alvo.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} }
+      };
+      r.addEventListener("click", irParaFicha);
+      r.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); irParaFicha(); }
+      });
       mes.appendChild(r);
     }
   }
@@ -4837,7 +4859,7 @@ function renderFichas(v) {
   bImp.addEventListener("click", importBackup);
   acct.appendChild(bImp);
   v.appendChild(acct);
-  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.5 · dados no seu Drive"));
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.6 · dados no seu Drive"));
 }
 
 function renderEditor(v) {
