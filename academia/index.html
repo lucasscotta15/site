@@ -182,6 +182,11 @@
   .ex-card.feito{opacity:.62}
   .ex-card.feito .ex-head .name{text-decoration:line-through; text-decoration-thickness:2px}
   .ex-card.feito{background:rgba(34,197,94,.06)}
+  /* checkbox por série */
+  .setrow .chk-serie{width:26px; height:26px; flex:none; border-radius:8px; border:1.5px solid var(--line);
+    background:var(--bg); display:grid; place-items:center; color:transparent; font-size:14px; font-weight:800;
+    padding:0; margin-right:2px}
+  .setrow .chk-serie.on{background:var(--brand); border-color:var(--brand); color:#121214}
   .prog{height:8px; border-radius:99px; background:var(--bg); border:1px solid var(--line); overflow:hidden; margin-top:8px}
   .prog > i{display:block; height:100%; background:var(--brand); width:0; transition:width .25s}
   .metarow{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:12.5px; color:var(--mut)}
@@ -862,7 +867,27 @@ const state = {
 let MEDICAO_EDIT = null;  // medição em edição (aba Corpo) — NUNCA persistido (só em memória)
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
-function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], medicoes: [], perfis: [], perfilAtivoId: null, aceitouAvisoMedico: false }; }
+function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], medicoes: [], perfis: [], perfilAtivoId: null, aceitouAvisoMedico: false, config: { progressao: null } }; }
+
+/* ============================================================
+   Configurações de progressão de carga
+   Regra: sugerir aumento quando o exercício foi executado pelo menos
+   `vezes` vezes E/OU há `semanas` semanas com o mesmo peso máximo.
+   Padrão: 3 execuções E 3 semanas (mais seguro que o antigo "15 dias").
+   ============================================================ */
+const PROG_PADRAO = { semanas: 3, vezes: 3, modo: "E", ativo: true };
+const PROG_SEMANAS = [2, 3, 4, 5, 6];
+const PROG_VEZES = [1, 2, 3, 4, 5, 6];
+
+function progConfig() {
+  const c = state.data && state.data.config && state.data.config.progressao;
+  return Object.assign({}, PROG_PADRAO, c || {});
+}
+function setProgConfig(patch) {
+  if (!state.data.config) state.data.config = {};
+  state.data.config.progressao = Object.assign({}, progConfig(), patch);
+  saveLocal();
+}
 
 function loadLocal() {
   try {
@@ -962,6 +987,18 @@ function normalizeData(d) {
   // perfis achados por id (para recalcular Navy de cada dono)
   const perfilDe = (pid) => out.perfis.find(p => p.id === pid) || ativoPerfil;
   out.aceitouAvisoMedico = d.aceitouAvisoMedico === true;
+  // ---- configurações (progressão de carga) ----
+  const cfIn = d.config && typeof d.config === "object" ? d.config : null;
+  const prIn = cfIn && cfIn.progressao && typeof cfIn.progressao === "object" ? cfIn.progressao : null;
+  if (prIn) {
+    const sem = parseInt(prIn.semanas, 10), vez = parseInt(prIn.vezes, 10);
+    out.config = { progressao: {
+      semanas: PROG_SEMANAS.includes(sem) ? sem : PROG_PADRAO.semanas,
+      vezes: PROG_VEZES.includes(vez) ? vez : PROG_PADRAO.vezes,
+      modo: prIn.modo === "OU" ? "OU" : "E",
+      ativo: prIn.ativo !== false,
+    } };
+  }
   // ---- medições antropométricas (aba Corpo) ----
   const meds = Array.isArray(d.medicoes) ? d.medicoes : [];
   const nums = (o) => {
@@ -1390,6 +1427,10 @@ function diasEntre(isoA, isoB) {
  */
 function loadStagnation(exId, atRef) {
   if (!exId) return null;
+  const cfg = progConfig();
+  if (cfg.ativo === false) return null;
+  const DIAS_SEMANA = 7;
+  const minimoDias = cfg.semanas * DIAS_SEMANA;
   const ref = atRef || todayISO();
   const pts = [];
   for (const s of sessoesDoPerfil()) {
@@ -1400,22 +1441,24 @@ function loadStagnation(exId, atRef) {
     if (!ws.length) continue;
     pts.push({ data: s.data, max: Math.max(...ws) });
   }
-  if (pts.length < 2) return null;
+  if (pts.length < cfg.vezes) return null;
   // ordena e faz um ponto por dia (mantém o maior peso do dia)
   const porDia = new Map();
   for (const p of pts) { const cur = porDia.get(p.data); if (cur == null || p.max > cur) porDia.set(p.data, p.max); }
   const serie = [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([data, max]) => ({ data, max }));
   const ultimo = serie[serie.length - 1];
-  // assume o peso atual = última sessão registrada (sem treino em andamento nesta data)
   const pesoAtual = ultimo.max;
   // início da sequência atual: primeira sessão em que o peso atual aparece, sem alteração depois
   let inicioSeq = serie.length - 1;
   for (let i = serie.length - 2; i >= 0; i--) { if (serie[i].max !== pesoAtual) break; inicioSeq = i; }
-  const registros = serie.length - inicioSeq;          // qtde de sessões com esse mesmo peso
-  if (registros < 2) return null;
+  const registros = serie.length - inicioSeq;          // qtde de execuções com esse mesmo peso
   const dias = diasEntre(serie[inicioSeq].data, ref);
-  if (dias < 15) return null;
-  return { dias, peso: pesoAtual, desde: serie[inicioSeq].data, ate: ultimo.data, registros };
+  const atingiuVezes = registros >= cfg.vezes;
+  const atingiuSemanas = dias >= minimoDias;
+  const dispara = cfg.modo === "OU" ? (atingiuVezes || atingiuSemanas) : (atingiuVezes && atingiuSemanas);
+  if (!dispara) return null;
+  return { dias, peso: pesoAtual, desde: serie[inicioSeq].data, ate: ultimo.data,
+           registros, semanas: cfg.semanas, vezesCfg: cfg.vezes, modo: cfg.modo };
 }
 
 /* ============================================================
@@ -1690,7 +1733,7 @@ function renderSessao(v) {
     <div class="prog"><i style="width:${n ? Math.round((d / n) * 100) : 0}%"></i></div>`;
   v.appendChild(prog);
 
-  for (const ex of s.exercicios) {
+  for (const ex of exerciciosOrdenados(s.exercicios)) {
     v.appendChild(exCard(ex));
   }
 
@@ -1712,31 +1755,45 @@ function renderSessao(v) {
 
 /** card de confirmação: lembra de parar relógio/pulseira antes de fechar o treino */
 function cardCronometroExterno() {
+  const m = state.cronometroExterno || {};
+  const ehInicio = m.modo === "inicio";
   const c = el("div", { class: "card card-crono-ext", id: "crono-ext" });
-  c.innerHTML = `
+  c.innerHTML = ehInicio
+    ? `
+    <div class="ce-ico" aria-hidden="true">⌚</div>
+    <div class="ce-txt">
+      <b>Vai usar relógio ou pulseira?</b>
+      <span>Inicie a medição do tempo no relógio agora, junto com o treino.</span>
+    </div>`
+    : `
     <div class="ce-ico" aria-hidden="true">⌚</div>
     <div class="ce-txt">
       <b>Está usando relógio ou pulseira?</b>
       <span>Pare a medição do tempo lá antes de finalizar o treino.</span>
     </div>`;
   const acoes = el("div", { class: "ce-acoes" });
-  const bOk = el("button", { class: "btn pri" }, "Já parei");
+  const bOk = el("button", { class: "btn pri" }, ehInicio ? "Iniciar treino" : "Já parei");
   bOk.addEventListener("click", () => {
     const fn = state.cronometroExterno && state.cronometroExterno.aoConfirmar;
+    if (ehInicio) { iniciarTreinoAgora(); return; }
     state.cronometroExterno = null;
     render();
     if (typeof fn === "function") fn();
   });
-  const bNao = el("button", { class: "btn" }, "Não uso");
+  const bNao = el("button", { class: "btn" }, ehInicio ? "Não uso — iniciar" : "Não uso");
   bNao.addEventListener("click", () => {
     const fn = state.cronometroExterno && state.cronometroExterno.aoConfirmar;
+    if (ehInicio) { iniciarTreinoAgora(); return; }
     state.cronometroExterno = null;
     render();
     if (typeof fn === "function") fn();
   });
-  const bVolta = el("button", { class: "btn ghost" }, "Voltar ao treino");
-  bVolta.addEventListener("click", () => { state.cronometroExterno = null; render(); });
-  acoes.appendChild(bOk); acoes.appendChild(bNao); acoes.appendChild(bVolta);
+  acoes.appendChild(bOk); acoes.appendChild(bNao);
+  if (!ehInicio) {
+    const bVolta = el("button", { class: "btn ghost" }, "Voltar ao treino");
+    bVolta.addEventListener("click", () => { state.cronometroExterno = null; render(); });
+    acoes.appendChild(bVolta);
+  }
   c.appendChild(acoes);
   setTimeout(() => { try { c.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} }, 60);
   return c;
@@ -1746,8 +1803,18 @@ function cardCronometroExterno() {
 function iniciarTreino() {
   const s = state.sessao;
   if (!s) return;
+  // aviso: quem mede o tempo por relógio/pulseira precisa iniciar a medição agora
+  state.cronometroExterno = { modo: "inicio" };
+  render();
+}
+
+/** aplica de fato o início (chamado depois do aviso, ou direto se ele dispensar) */
+function iniciarTreinoAgora() {
+  const s = state.sessao;
+  if (!s) return;
   s.horaInicio = new Date().toISOString();
   saveSessaoRascunho();
+  state.cronometroExterno = null;
   render();
   toast("Treino iniciado às " + fmtHora(s.horaInicio));
 }
@@ -2074,7 +2141,16 @@ function exCard(ex) {
 
   ex.series.forEach((se, i) => {
     const r = el("div", { class: "setrow" });
-    r.innerHTML = `<span class="idx">${i + 1}ª</span>`;
+    const feita = !!se.feita;
+    const chkS = el("button", {
+      class: "chk chk-serie" + (feita ? " on" : ""), type: "button",
+      "aria-label": "Série " + (i + 1) + (feita ? " concluída" : " pendente"),
+      "aria-pressed": feita ? "true" : "false",
+      title: feita ? `Série ${i + 1} feita — toque para desmarcar` : `Marcar série ${i + 1} como feita`,
+    }, "✓");
+    chkS.addEventListener("click", (e) => { e.stopPropagation(); toggleSerieFeita(ex, i); });
+    r.appendChild(chkS);
+    r.appendChild(el("span", { class: "idx" }, `${i + 1}ª`));
     const ip = el("input", { type: "number", inputmode: "decimal", step: "0.5", min: "0", placeholder: se.prev != null ? String(se.prev) : "0", value: se.peso, "aria-label": `Peso série ${i + 1}` });
     ip.addEventListener("input", () => { se.peso = ip.value; saveSessaoRascunho(); });
     ip.addEventListener("change", () => { const p = num(ip.value); if (p != null) ip.value = p; });
@@ -2285,6 +2361,66 @@ function toggleConcluido(ex) {
   }
 }
 
+/** Marca/desmarca uma série. Grava o horário em que foi feita (para medir
+ *  densidade, descanso entre séries e queda de performance na sessão).
+ *  Quando TODAS as séries do exercício ficam marcadas, o exercício é
+ *  concluído automaticamente. */
+function toggleSerieFeita(ex, i) {
+  const s = state.sessao;
+  if (!s) return;
+  const se = ex.series[i];
+  if (!se) return;
+  se.feita = !se.feita;
+  if (se.feita) {
+    se.feitaEm = new Date().toISOString();
+    delete se.desfeitaEm;
+  } else {
+    se.desfeitaEm = new Date().toISOString();
+  }
+  // tempo decorrido desde a série anterior feita (descanso efetivo)
+  if (se.feita) {
+    let anteriorISO = s.horaInicio;
+    for (let k = i - 1; k >= 0; k--) {
+      if (ex.series[k] && ex.series[k].feitaEm) { anteriorISO = ex.series[k].feitaEm; break; }
+    }
+    if (anteriorISO) {
+      const d = Math.round((new Date(se.feitaEm) - new Date(anteriorISO)) / 1000);
+      if (d >= 0 && d < 3600) se.descansoSeg = d;
+    }
+  } else {
+    delete se.descansoSeg;
+  }
+  saveSessaoRascunho();
+
+  // todas as séries feitas -> exercício concluído
+  const todasFeitas = ex.series.length > 0 && ex.series.every(x => x.feita);
+  if (todasFeitas && !ex.concluido) {
+    ex.concluido = true;
+    saveSessaoRascunho();
+    render();
+    toast(`Séries completas — ${ex.nome} concluído ✓`);
+    return;
+  }
+  // desmarcou uma série de um exercício concluído -> reabre o exercício
+  if (!todasFeitas && ex.concluido) {
+    ex.concluido = false;
+    saveSessaoRascunho();
+    render();
+    return;
+  }
+  render();
+}
+
+/** Ordena os exercícios da sessão: pendentes primeiro (na ordem original),
+ *  concluídos por último — assim o que falta fazer sobe e sai do caminho.
+ *  A ordem dentro de cada grupo é estável (segue a ordem da ficha). */
+function exerciciosOrdenados(lista) {
+  if (!Array.isArray(lista)) return [];
+  const pend = [], feitos = [];
+  for (const ex of lista) (ex && ex.concluido ? feitos : pend).push(ex);
+  return pend.concat(feitos);
+}
+
 /** Finaliza: exige início + todos os exercícios marcados (ou confirmação explícita). */
 function finalizarTreino() {
   const s = state.sessao;
@@ -2333,7 +2469,13 @@ function concluirSessao(s, forcar) {
         })
       : ex.series
         .filter(se => se.peso !== "" || se.reps !== "")
-        .map(se => ({ peso: num(se.peso), reps: se.reps === "" ? null : num(se.reps) })),
+        .map(se => {
+          const o = { peso: num(se.peso), reps: se.reps === "" ? null : num(se.reps) };
+          if (se.feita) o.feita = true;
+          if (se.feitaEm) o.feitaEm = se.feitaEm;
+          if (se.descansoSeg != null) o.descansoSeg = se.descansoSeg;
+          return o;
+        }),
   })).filter(ex => ex.series.length || ex.concluido);
 
   if (!exercicios.length) { toast(forcar ? "Nada para salvar" : "Registre o peso de pelo menos um exercício"); return; }
@@ -2853,6 +2995,39 @@ function abrirMedicaoForm(m) {
 }
 
 /* ---------- editor do perfil ativo ---------- */
+/* ---------- configurações de progressão de carga (dentro do perfil) ---------- */
+function editorProgressao() {
+  const c = progConfig();
+  const opt = (arr, sel) => arr.map(v => `<option value="${v}"${v === sel ? " selected" : ""}>${v}</option>`).join("");
+  return `
+  <div class="prog-box" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--bg3)">
+    <div class="row" style="align-items:center; gap:10px">
+      <div style="flex:1"><b style="font-size:14px">Sugerir aumento de carga</b>
+        <div class="tiny" style="margin-top:2px">Aviso quando o peso máximo repete por tempo demais.</div></div>
+      <label class="sw" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="pg-ativo"${c.ativo ? " checked" : ""} style="width:20px;height:20px;accent-color:var(--acc)">
+      </label>
+    </div>
+    <div class="perfil-grid" style="margin-top:12px">
+      <div class="pfcell"><span class="lb">Semanas mínimas</span>
+        <select id="pg-semanas" aria-label="Semanas mínimas">${opt(PROG_SEMANAS, c.semanas)}</select></div>
+      <div class="pfcell"><span class="lb">Execuções mínimas</span>
+        <select id="pg-vezes" aria-label="Execuções mínimas">${opt(PROG_VEZES, c.vezes)}</select></div>
+      <div class="pfcell full"><span class="lb">Critério</span>
+        <div class="cseg-l" role="group" aria-label="Critério de progressão">
+          <button type="button" data-modo="E" class="${c.modo === "E" ? "on" : ""}">Os dois (E)</button>
+          <button type="button" data-modo="OU" class="${c.modo === "OU" ? "on" : ""}">Qualquer um (OU)</button>
+        </div>
+      </div>
+    </div>
+    <div class="tiny" style="margin-top:8px">
+      Padrão: <b>3 semanas E 3 execuções</b> com o mesmo peso. O modo <b>E</b> é mais seguro:
+      só sugere aumento a quem treinou o exercício com regularidade e cumpriu o tempo.
+    </div>
+  </div>`;
+}
+
+
 function editorPerfil() {
   const p = perfil();
   const box = el("div", { class: "card av-form", id: "corpo-perfil-editor", style: "margin-top:14px" });
@@ -2886,6 +3061,7 @@ function editorPerfil() {
           <option value="navy"${p.metodoPadrao === "navy" ? " selected" : ""}>Navy (circunferências)</option>
         </select></div>
     </div>
+    ${editorProgressao()}
     <div class="load-warn hidden" id="pf-erro" style="display:none"></div>
     <button class="btn pri block" id="pf-salvar" style="margin-top:12px">Salvar perfil</button>
     ${perfilCompleto() || perfisArr().length > 1 ? `<button class="btn block danger" id="pf-excluir" style="margin-top:8px">Excluir este perfil</button>` : ""}
@@ -2897,6 +3073,12 @@ function editorPerfil() {
     idadeDoNasc();
   }));
   box.dataset.sexo = p.sexo || "";
+  // ---- progressão de carga: segmento E/OU ----
+  box.querySelectorAll("[data-modo]").forEach(b => b.addEventListener("click", () => {
+    box.querySelectorAll("[data-modo]").forEach(o => o.classList.toggle("on", o === b));
+    box.dataset.progModo = b.dataset.modo;
+  }));
+  box.dataset.progModo = progConfig().modo;
   const err = (msg) => { const e = $("#pf-erro", box); e.style.display = ""; e.innerHTML = `\u26a0 <b>${esc(msg)}</b>`; };
   // nascimento preenche a idade automaticamente
   const idadeDoNasc = () => {
@@ -2927,6 +3109,14 @@ function editorPerfil() {
       gorduraPct: num($("#pf-meta-gordura", box).value),
     };
     p.metodoPadrao = $("#pf-metodo", box).value === "navy" ? "navy" : "faulkner";
+    // progressão de carga (configuração global do app)
+    const pgAtivo = $("#pg-ativo", box);
+    setProgConfig({
+      ativo: !!(pgAtivo && pgAtivo.checked),
+      semanas: parseInt($("#pg-semanas", box).value, 10) || PROG_PADRAO.semanas,
+      vezes: parseInt($("#pg-vezes", box).value, 10) || PROG_PADRAO.vezes,
+      modo: box.dataset.progModo === "OU" ? "OU" : "E",
+    });
     // recalcula o método das medições DESTE perfil que dependem do perfil
     for (const m of medicoesDoPerfil()) recalcularMedicao(m);
     saveLocal();
@@ -4646,7 +4836,7 @@ function renderFichas(v) {
   bImp.addEventListener("click", importBackup);
   acct.appendChild(bImp);
   v.appendChild(acct);
-  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.3 · dados no seu Drive"));
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.4 · dados no seu Drive"));
 }
 
 function renderEditor(v) {
