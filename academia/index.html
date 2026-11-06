@@ -112,6 +112,7 @@
   .ex-body{display:none; padding:0 12px 12px}
   .ex-card.open .ex-body{display:block}
   .setrow{display:grid; grid-template-columns:34px 1fr 1fr; gap:8px; align-items:center; margin-top:8px}
+  .setrow.com-chk{grid-template-columns:26px 28px 1fr 1fr; gap:6px}
   .setrow .idx{font-size:13px; color:var(--mut); text-align:center; font-weight:700}
   label.f field{display:block; font-size:10.5px; color:var(--mut); text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px}
   input[type=number],input[type=text],input[type=date],select{
@@ -2135,12 +2136,12 @@ function exCard(ex) {
     body.appendChild(w);
   }
   // cabeçalho
-  const hdr = el("div", { class: "setrow", style: "margin-top:10px" });
-  hdr.innerHTML = `<span class="idx"></span><label class="f"><field>Peso (kg)</field></label><label class="f"><field>${ex.tipo === "tempo" ? "Segundos" : "Reps"}</field></label>`;
+  const hdr = el("div", { class: "setrow com-chk", style: "margin-top:10px" });
+  hdr.innerHTML = `<span></span><span class="idx"></span><label class="f"><field>Peso (kg)</field></label><label class="f"><field>${ex.tipo === "tempo" ? "Segundos" : "Reps"}</field></label>`;
   body.appendChild(hdr);
 
   ex.series.forEach((se, i) => {
-    const r = el("div", { class: "setrow" });
+    const r = el("div", { class: "setrow com-chk" });
     const feita = !!se.feita;
     const chkS = el("button", {
       class: "chk chk-serie" + (feita ? " on" : ""), type: "button",
@@ -4836,7 +4837,7 @@ function renderFichas(v) {
   bImp.addEventListener("click", importBackup);
   acct.appendChild(bImp);
   v.appendChild(acct);
-  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.4 · dados no seu Drive"));
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.5 · dados no seu Drive"));
 }
 
 function renderEditor(v) {
