@@ -3038,23 +3038,25 @@ function abrirMedicaoForm(m) {
 
 /* ---------- editor do perfil ativo ---------- */
 /* ---------- configurações de progressão de carga (dentro do perfil) ---------- */
-function editorProgressao() {
+function editorProgressao(opts) {
   const c = progConfig();
+  const standalone = !!(opts && opts.standalone);
+  const pfx = standalone ? "fp" : "pg";     // IDs distintos para não colidir com o editor de perfil
   const opt = (arr, sel) => arr.map(v => `<option value="${v}"${v === sel ? " selected" : ""}>${v}</option>`).join("");
   return `
-  <div class="prog-box" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--bg3)">
+  <div class="prog-box" style="${standalone ? "" : "margin-top:16px; padding-top:14px; border-top:1px solid var(--bg3)"}">
     <div class="row" style="align-items:center; gap:10px">
-      <div style="flex:1"><b style="font-size:14px">Sugerir aumento de carga</b>
+      <div style="flex:1"><b style="font-size:15px">Sugerir aumento de carga</b>
         <div class="tiny" style="margin-top:2px">Aviso quando o peso máximo repete por tempo demais.</div></div>
       <label class="sw" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="pg-ativo"${c.ativo ? " checked" : ""} style="width:20px;height:20px;accent-color:var(--acc)">
+        <input type="checkbox" id="${pfx}-ativo"${c.ativo ? " checked" : ""} style="width:20px;height:20px;accent-color:var(--acc)">
       </label>
     </div>
     <div class="perfil-grid" style="margin-top:12px">
       <div class="pfcell"><span class="lb">Semanas mínimas</span>
-        <select id="pg-semanas" aria-label="Semanas mínimas">${opt(PROG_SEMANAS, c.semanas)}</select></div>
+        <select id="${pfx}-semanas" aria-label="Semanas mínimas">${opt(PROG_SEMANAS, c.semanas)}</select></div>
       <div class="pfcell"><span class="lb">Execuções mínimas</span>
-        <select id="pg-vezes" aria-label="Execuções mínimas">${opt(PROG_VEZES, c.vezes)}</select></div>
+        <select id="${pfx}-vezes" aria-label="Execuções mínimas">${opt(PROG_VEZES, c.vezes)}</select></div>
       <div class="pfcell full"><span class="lb">Critério</span>
         <div class="cseg-l" role="group" aria-label="Critério de progressão">
           <button type="button" data-modo="E" class="${c.modo === "E" ? "on" : ""}">Os dois (E)</button>
@@ -3065,7 +3067,9 @@ function editorProgressao() {
     <div class="tiny" style="margin-top:8px">
       Padrão: <b>3 semanas E 3 execuções</b> com o mesmo peso. O modo <b>E</b> é mais seguro:
       só sugere aumento a quem treinou o exercício com regularidade e cumpriu o tempo.
+      ${standalone ? "<br>Vale para <b>todos os perfis</b> deste aparelho." : ""}
     </div>
+    ${standalone ? `<button class="btn pri block" id="fp-salvar" style="margin-top:12px">Salvar configuração</button>` : ""}
   </div>`;
 }
 
@@ -3103,7 +3107,6 @@ function editorPerfil() {
           <option value="navy"${p.metodoPadrao === "navy" ? " selected" : ""}>Navy (circunferências)</option>
         </select></div>
     </div>
-    ${editorProgressao()}
     <div class="load-warn hidden" id="pf-erro" style="display:none"></div>
     <button class="btn pri block" id="pf-salvar" style="margin-top:12px">Salvar perfil</button>
     ${perfilCompleto() || perfisArr().length > 1 ? `<button class="btn block danger" id="pf-excluir" style="margin-top:8px">Excluir este perfil</button>` : ""}
@@ -3115,12 +3118,6 @@ function editorPerfil() {
     idadeDoNasc();
   }));
   box.dataset.sexo = p.sexo || "";
-  // ---- progressão de carga: segmento E/OU ----
-  box.querySelectorAll("[data-modo]").forEach(b => b.addEventListener("click", () => {
-    box.querySelectorAll("[data-modo]").forEach(o => o.classList.toggle("on", o === b));
-    box.dataset.progModo = b.dataset.modo;
-  }));
-  box.dataset.progModo = progConfig().modo;
   const err = (msg) => { const e = $("#pf-erro", box); e.style.display = ""; e.innerHTML = `\u26a0 <b>${esc(msg)}</b>`; };
   // nascimento preenche a idade automaticamente
   const idadeDoNasc = () => {
@@ -3151,14 +3148,6 @@ function editorPerfil() {
       gorduraPct: num($("#pf-meta-gordura", box).value),
     };
     p.metodoPadrao = $("#pf-metodo", box).value === "navy" ? "navy" : "faulkner";
-    // progressão de carga (configuração global do app)
-    const pgAtivo = $("#pg-ativo", box);
-    setProgConfig({
-      ativo: !!(pgAtivo && pgAtivo.checked),
-      semanas: parseInt($("#pg-semanas", box).value, 10) || PROG_PADRAO.semanas,
-      vezes: parseInt($("#pg-vezes", box).value, 10) || PROG_PADRAO.vezes,
-      modo: box.dataset.progModo === "OU" ? "OU" : "E",
-    });
     // recalcula o método das medições DESTE perfil que dependem do perfil
     for (const m of medicoesDoPerfil()) recalcularMedicao(m);
     saveLocal();
@@ -4875,6 +4864,28 @@ function renderFichas(v) {
   bAdd.addEventListener("click", addTreino);
   btns.appendChild(bAdd);
   v.appendChild(btns);
+
+  // ---- configuração de progressão de carga (global do app) ----
+  const cfg = el("div", { class: "card", id: "fichas-progressao", style: "margin-top:14px" });
+  cfg.innerHTML = editorProgressao({ standalone: true });
+  v.appendChild(cfg);
+  // segmento E/OU
+  cfg.querySelectorAll("[data-modo]").forEach(b => b.addEventListener("click", () => {
+    cfg.querySelectorAll("[data-modo]").forEach(o => o.classList.toggle("on", o === b));
+    cfg.dataset.progModo = b.dataset.modo;
+  }));
+  cfg.dataset.progModo = progConfig().modo;
+  $("#fp-salvar", cfg).addEventListener("click", () => {
+    const at = $("#fp-ativo", cfg);
+    setProgConfig({
+      ativo: !!(at && at.checked),
+      semanas: parseInt($("#fp-semanas", cfg).value, 10) || PROG_PADRAO.semanas,
+      vezes: parseInt($("#fp-vezes", cfg).value, 10) || PROG_PADRAO.vezes,
+      modo: cfg.dataset.progModo === "OU" ? "OU" : "E",
+    });
+    toast("Configuração de progressão salva");
+    render();
+  });
 
   const acct = el("div", { class: "card", style: "margin-top:16px" });
   acct.innerHTML = `<h3 style="font-size:15px; margin-bottom:8px">Conta</h3>`;
