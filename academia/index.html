@@ -1071,6 +1071,8 @@ function normalizeData(d) {
           nome: String(x.nome || ""),
           concluido: x.concluido === true,
           obs: typeof x.obs === "string" ? x.obs : "",   // retrocompatível: sessões antigas não têm
+          ...(x.inicioExec ? { inicioExec: x.inicioExec } : {}),
+          ...(x.fimExec ? { fimExec: x.fimExec } : {}),
           series: (Array.isArray(x.series) ? x.series : []).filter(v => v).map(v => {
             // retrocompatível: séries antigas só têm {peso, reps}; cardio tem {tempo, velocidade, ...}
             const se = {
@@ -1080,6 +1082,9 @@ function normalizeData(d) {
             if (v.velocidade !== undefined) se.velocidade = num(v.velocidade);
             if (v.distancia !== undefined) se.distancia = num(v.distancia);
             if (v.inclinacao !== undefined) se.inclinacao = num(v.inclinacao);
+            if (v.feita === true) se.feita = true;
+            if (v.feitaEm) se.feitaEm = v.feitaEm;
+            if (v.descansoSeg != null) se.descansoSeg = num(v.descansoSeg);
             return se;
           }),
         };
@@ -1959,12 +1964,15 @@ function restPlay() {
   r.fim = Date.now() + r.dur * 1000;
   r.rodando = true;
   restTick();
+  // agenda o aviso no SW: entrega a notificação mesmo com o app em segundo plano
+  agendarNotificacaoDescanso(r.fim, r.dur);
   paintRest();
 }
 
 function restPausar() {
   const r = restState();
   r.rodando = false;
+  cancelarNotificacaoDescanso();
   restManterAcordado(false);
   if (r.tick) { clearInterval(r.tick); r.tick = null; }
   paintRest();
@@ -1973,6 +1981,7 @@ function restPausar() {
 function restZerar() {
   const r = restState();
   r.rodando = false;
+  cancelarNotificacaoDescanso();
   restManterAcordado(false);
   if (r.tick) { clearInterval(r.tick); r.tick = null; }
   paintRest();
@@ -2114,9 +2123,15 @@ function exCard(ex) {
         ? `${ex.series.length} série(s) · tempo + velocidade${last && last.series.some(v => v.velocidade != null) ? ` · último: <b style="color:var(--acc)">${fmtVel(cardioStats(last.series).velAvg)} km/h</b>` : ""}`
         : `${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}`}</div>
       ${stag ? `<span class="mini-warn" title="Mesmo peso desde ${fmtBR(stag.desde)}">⚠ Considere aumentar a carga</span>` : ""}
+      ${duracaoExecTexto(ex) ? `<div class="meta" style="color:var(--acc)">⏱ ${duracaoExecTexto(ex)}</div>` : ""}
     </div>
     <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
-  h.addEventListener("click", () => { state.openEx[ex.exercicioId] = !open; render(); });
+  h.addEventListener("click", () => {
+    state.openEx[ex.exercicioId] = !open;
+    // marca o início quando o exercício é aberto pela primeira vez
+    if (!open && !ex.inicioExec) { ex.inicioExec = new Date().toISOString(); saveSessaoRascunho(); }
+    render();
+  });
   head.appendChild(h);
   c.appendChild(head);
 
@@ -2356,6 +2371,12 @@ function toggleConcluido(ex) {
     }
   }
   ex.concluido = !ex.concluido;
+  if (ex.concluido) {
+    ex.fimExec = new Date().toISOString();
+    if (!ex.inicioExec) ex.inicioExec = ex.fimExec;
+  } else {
+    delete ex.fimExec;
+  }
   saveSessaoRascunho();
   render();
   const s = state.sessao;
@@ -2400,6 +2421,8 @@ function toggleSerieFeita(ex, i) {
   const todasFeitas = ex.series.length > 0 && ex.series.every(x => x.feita);
   if (todasFeitas && !ex.concluido) {
     ex.concluido = true;
+    ex.fimExec = new Date().toISOString();
+    if (!ex.inicioExec) ex.inicioExec = ex.fimExec;
     saveSessaoRascunho();
     render();
     toast(`Séries completas — ${ex.nome} concluído ✓`);
@@ -2408,6 +2431,7 @@ function toggleSerieFeita(ex, i) {
   // desmarcou uma série de um exercício concluído -> reabre o exercício
   if (!todasFeitas && ex.concluido) {
     ex.concluido = false;
+    delete ex.fimExec;
     saveSessaoRascunho();
     render();
     return;
@@ -2418,6 +2442,18 @@ function toggleSerieFeita(ex, i) {
 /** Ordena os exercícios da sessão: pendentes primeiro (na ordem original),
  *  concluídos por último — assim o que falta fazer sobe e sai do caminho.
  *  A ordem dentro de cada grupo é estável (segue a ordem da ficha). */
+/** texto do tempo de execução de um exercício na sessão atual ("⏱ 4 min 12 s" ou "em andamento") */
+function duracaoExecTexto(ex) {
+  if (!ex || !ex.inicioExec) return "";
+  const ini = new Date(ex.inicioExec).getTime();
+  const fim = ex.fimExec ? new Date(ex.fimExec).getTime() : Date.now();
+  const seg = Math.max(0, Math.round((fim - ini) / 1000));
+  if (!seg) return "";
+  const m = Math.floor(seg / 60), s = seg % 60;
+  const txt = m > 0 ? `${m} min ${String(s).padStart(2, "0")} s` : `${s} s`;
+  return ex.fimExec ? txt : `${txt} (em andamento)`;
+}
+
 function exerciciosOrdenados(lista) {
   if (!Array.isArray(lista)) return [];
   const pend = [], feitos = [];
@@ -2460,6 +2496,8 @@ function concluirSessao(s, forcar) {
     nome: ex.nome,
     concluido: !!ex.concluido,
     obs: typeof ex.obs === "string" ? ex.obs.trim() : "",
+    ...(ex.inicioExec ? { inicioExec: ex.inicioExec } : {}),
+    ...(ex.fimExec ? { fimExec: ex.fimExec } : {}),
     ...(ex.tipo === "cardio" ? { tipo: "cardio" } : {}),
     series: ex.tipo === "cardio"
       ? ex.series
@@ -4859,7 +4897,7 @@ function renderFichas(v) {
   bImp.addEventListener("click", importBackup);
   acct.appendChild(bImp);
   v.appendChild(acct);
-  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.6 · dados no seu Drive"));
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.6.1 · dados no seu Drive"));
 }
 
 function renderEditor(v) {
@@ -5059,6 +5097,49 @@ window.addEventListener("pageshow", () => { try { restChecarAoVoltar(); } catch 
 /* service worker */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("SW:", e)));
+  // o SW avisa quando o descanso venceu (app em segundo plano): toca o som aqui também
+  navigator.serviceWorker.addEventListener("message", (ev) => {
+    const d = ev.data || {};
+    if (d.type === "rest-venceu") {
+      try { tocaSomDescanso(); } catch (e) {}
+      try { mostrarAlertaDescanso(restState().dur, null); } catch (e) {}
+    }
+  });
+}
+
+/* ============================================================
+   Notificação do timer (descanso em segundo plano)
+   O JS da aba congela ao trocar de app; o SW entrega a notificação.
+   ============================================================ */
+async function notificarSuportado() {
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  try {
+    const p = await Notification.requestPermission();
+    return p === "granted";
+  } catch (e) { return false; }
+}
+
+/** pede ao SW para agendar o aviso de fim de descanso */
+async function agendarNotificacaoDescanso(quando, dur) {
+  try {
+    const ok = await notificarSuportado();
+    if (!ok) return false;
+    const reg = await navigator.serviceWorker.ready;
+    if (reg && reg.active) reg.active.postMessage({ type: "rest-agendar", quando, dur });
+    return true;
+  } catch (e) { return false; }
+}
+
+/** cancela o aviso (pausa, zerar ou toque em silenciar) */
+function cancelarNotificacaoDescanso() {
+  try {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.ready.then(reg => {
+      if (reg && reg.active) reg.active.postMessage({ type: "rest-cancelar" });
+    }).catch(() => {});
+  } catch (e) {}
 }
 
 /* ============================================================
