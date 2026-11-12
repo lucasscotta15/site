@@ -88,6 +88,9 @@
   .treino-btn.st-prox{border:1.5px solid #fbbf24; background:rgba(251,191,36,.10)}
   .treino-btn.st-prox .letter{background:#fbbf24; color:#121214}
   .treino-btn.st-prox .sub{color:#fcd34d}
+  /* ficha fora da rotação (diária): visual apagado, sem verde/amarelo */
+  .treino-btn.st-diaria{border-style:dashed; opacity:.78}
+  .treino-btn.st-diaria .letter{background:var(--bg3); color:var(--mut)}
   /* tabs / nav */
   nav.tabs{
     position:fixed; left:0; right:0; bottom:0; z-index:30;
@@ -240,6 +243,12 @@
   .fichas-mes .fd .var{font-weight:800; white-space:nowrap}
   /* exercício de cardio (esteira / bicicleta) */
   .badge.cardio{background:rgba(96,165,250,.16); color:#93c5fd}
+  .badge.diario{background:rgba(251,191,36,.14); color:var(--acc)}
+  .rot-row{display:flex; gap:9px; align-items:flex-start; padding:9px 10px; margin-top:4px;
+    border:1px solid var(--line); border-radius:11px; background:var(--bg3); cursor:pointer}
+  .rot-row input{width:19px; height:19px; flex:none; accent-color:var(--brand); margin-top:1px}
+  .rot-row b{display:block; font-size:13px; font-weight:650; line-height:1.3}
+  .rot-row .tiny{display:block; margin-top:2px; line-height:1.35}
   .cblock{display:grid; grid-template-columns:26px minmax(0,1fr); gap:8px; align-items:start; margin-top:10px;
     padding-top:10px; border-top:1px solid rgba(42,50,64,.7)}
   .cblock:first-of-type{border-top:0}
@@ -844,8 +853,12 @@ function elapsedSec(s) {
   if (s.duracaoMin != null && s.horaFim) return Math.round(s.duracaoMin * 60);
   return Math.max(0, total);
 }
-function totalEx(s) { return s.exercicios.length; }
-function doneEx(s) { return s.exercicios.filter(x => x.concluido).length; }
+function totalEx(s) { return s.exercicios.filter(x => !exForaDeRotacao(x)).length; }
+function doneEx(s) { return s.exercicios.filter(x => !exForaDeRotacao(x) && x.concluido).length; }
+
+/** Exercício marcado como "fora da rotatividade" (ex.: assoalho pélvico, diário).
+    Padrão = entra na rotatividade (rotacao !== false). Só sai se explicitamente false. */
+function exForaDeRotacao(ex) { return !!ex && ex.rotacao === false; }
 
 /* ============================================================
    Estado
@@ -1530,13 +1543,22 @@ function lastSessionsForTreino(trId, n = 3) {
 /* Rotação fixa das fichas */
 const ROTACAO = ["A", "B", "C", "D"];
 
-/* Sessão mais recente: maior data; em empate, maior horaInicio; depois última inserida */
+/** Ficha fora da rotação (padrão = entra na rotação). Independe da letra: se A–D
+    não bastam, a ficha pode ter qualquer código. Só sai se rotacao === false. */
+function fichaForaDeRotacao(t) { return !!t && t.rotacao === false; }
+
+/* Sessão mais recente: maior data; em empate, maior horaInicio; depois última inserida.
+   Fichas fora da rotação (diárias) são ignoradas: não definem o "próximo" treino. */
 function ultimaSessao() {
   const arr = sessoesDoPerfil();
+  const fichas = treinosDoPerfil();
+  const foraIds = new Set(fichas.filter(fichaForaDeRotacao).map(t => String(t.id).trim().toUpperCase()));
   let best = null, bestKey = null;
   for (let i = 0; i < arr.length; i++) {
     const s = arr[i];
     if (!s || !s.data) continue;
+    const tid = String(s.treinoId || "").trim().toUpperCase();
+    if (foraIds.has(tid)) continue;              // ficha diária não entra na rotação
     const key = [String(s.data).slice(0, 10), s.horaInicio || "", i];
     if (!bestKey || key[0] > bestKey[0]
       || (key[0] === bestKey[0] && key[1] > bestKey[1])
@@ -1553,25 +1575,23 @@ function ultimaSessao() {
    sem entrada = neutra. Nunca as duas no mesmo id (garantido pelo else). */
 function estadoFichas() {
   const map = new Map();
+  const fichas = treinosDoPerfil();
+  // só as fichas que entram na rotação, na ordem em que aparecem na lista
+  const rot = fichas.filter(t => !fichaForaDeRotacao(t)).map(t => String(t.id).trim().toUpperCase());
+  const todas = fichas.map(t => String(t.id).trim().toUpperCase());
+
   const ult = ultimaSessao();
   let ultId = ult && ult.treinoId ? String(ult.treinoId).trim().toUpperCase() : null;
-  const existentes = treinosDoPerfil().map(t => String(t.id).trim().toUpperCase());
-  if (ultId && !existentes.includes(ultId)) ultId = null;   // sessão órfã: ignora
+  if (ultId && !todas.includes(ultId)) ultId = null;        // sessão órfã: ignora
+  if (ultId && !rot.includes(ultId)) ultId = null;          // sessão de ficha que saiu da rotação
   if (ultId) map.set(ultId, "ult");
-  // próxima na rotação fixa; sem nenhum treino, começa em A
-  let prox = "A";
-  if (ultId) {
-    const idx = ROTACAO.indexOf(ultId);
-    prox = idx >= 0 ? ROTACAO[(idx + 1) % ROTACAO.length] : "A";
-  }
-  // ficha da rotação inexistente no app? usa a próxima que existir
-  if (!existentes.includes(prox)) {
-    const start = ROTACAO.indexOf(prox);
-    for (let k = 1; k <= ROTACAO.length; k++) {
-      const cand = ROTACAO[(start + k) % ROTACAO.length];
-      if (existentes.includes(cand)) { prox = cand; break; }
-    }
-  }
+
+  if (!rot.length) return map;                              // nenhuma ficha rotativa
+  // próxima: a seguinte da última na ordem; sem histórico, a primeira
+  let prox;
+  const idx = ultId ? rot.indexOf(ultId) : -1;
+  prox = idx >= 0 ? rot[(idx + 1) % rot.length] : rot[0];
+
   if (prox !== ultId) map.set(prox, "prox");   // verde e amarelo nunca na mesma ficha
   return map;
 }
@@ -1613,12 +1633,12 @@ function renderInicio(v) {
   const estado = estadoFichas();
   for (const t of treinosDoPerfil()) {
     const st = estado.get(t.id) || "";   // "" | "ult" | "prox"
-    const b = el("button", { class: "treino-btn" + (st === "ult" ? " st-ult" : st === "prox" ? " st-prox" : "") });
+    const b = el("button", { class: "treino-btn" + (st === "ult" ? " st-ult" : st === "prox" ? " st-prox" : "") + (fichaForaDeRotacao(t) ? " st-diaria" : "") });
     b.dataset.ficha = t.id;
     b.dataset.estado = st || "neutro";
     const ls = lastSessionsForTreino(t.id, 1)[0];
     b.innerHTML = `<span class="letterwrap"><span class="letter">${esc(t.id)}</span>${st === "prox"
-        ? `<span class="tag-prox" title="Próxima ficha da rotação A→B→C→D→A">#próximo</span>` : ""}</span><span class="n">${esc(t.nome)}</span>
+        ? `<span class="tag-prox" title="Próxima ficha da rotação A→B→C→D→A">#próximo</span>` : ""}</span><span class="n">${esc(t.nome)}${fichaForaDeRotacao(t) ? ' <span class="badge diario">fora da rotação</span>' : ""}</span>
       <div class="sub">${t.exercicios.length} exercícios${ls ? " · último dia " + fmtBR(ls.data) : " · ainda não feito"}</div>`;
     b.addEventListener("click", () => startSession(t.id));
     v.appendChild(b);
@@ -2106,6 +2126,18 @@ function exCard(ex) {
   const stag = isCardio ? null : loadStagnation(ex.exercicioId, state.sessao ? state.sessao.data : todayISO());
   const obsPrev = obsHistoryFor(ex.exercicioId);
   const head = el("div", { class: "ex-head", style: "display:flex; align-items:center; gap:10px" });
+  if (exForaDeRotacao(ex)) {
+    const cal = el("button", {
+      class: "chk" + (feito ? " on" : ""), type: "button",
+      "aria-label": (feito ? "Desmarcar" : "Marcar como feito hoje") + ": " + ex.nome,
+      "aria-pressed": feito ? "true" : "false",
+      title: feito ? "Feito hoje — toque para desmarcar" : "Registrar que fez hoje",
+    }, feito ? "✓" : "○");
+    cal.dataset.exid = ex.exercicioId;
+    cal.classList.add("toggle-ex");
+    cal.addEventListener("click", (e) => { e.stopPropagation(); toggleConcluido(ex); });
+    head.appendChild(cal);
+  } else {
   const chk = el("button", {
     class: "chk" + (feito ? " on" : ""), type: "button",
     "aria-label": (feito ? "Desmarcar" : "Marcar como concluído") + ": " + ex.nome,
@@ -2115,10 +2147,11 @@ function exCard(ex) {
   chk.classList.add("toggle-ex");
   chk.addEventListener("click", (e) => { e.stopPropagation(); toggleConcluido(ex); });
   head.appendChild(chk);
+  }
 
   const h = el("button", { class: "ex-head", style: "padding:0; flex:1; min-width:0; background:none; border:0; text-align:left" });
   h.innerHTML = `<div style="flex:1">
-      <div class="name">${esc(ex.nome)} ${ex.tipo === "tempo" ? '<span class="badge tempo">tempo</span>' : ""}${isCardio ? '<span class="badge cardio">cardio</span>' : ""}</div>
+      <div class="name">${esc(ex.nome)} ${ex.tipo === "tempo" ? '<span class="badge tempo">tempo</span>' : ""}${isCardio ? '<span class="badge cardio">cardio</span>' : ""}${exForaDeRotacao(ex) ? '<span class="badge diario">diário</span>' : ""}</div>
       <div class="meta">${isCardio
         ? `${ex.series.length} série(s) · tempo + velocidade${last && last.series.some(v => v.velocidade != null) ? ` · último: <b style="color:var(--acc)">${fmtVel(cardioStats(last.series).velAvg)} km/h</b>` : ""}`
         : `${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}`}</div>
@@ -2456,9 +2489,13 @@ function duracaoExecTexto(ex) {
 
 function exerciciosOrdenados(lista) {
   if (!Array.isArray(lista)) return [];
-  const pend = [], feitos = [];
-  for (const ex of lista) (ex && ex.concluido ? feitos : pend).push(ex);
-  return pend.concat(feitos);
+  const pend = [], feitos = [], diarios = [];
+  for (const ex of lista) {
+    if (!ex) continue;
+    if (exForaDeRotacao(ex)) diarios.push(ex);      // "todos os dias": vão sempre ao fim
+    else (ex.concluido ? feitos : pend).push(ex);
+  }
+  return pend.concat(feitos).concat(diarios);
 }
 
 /** Finaliza: exige início + todos os exercícios marcados (ou confirmação explícita). */
@@ -2468,10 +2505,10 @@ function finalizarTreino() {
 
   if (!s.horaInicio) { toast("Toque em “Iniciar treino” primeiro"); return; }
 
-  const faltando = s.exercicios.filter(ex => !ex.concluido);
+  const faltando = s.exercicios.filter(ex => !exForaDeRotacao(ex) && !ex.concluido);
   if (faltando.length) {
     const nomes = faltando.map(ex => "• " + ex.nome).join("\n");
-    const total = s.exercicios.length;
+    const total = totalEx(s);
     const aviso = `Atenção: ${faltando.length} de ${total} exercício(s) ainda não foram marcados como concluídos:\n\n${nomes}\n\n` +
       `Finalizar o treino mesmo assim?\n(Os exercícios não marcados NÃO entram no histórico como feitos.)`;
     if (!confirm(aviso)) {
@@ -2499,6 +2536,7 @@ function concluirSessao(s, forcar) {
     ...(ex.inicioExec ? { inicioExec: ex.inicioExec } : {}),
     ...(ex.fimExec ? { fimExec: ex.fimExec } : {}),
     ...(ex.tipo === "cardio" ? { tipo: "cardio" } : {}),
+    ...(exForaDeRotacao(ex) ? { rotacao: false } : {}),
     series: ex.tipo === "cardio"
       ? ex.series
         .filter(se => parseTempoMin(se.tempo) != null || num(se.velocidade) != null || num(se.distancia) != null || num(se.inclinacao) != null)
@@ -4853,7 +4891,7 @@ function renderFichas(v) {
   for (const t of fichasDoPerfil) {
     const c = el("div", { class: "card" });
     c.innerHTML = `<div class="row"><span class="letter badge" style="font-size:14px; padding:7px 10px">${esc(t.id)}</span>
-      <div style="flex:1"><div style="font-weight:700">${esc(t.nome)}</div><div class="tiny">${t.exercicios.length} exercícios</div></div>
+      <div style="flex:1"><div style="font-weight:700">${esc(t.nome)}${fichaForaDeRotacao(t) ? ' <span class="badge diario">fora da rotação</span>' : ""}</div><div class="tiny">${t.exercicios.length} exercícios</div></div>
       <button class="btn sm" id="ed-${esc(t.id)}">Editar</button></div>`;
     v.appendChild(c);
     $(`#ed-${CSS.escape(t.id)}`, c).addEventListener("click", () => { state.editTreinoId = t.id; render(); });
@@ -4918,6 +4956,22 @@ function renderEditor(v) {
   head.innerHTML = `<button class="btn sm" id="back">← Voltar</button>
     <div class="field"><label>Letra / código</label><input type="text" id="t-id" value="${esc(t.id)}" maxlength="3" style="text-transform:uppercase"></div>
     <div class="field"><label>Nome da ficha</label><input type="text" id="t-nome" value="${esc(t.nome)}"></div>`;
+
+  // ---- rotatividade da ficha inteira (padrão: entra na rotação) ----
+  const rotBox = el("label", { class: "rot-row", id: "t-rot-row" });
+  const rotChk = el("input", { type: "checkbox" });
+  rotChk.id = "t-rot";
+  rotChk.checked = !fichaForaDeRotacao(t);
+  rotChk.addEventListener("change", () => {
+    if (rotChk.checked) delete t.rotacao;
+    else t.rotacao = false;
+    saveLocal(); scheduleSync();
+  });
+  const rotTxt = el("span");
+  rotTxt.innerHTML = `<b>Entra na rotatividade A → B → C → D</b><span class="tiny">Desmarque para fichas diárias (ex.: assoalho pélvico). Ela não aparece como “próximo treino”, não conta no progresso nem entra no cálculo de carga — mas continua disponível para abrir quando quiser.</span>`;
+  rotBox.append(rotChk, rotTxt);
+  head.appendChild(rotBox);
+
   v.appendChild(head);
   $("#back", head).addEventListener("click", () => { state.editTreinoId = null; render(); });
   $("#t-nome", head).addEventListener("input", (e) => { t.nome = e.target.value; saveLocal(); scheduleSync(); });
@@ -4966,7 +5020,22 @@ function renderEditor(v) {
     if (isC) reps.placeholder = "ex.: 20 min";
     const wrapBtns = el("div", { class: "row", style: "gap:6px" });
     wrapBtns.append(up, del);
-    r.append(name, tseg, hint, wrapSets, wrapReps, wrapBtns);
+
+    // ---- rotatividade: entra na rotação de treinos? (padrão: sim) ----
+    const rotWrap = el("label", { class: "rot-row", style: "grid-column:1 / -1" });
+    const rotChk = el("input", { type: "checkbox" });
+    rotChk.checked = !exForaDeRotacao(ex);
+    rotChk.dataset.rot = ex.id;
+    rotChk.addEventListener("change", () => {
+      if (rotChk.checked) delete ex.rotacao;
+      else ex.rotacao = false;
+      saveLocal(); scheduleSync(); render();
+    });
+    const rotTxt = el("span");
+    rotTxt.innerHTML = `<b>Entra na rotatividade</b><span class="tiny">Desmarque para exercícios diários (ex.: assoalho pélvico): não contam como série a fazer nem entram na contagem e no cálculo de progresso.</span>`;
+    rotWrap.append(rotChk, rotTxt);
+
+    r.append(name, tseg, hint, wrapSets, wrapReps, wrapBtns, rotWrap);
     list.appendChild(r);
   });
   const add = el("button", { class: "btn block", style: "margin-top:12px" }, "+ Adicionar exercício");
