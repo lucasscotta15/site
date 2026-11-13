@@ -892,7 +892,7 @@ function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], m
    `vezes` vezes E/OU há `semanas` semanas com o mesmo peso máximo.
    Padrão: 3 execuções E 3 semanas (mais seguro que o antigo "15 dias").
    ============================================================ */
-const PROG_PADRAO = { semanas: 3, vezes: 3, modo: "E", ativo: true, metrica: "volume" };
+const PROG_PADRAO = { semanas: 3, vezes: 3, modo: "E", ativo: true, metrica: "volume", tetoAtivo: true, tetoReps: 12 };
 const PROG_SEMANAS = [2, 3, 4, 5, 6];
 const PROG_VEZES = [1, 2, 3, 4, 5, 6];
 
@@ -1455,6 +1455,8 @@ function loadStagnation(exId, atRef) {
   const minimoDias = cfg.semanas * DIAS_SEMANA;
   const ref = atRef || todayISO();
   const modoProg = cfg.metrica || "volume";      // "carga" | "reps" | "volume"
+  const tetoOn = cfg.tetoAtivo !== false;
+  const tetoReps = parseInt(cfg.tetoReps, 10) > 0 ? parseInt(cfg.tetoReps, 10) : PROG_PADRAO.tetoReps;
   const pts = [];
   for (const s of sessoesDoPerfil()) {
     if (s.data > ref) continue;
@@ -1486,10 +1488,22 @@ function loadStagnation(exId, atRef) {
   const dias = diasEntre(serie[inicioSeq].data, ref);
   const atingiuVezes = registros >= cfg.vezes;
   const atingiuSemanas = dias >= minimoDias;
-  const dispara = cfg.modo === "OU" ? (atingiuVezes || atingiuSemanas) : (atingiuVezes && atingiuSemanas);
+  let dispara = cfg.modo === "OU" ? (atingiuVezes || atingiuSemanas) : (atingiuVezes && atingiuSemanas);
+
+  // ---- teto de repetições ----
+  // Se o peso está congelado e as repetições já atingiram o teto em todas as sessões
+  // da sequência, "volume" deixaria de subir sem mudar carga. Nesse caso o sinal é
+  // trocar o peso, e o aviso dispara mesmo com o volume estabilizado.
+  let teto = false;
+  if (tetoOn && ultimo.reps != null) {
+    const seq = serie.slice(inicioSeq);
+    const todasNoTeto = seq.length >= 2 && seq.every(p => p.reps != null && p.reps >= tetoReps);
+    if (todasNoTeto) { teto = true; dispara = true; }
+  }
   if (!dispara) return null;
   return { dias, peso: ultimo.peso, reps: ultimo.reps, volume: ultimo.reps != null ? ultimo.peso * ultimo.reps : null,
            metric: modoProg, desde: serie[inicioSeq].data, ate: ultimo.data,
+           teto, tetoReps,
            registros, semanas: cfg.semanas, vezesCfg: cfg.vezes, modo: cfg.modo };
 }
 
@@ -2165,7 +2179,7 @@ function exCard(ex) {
       <div class="meta">${isCardio
         ? `${ex.series.length} série(s) · tempo + velocidade${last && last.series.some(v => v.velocidade != null) ? ` · último: <b style="color:var(--acc)">${fmtVel(cardioStats(last.series).velAvg)} km/h</b>` : ""}`
         : `${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}`}</div>
-      ${stag ? `<span class="mini-warn" title="Sem progresso desde ${fmtBR(stag.desde)}">⚠ Considere aumentar</span>` : ""}
+      ${stag ? `<span class="mini-warn" title="Sem progresso desde ${fmtBR(stag.desde)}">${stag.teto ? "⚠ Hora de subir a carga" : "⚠ Considere aumentar"}</span>` : ""}
       ${duracaoExecTexto(ex) ? `<div class="meta" style="color:var(--acc)">⏱ ${duracaoExecTexto(ex)}</div>`
         : (!isCardio && !exForaDeRotacao(ex) ? `<div class="meta tiny" style="color:var(--mut)">⏱ O tempo começa na 1ª série marcada</div>` : "")}
     </div>
@@ -2193,8 +2207,8 @@ function exCard(ex) {
   }
   if (stag) {
     const w = el("div", { class: "load-warn" });
-    w.innerHTML = `<span aria-hidden="true">⚠</span><div><b>Considere aumentar.</b> Sem progresso há ${stag.dias} dias
-      (${stagResumo(stag)} desde ${fmtBR(stag.desde)} · ${stag.registros} registros).</div>`;
+    w.innerHTML = `<span aria-hidden="true">⚠</span><div><b>${stag.teto ? "Hora de subir a carga." : "Considere aumentar."}</b>
+      ${stag.teto ? `${stagResumo(stag)}.` : `Sem progresso há ${stag.dias} dias (${stagResumo(stag)} desde ${fmtBR(stag.desde)} · ${stag.registros} registros).`}</div>`;
     body.appendChild(w);
   }
   // cabeçalho
@@ -2489,6 +2503,7 @@ function toggleSerieFeita(ex, i) {
 /** Resumo do que está estagnado, conforme a métrica configurada. */
 function stagResumo(stag) {
   if (!stag) return "";
+  if (stag.teto) return `${stag.peso} kg já em ${stag.reps} reps (teto de ${stag.tetoReps}) — hora de subir a carga`;
   const m = stag.metric || "volume";
   if (m === "carga") return `mesmo peso (${stag.peso} kg)`;
   if (m === "reps") return `mesmas repetições (${stag.reps ?? stag.peso} reps${stag.peso ? " · " + stag.peso + " kg" : ""})`;
@@ -3150,6 +3165,13 @@ function editorProgressao(opts) {
           <button type="button" data-modo="OU" class="${c.modo === "OU" ? "on" : ""}">Qualquer um (OU)</button>
         </div>
       </div>
+      <div class="pfcell full"><span class="lb">Teto de repetições</span>
+        <label class="sw" style="display:flex;align-items:center;gap:9px;cursor:pointer;margin-top:2px">
+          <input type="checkbox" id="${pfx}-teto-ativo"${c.tetoAtivo !== false ? " checked" : ""} style="width:20px;height:20px;accent-color:var(--acc)">
+          <span class="tiny">Avisar para subir a carga quando as repetições chegarem ao teto</span>
+        </label>
+        <select id="${pfx}-teto-reps" aria-label="Teto de repetições" style="margin-top:8px">${opt([8,10,12,15,20], c.tetoReps || PROG_PADRAO.tetoReps)}</select>
+      </div>
       <div class="pfcell full"><span class="lb">O que conta como progresso</span>
         <div class="cseg-l" role="group" aria-label="Métrica de progressão" style="grid-template-columns:repeat(3,1fr)">
           <button type="button" data-metrica="carga" class="${(c.metrica || "volume") === "carga" ? "on" : ""}">Carga</button>
@@ -3163,6 +3185,8 @@ function editorProgressao(opts) {
       só sugere aumento a quem treinou o exercício com regularidade e cumpriu o tempo.
       <br><b>Volume</b> = peso × repetições (recomendado): subir carga <i>ou</i> repetições conta como progresso.
       <b>Carga</b> olha só o peso; <b>Reps</b> olha só as repetições.
+      <br><b>Teto</b> cobre o caso em que só as repetições sobem: se o peso não muda e as repetições
+      batem no teto em duas sessões seguidas, o aviso passa a pedir carga.
       ${standalone ? "<br>Vale para <b>todos os perfis</b> deste aparelho." : ""}
     </div>
     ${standalone ? `<button class="btn pri block" id="fp-salvar" style="margin-top:12px">Salvar configuração</button>` : ""}
@@ -4787,7 +4811,7 @@ function renderGraficos(v) {
     if (lastP != null && prevP != null) arrow = lastP > prevP ? '<span style="color:var(--acc)">▲</span>' : lastP < prevP ? '<span style="color:var(--err)">▼</span>' : "";
     r.innerHTML = `<div style="flex:1; min-width:0"><div style="font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(ex.nome)}</div>
       <div class="tiny">Treino ${esc(ex.treinoId)} · ${p.length} sessão(ões)</div>
-      ${stag ? `<span class="mini-warn">⚠ Considere aumentar · ${stag.dias} dias</span>` : ""}</div>
+      ${stag ? `<span class="mini-warn">${stag.teto ? "⚠ Hora de subir a carga" : "⚠ Considere aumentar"} · ${stag.dias} dias</span>` : ""}</div>
       <div style="text-align:right"><b>${lastP != null ? lastP + " kg" : "–"}</b> ${arrow}</div>`;
     r.addEventListener("click", () => { state.chartEx.sel = ex.id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
     list.appendChild(r);
@@ -4985,6 +5009,8 @@ function renderFichas(v) {
       vezes: parseInt($("#fp-vezes", cfg).value, 10) || PROG_PADRAO.vezes,
       modo: cfg.dataset.progModo === "OU" ? "OU" : "E",
       metrica: ["carga", "reps", "volume"].includes(cfg.dataset.progMetrica) ? cfg.dataset.progMetrica : "volume",
+      tetoAtivo: !!(($("#fp-teto-ativo", cfg) || {}).checked),
+      tetoReps: parseInt((($("#fp-teto-reps", cfg) || {}).value), 10) || PROG_PADRAO.tetoReps,
     });
     toast("Configuração de progressão salva");
     render();
@@ -5011,7 +5037,7 @@ function renderFichas(v) {
   bImp.addEventListener("click", importBackup);
   acct.appendChild(bImp);
   v.appendChild(acct);
-  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.6.1 · dados no seu Drive"));
+  v.appendChild(el("p", { class: "tiny center", style: "margin:14px 0 20px" }, "Gusto v1.6.2 · dados no seu Drive"));
 }
 
 function renderEditor(v) {
