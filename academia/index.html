@@ -892,7 +892,7 @@ function defaultData() { return { treinos: clone(TREINOS_PADRAO), sessoes: [], m
    `vezes` vezes E/OU há `semanas` semanas com o mesmo peso máximo.
    Padrão: 3 execuções E 3 semanas (mais seguro que o antigo "15 dias").
    ============================================================ */
-const PROG_PADRAO = { semanas: 3, vezes: 3, modo: "E", ativo: true };
+const PROG_PADRAO = { semanas: 3, vezes: 3, modo: "E", ativo: true, metrica: "volume" };
 const PROG_SEMANAS = [2, 3, 4, 5, 6];
 const PROG_VEZES = [1, 2, 3, 4, 5, 6];
 
@@ -1454,6 +1454,7 @@ function loadStagnation(exId, atRef) {
   const DIAS_SEMANA = 7;
   const minimoDias = cfg.semanas * DIAS_SEMANA;
   const ref = atRef || todayISO();
+  const modoProg = cfg.metrica || "volume";      // "carga" | "reps" | "volume"
   const pts = [];
   for (const s of sessoesDoPerfil()) {
     if (s.data > ref) continue;
@@ -1461,25 +1462,34 @@ function loadStagnation(exId, atRef) {
     if (!ex || !ex.series || !ex.series.length) continue;
     const ws = ex.series.map(v => v.peso).filter(v => v != null);
     if (!ws.length) continue;
-    pts.push({ data: s.data, max: Math.max(...ws) });
+    const pesoMax = Math.max(...ws);
+    // melhor conjunto do dia pelo critério escolhido
+    const reps = ex.series.map(v => v.reps).filter(v => v != null);
+    const repsMax = reps.length ? Math.max(...reps) : null;
+    let chave;
+    if (modoProg === "reps") chave = repsMax != null ? repsMax : pesoMax;
+    else if (modoProg === "carga") chave = pesoMax;
+    else chave = repsMax != null ? pesoMax * repsMax : pesoMax;   // volume = carga × reps
+    pts.push({ data: s.data, chave, peso: pesoMax, reps: repsMax });
   }
   if (pts.length < cfg.vezes) return null;
-  // ordena e faz um ponto por dia (mantém o maior peso do dia)
+  // ordena e faz um ponto por dia (mantém o melhor do dia)
   const porDia = new Map();
-  for (const p of pts) { const cur = porDia.get(p.data); if (cur == null || p.max > cur) porDia.set(p.data, p.max); }
-  const serie = [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([data, max]) => ({ data, max }));
+  for (const p of pts) { const cur = porDia.get(p.data); if (cur == null || p.chave > cur.chave) porDia.set(p.data, p); }
+  const serie = [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([data, p]) => ({ data, ...p }));
   const ultimo = serie[serie.length - 1];
-  const pesoAtual = ultimo.max;
-  // início da sequência atual: primeira sessão em que o peso atual aparece, sem alteração depois
+  const chaveAtual = ultimo.chave;
+  // início da sequência atual: primeira sessão com o mesmo valor, sem alteração depois
   let inicioSeq = serie.length - 1;
-  for (let i = serie.length - 2; i >= 0; i--) { if (serie[i].max !== pesoAtual) break; inicioSeq = i; }
-  const registros = serie.length - inicioSeq;          // qtde de execuções com esse mesmo peso
+  for (let i = serie.length - 2; i >= 0; i--) { if (serie[i].chave !== chaveAtual) break; inicioSeq = i; }
+  const registros = serie.length - inicioSeq;
   const dias = diasEntre(serie[inicioSeq].data, ref);
   const atingiuVezes = registros >= cfg.vezes;
   const atingiuSemanas = dias >= minimoDias;
   const dispara = cfg.modo === "OU" ? (atingiuVezes || atingiuSemanas) : (atingiuVezes && atingiuSemanas);
   if (!dispara) return null;
-  return { dias, peso: pesoAtual, desde: serie[inicioSeq].data, ate: ultimo.data,
+  return { dias, peso: ultimo.peso, reps: ultimo.reps, volume: ultimo.reps != null ? ultimo.peso * ultimo.reps : null,
+           metric: modoProg, desde: serie[inicioSeq].data, ate: ultimo.data,
            registros, semanas: cfg.semanas, vezesCfg: cfg.vezes, modo: cfg.modo };
 }
 
@@ -2155,14 +2165,15 @@ function exCard(ex) {
       <div class="meta">${isCardio
         ? `${ex.series.length} série(s) · tempo + velocidade${last && last.series.some(v => v.velocidade != null) ? ` · último: <b style="color:var(--acc)">${fmtVel(cardioStats(last.series).velAvg)} km/h</b>` : ""}`
         : `${ex.series.length} × ${esc(ex.repsAlvo)}${last ? ` · último: <b style="color:var(--acc)">${last.series.map(v => v.peso ?? "–").join(" / ")} kg</b>` : ""}`}</div>
-      ${stag ? `<span class="mini-warn" title="Mesmo peso desde ${fmtBR(stag.desde)}">⚠ Considere aumentar a carga</span>` : ""}
-      ${duracaoExecTexto(ex) ? `<div class="meta" style="color:var(--acc)">⏱ ${duracaoExecTexto(ex)}</div>` : ""}
+      ${stag ? `<span class="mini-warn" title="Sem progresso desde ${fmtBR(stag.desde)}">⚠ Considere aumentar</span>` : ""}
+      ${duracaoExecTexto(ex) ? `<div class="meta" style="color:var(--acc)">⏱ ${duracaoExecTexto(ex)}</div>`
+        : (!isCardio && !exForaDeRotacao(ex) ? `<div class="meta tiny" style="color:var(--mut)">⏱ O tempo começa na 1ª série marcada</div>` : "")}
     </div>
     <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
   h.addEventListener("click", () => {
     state.openEx[ex.exercicioId] = !open;
-    // marca o início quando o exercício é aberto pela primeira vez
-    if (!open && !ex.inicioExec) { ex.inicioExec = new Date().toISOString(); saveSessaoRascunho(); }
+    // O tempo do exercício NÃO começa ao abrir o card: abrir é só leitura.
+    // Ele começa na primeira série efetivamente marcada (ver inicioExecDe).
     render();
   });
   head.appendChild(h);
@@ -2182,8 +2193,8 @@ function exCard(ex) {
   }
   if (stag) {
     const w = el("div", { class: "load-warn" });
-    w.innerHTML = `<span aria-hidden="true">⚠</span><div><b>Considere aumentar a carga.</b> Mesmo peso há ${stag.dias} dias
-      (${stag.peso} kg desde ${fmtBR(stag.desde)} · ${stag.registros} registros).</div>`;
+    w.innerHTML = `<span aria-hidden="true">⚠</span><div><b>Considere aumentar.</b> Sem progresso há ${stag.dias} dias
+      (${stagResumo(stag)} desde ${fmtBR(stag.desde)} · ${stag.registros} registros).</div>`;
     body.appendChild(w);
   }
   // cabeçalho
@@ -2475,16 +2486,48 @@ function toggleSerieFeita(ex, i) {
 /** Ordena os exercícios da sessão: pendentes primeiro (na ordem original),
  *  concluídos por último — assim o que falta fazer sobe e sai do caminho.
  *  A ordem dentro de cada grupo é estável (segue a ordem da ficha). */
+/** Resumo do que está estagnado, conforme a métrica configurada. */
+function stagResumo(stag) {
+  if (!stag) return "";
+  const m = stag.metric || "volume";
+  if (m === "carga") return `mesmo peso (${stag.peso} kg)`;
+  if (m === "reps") return `mesmas repetições (${stag.reps ?? stag.peso} reps${stag.peso ? " · " + stag.peso + " kg" : ""})`;
+  return stag.reps != null
+    ? `mesmo volume (${stag.peso} kg × ${stag.reps} reps = ${stag.volume})`
+    : `mesmo desempenho (${stag.peso} kg)`;
+}
+
+/** Momento em que o exercício realmente começou: a primeira série marcada.
+ *  Devolve ISO, ou null se nenhuma série foi feita. Fichas antigas que só têm
+ *  inicioExec (gravado ao abrir o card) caem no fallback, para não perder histórico. */
+function inicioExecDe(ex) {
+  if (!ex) return null;
+  const marcadas = (ex.series || []).filter(se => se && se.feitaEm).map(se => se.feitaEm);
+  if (marcadas.length) return marcadas.reduce((a, b) => (a < b ? a : b));  // a mais antiga
+  return ex.inicioExec || null;   // retrocompatível
+}
+
+/** Fim do exercício: a última série marcada; se concluído sem séries, usa fimExec. */
+function fimExecDe(ex) {
+  if (!ex) return null;
+  const marcadas = (ex.series || []).filter(se => se && se.feitaEm).map(se => se.feitaEm);
+  if (marcadas.length && ex.concluido) return marcadas.reduce((a, b) => (a > b ? a : b));  // a mais recente
+  return ex.fimExec && ex.concluido ? ex.fimExec : null;
+}
+
 /** texto do tempo de execução de um exercício na sessão atual ("⏱ 4 min 12 s" ou "em andamento") */
 function duracaoExecTexto(ex) {
-  if (!ex || !ex.inicioExec) return "";
-  const ini = new Date(ex.inicioExec).getTime();
-  const fim = ex.fimExec ? new Date(ex.fimExec).getTime() : Date.now();
-  const seg = Math.max(0, Math.round((fim - ini) / 1000));
+  if (!ex) return "";
+  const ini = inicioExecDe(ex);
+  if (!ini) return "";
+  const fimISO = fimExecDe(ex);
+  const iniMs = new Date(ini).getTime();
+  const fim = fimISO ? new Date(fimISO).getTime() : Date.now();
+  const seg = Math.max(0, Math.round((fim - iniMs) / 1000));
   if (!seg) return "";
   const m = Math.floor(seg / 60), s = seg % 60;
   const txt = m > 0 ? `${m} min ${String(s).padStart(2, "0")} s` : `${s} s`;
-  return ex.fimExec ? txt : `${txt} (em andamento)`;
+  return fimISO ? txt : `${txt} (em andamento)`;
 }
 
 function exerciciosOrdenados(lista) {
@@ -2528,6 +2571,12 @@ function avisoCronometroExterno(aoConfirmar) {
 
 function concluirSessao(s, forcar) {
   if (!s) return;
+  // grava o início real (1ª série) e o fim (última série) antes de salvar
+  for (const ex of s.exercicios) {
+    const ini = inicioExecDe(ex), fim = fimExecDe(ex);
+    if (ini) ex.inicioExec = ini; else delete ex.inicioExec;
+    if (fim) ex.fimExec = fim; else delete ex.fimExec;
+  }
   const exercicios = s.exercicios.map(ex => ({
     exercicioId: ex.exercicioId,
     nome: ex.nome,
@@ -3084,8 +3133,8 @@ function editorProgressao(opts) {
   return `
   <div class="prog-box" style="${standalone ? "" : "margin-top:16px; padding-top:14px; border-top:1px solid var(--bg3)"}">
     <div class="row" style="align-items:center; gap:10px">
-      <div style="flex:1"><b style="font-size:15px">Sugerir aumento de carga</b>
-        <div class="tiny" style="margin-top:2px">Aviso quando o peso máximo repete por tempo demais.</div></div>
+      <div style="flex:1"><b style="font-size:15px">Sugerir aumento</b>
+        <div class="tiny" style="margin-top:2px">Aviso quando o desempenho repete por tempo demais.</div></div>
       <label class="sw" style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="${pfx}-ativo"${c.ativo ? " checked" : ""} style="width:20px;height:20px;accent-color:var(--acc)">
       </label>
@@ -3101,10 +3150,19 @@ function editorProgressao(opts) {
           <button type="button" data-modo="OU" class="${c.modo === "OU" ? "on" : ""}">Qualquer um (OU)</button>
         </div>
       </div>
+      <div class="pfcell full"><span class="lb">O que conta como progresso</span>
+        <div class="cseg-l" role="group" aria-label="Métrica de progressão" style="grid-template-columns:repeat(3,1fr)">
+          <button type="button" data-metrica="carga" class="${(c.metrica || "volume") === "carga" ? "on" : ""}">Carga</button>
+          <button type="button" data-metrica="reps" class="${(c.metrica || "volume") === "reps" ? "on" : ""}">Reps</button>
+          <button type="button" data-metrica="volume" class="${(c.metrica || "volume") === "volume" ? "on" : ""}">Volume</button>
+        </div>
+      </div>
     </div>
     <div class="tiny" style="margin-top:8px">
-      Padrão: <b>3 semanas E 3 execuções</b> com o mesmo peso. O modo <b>E</b> é mais seguro:
+      Padrão: <b>3 semanas E 3 execuções</b> sem progresso. O modo <b>E</b> é mais seguro:
       só sugere aumento a quem treinou o exercício com regularidade e cumpriu o tempo.
+      <br><b>Volume</b> = peso × repetições (recomendado): subir carga <i>ou</i> repetições conta como progresso.
+      <b>Carga</b> olha só o peso; <b>Reps</b> olha só as repetições.
       ${standalone ? "<br>Vale para <b>todos os perfis</b> deste aparelho." : ""}
     </div>
     ${standalone ? `<button class="btn pri block" id="fp-salvar" style="margin-top:12px">Salvar configuração</button>` : ""}
@@ -4729,7 +4787,7 @@ function renderGraficos(v) {
     if (lastP != null && prevP != null) arrow = lastP > prevP ? '<span style="color:var(--acc)">▲</span>' : lastP < prevP ? '<span style="color:var(--err)">▼</span>' : "";
     r.innerHTML = `<div style="flex:1; min-width:0"><div style="font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(ex.nome)}</div>
       <div class="tiny">Treino ${esc(ex.treinoId)} · ${p.length} sessão(ões)</div>
-      ${stag ? `<span class="mini-warn">⚠ Considere aumentar a carga · ${stag.dias} dias</span>` : ""}</div>
+      ${stag ? `<span class="mini-warn">⚠ Considere aumentar · ${stag.dias} dias</span>` : ""}</div>
       <div style="text-align:right"><b>${lastP != null ? lastP + " kg" : "–"}</b> ${arrow}</div>`;
     r.addEventListener("click", () => { state.chartEx.sel = ex.id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
     list.appendChild(r);
@@ -4913,6 +4971,12 @@ function renderFichas(v) {
     cfg.dataset.progModo = b.dataset.modo;
   }));
   cfg.dataset.progModo = progConfig().modo;
+  // segmento de métrica (Carga / Reps / Volume)
+  cfg.querySelectorAll("[data-metrica]").forEach(b => b.addEventListener("click", () => {
+    cfg.querySelectorAll("[data-metrica]").forEach(o => o.classList.toggle("on", o === b));
+    cfg.dataset.progMetrica = b.dataset.metrica;
+  }));
+  cfg.dataset.progMetrica = progConfig().metrica || "volume";
   $("#fp-salvar", cfg).addEventListener("click", () => {
     const at = $("#fp-ativo", cfg);
     setProgConfig({
@@ -4920,6 +4984,7 @@ function renderFichas(v) {
       semanas: parseInt($("#fp-semanas", cfg).value, 10) || PROG_PADRAO.semanas,
       vezes: parseInt($("#fp-vezes", cfg).value, 10) || PROG_PADRAO.vezes,
       modo: cfg.dataset.progModo === "OU" ? "OU" : "E",
+      metrica: ["carga", "reps", "volume"].includes(cfg.dataset.progMetrica) ? cfg.dataset.progMetrica : "volume",
     });
     toast("Configuração de progressão salva");
     render();
