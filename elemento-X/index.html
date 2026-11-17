@@ -138,18 +138,18 @@
       <label class="f"><span>Seu nome</span>
         <input type="text" id="m-nome" placeholder="Nome e sobrenome" autocomplete="name">
       </label>
-      <label class="f"><span>E-mail</span>
+      <label class="f"><span id="lbl-email">E-mail</span>
         <input type="email" id="m-email" placeholder="seu@email.com" inputmode="email">
       </label>
       <label class="f" style="display:flex; gap:9px; align-items:flex-start; cursor:pointer;
              background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:11px 13px">
         <input type="checkbox" id="m-sem-email" style="width:19px; height:19px; margin-top:1px; accent-color:var(--acc2); flex:none">
         <span style="margin:0; font-size:13.5px; color:var(--txt); font-weight:500; line-height:1.4">
-          Não tenho e-mail — estou usando o de outra pessoa
+          Não tenho e-mail próprio<br>
+          <span id="txt-sem-email" style="font-size:11.5px; color:var(--mut); font-weight:400">
+            Vou usar o e-mail de alguém da família
+          </span>
         </span>
-      </label>
-      <label class="f hidden" id="wrap-dono"><span>E-mail de quem?</span>
-        <input type="text" id="m-dono" placeholder="Nome de quem emprestou o e-mail" autocomplete="off">
       </label>
       <div id="extras-meus"></div>
       <button class="btn pri" type="submit" id="btn-meus">Entrar no sorteio</button>
@@ -430,7 +430,12 @@ function renderExtrasMeus() {
 }
 
 $("#m-sem-email").addEventListener("change", (e) => {
-  $("#wrap-dono").classList.toggle("hidden", !e.target.checked);
+  const on = e.target.checked;
+  $("#lbl-email").textContent = on ? "E-mail de quem vai te avisar" : "E-mail";
+  $("#m-email").placeholder = on ? "e-mail do familiar" : "seu@email.com";
+  $("#txt-sem-email").textContent = on
+    ? "Use o e-mail de alguém da família — o resultado vai para lá"
+    : "Vou usar o e-mail de alguém da família";
 });
 
 /* ---------- tela de entrada (código do evento) ---------- */
@@ -494,14 +499,13 @@ $("#form-meus").addEventListener("submit", async (e) => {
   const codigo = COD_EVENTO;
   const nome = $("#m-nome").value.trim();
   const semEmail = $("#m-sem-email").checked;
-  const dono = $("#m-dono").value.trim();
   const email = $("#m-email").value.trim();
   const re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
   if (!codigo) return aviso($("#msg-meus"), "Digite o código do evento.");
   if (!nome) return aviso($("#msg-meus"), "Digite seu nome.");
   if (!re.test(email)) return aviso($("#msg-meus"), "Digite um e-mail válido.");
-  if (semEmail && !dono) return aviso($("#msg-meus"), "Informe de quem é o e-mail.");
+  if (semEmail && !email) return aviso($("#msg-meus"), "Informe o e-mail de quem vai te avisar.");
 
   const extras = {};
   for (const c of EXTRA_CAMPOS) {
@@ -515,7 +519,7 @@ $("#form-meus").addEventListener("submit", async (e) => {
   btn.innerHTML = '<span class="spin"></span>Enviando…';
   try {
     const d = await apiPost({ acao: "cadastrar", nome, email,
-      codigo_evento: codigo, sem_email: semEmail, dono_email: dono, extras });
+      codigo_evento: codigo, sem_email: semEmail, dono_email: "", extras });
     if (!d.ok) throw new Error(d.erro || "não foi possível cadastrar");
     $("#ok-nome").textContent = d.nome || nome;
     mostrar("tela-ok");
@@ -753,7 +757,9 @@ function preencherAdm(d) {
   (d.participantes || []).forEach(p => {
     const div = document.createElement("div");
     div.className = "adm-row";
-    div.innerHTML = '<span class="nm">' + esc(p.nome) + '</span><span class="tag ' +
+    div.innerHTML = '<span class="nm">' + esc(p.nome) +
+      (p.sem_email ? ' <span style="font-size:10.5px; color:var(--mut)">(sem e-mail próprio)</span>' : '') +
+      '</span><span class="tag ' +
       (p.preencheu ? "ok" : "no") + '">' + (p.preencheu ? "preencheu" : "falta") + '</span>';
     lista.appendChild(div);
   });
