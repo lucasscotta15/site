@@ -158,7 +158,7 @@
     <h2>Quem é você?</h2>
     <p class="hint" id="txt-boas">Escolha seu nome na lista e preencha seus dados.</p>
     <div class="lista" id="lista-nomes"></div>
-    <button class="btn gh" type="button" id="ir-meus" style="margin-top:14px">Meu nome não está na lista</button>
+    <button class="btn gh hidden" type="button" id="ir-meus" style="margin-top:14px">Meu nome não está na lista</button>
   </section>
 
   <!-- ===== CADASTRO ===== -->
@@ -227,6 +227,16 @@
         <label class="f" style="margin-top:14px"><span>Lista de nomes (um por linha)</span>
           <textarea id="adm-nomes" style="min-height:130px" placeholder="Andressa&#10;Beatriz&#10;Carlos"></textarea>
         </label>
+        <label class="f" style="display:flex; gap:9px; align-items:flex-start; cursor:pointer;
+               background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:11px 13px">
+          <input type="checkbox" id="adm-lista-aberta" style="width:19px; height:19px; margin-top:1px; accent-color:var(--acc2); flex:none">
+          <span style="margin:0; font-size:13.5px; color:var(--txt); font-weight:500; line-height:1.4">
+            Mostrar a lista de nomes na tela inicial<br>
+            <span style="font-size:11.5px; color:var(--mut); font-weight:400">
+              Desmarcado (padrão): auto-cadastro — cada pessoa preenche o próprio nome em #meusDados
+            </span>
+          </span>
+        </label>
         <label class="f"><span>Código do evento (compartilhe com todos)</span>
           <input type="text" id="adm-codigo" placeholder="Ex.: FAMILIA2026"
                  style="text-transform:uppercase" autocapitalize="characters">
@@ -289,7 +299,7 @@ function mostrar(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false;
+let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false, LISTA_ABERTA = false;
 let nomeEscolhido = null, senhaAdm = "", confAdm = null;
 let logoB64 = null, fundoB64 = null, logoTipo = "", fundoTipo = "";
 
@@ -421,11 +431,20 @@ async function carregar() {
     aplicarImagens();
     sorteado = !!d.sorteado;
     NOMES = d.participantes || [];
+    LISTA_ABERTA = !!d.lista_aberta;
     desenharNomes();
     if (sorteado) {
       $("#tt-sub").textContent = "Sorteio realizado — consulte seu código";
       $("#tela-nome").classList.add("hidden");
       mostrar("tela-codigo");
+      return;
+    }
+    // AUTO-CADASTRO: sem lista aberta, a entrada é o formulário direto
+    if (!LISTA_ABERTA && !(location.hash || "").toLowerCase().includes("lista")) {
+      if ((location.hash || "").toLowerCase() !== "#meusdados") {
+        renderExtrasMeus();
+        mostrar("tela-meus");
+      }
     }
   } catch (e) {
     $("#lista-nomes").innerHTML =
@@ -437,6 +456,8 @@ async function carregar() {
 function desenharNomes() {
   const box = $("#lista-nomes");
   box.innerHTML = "";
+  if (!LISTA_ABERTA) { $("#tela-nome").classList.add("hidden"); return; }
+  $("#ir-meus").classList.remove("hidden");
   if (!NOMES.length) {
     box.innerHTML = '<p class="hint">Nenhum nome cadastrado ainda. Aguarde o organizador.</p>';
     return;
@@ -604,6 +625,10 @@ function preencherAdm(d) {
   $("#adm-sub").value = confAdm.subtitulo || "";
   $("#adm-boas").value = confAdm.texto_boas_vindas || "";
   $("#adm-ok").value = confAdm.texto_sucesso || "";
+  $("#adm-lista-aberta").checked = !!confAdm.lista_aberta;
+  // a aba pode vir como booleano ou string "SIM"/"NAO"
+  if (typeof confAdm.lista_aberta === "string")
+    $("#adm-lista-aberta").checked = confAdm.lista_aberta === "SIM";
   $("#adm-codigo").value = confAdm.codigo_evento || "";
   $("#adm-min").value = confAdm.min_participantes || 3;
   $("#adm-max").value = confAdm.max_participantes || 0;
@@ -627,6 +652,7 @@ $("#btn-salvar-lista").addEventListener("click", async () => {
   try {
     const c1 = await apiPost({ acao: "config", senha: senhaAdm,
       codigo_evento: $("#adm-codigo").value.trim().toUpperCase(),
+      lista_aberta: $("#adm-lista-aberta").checked ? "SIM" : "NAO",
       min_participantes: String($("#adm-min").value),
       max_participantes: String($("#adm-max").value) });
     if (!c1.ok) throw new Error(c1.erro);
