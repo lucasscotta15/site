@@ -201,6 +201,12 @@
         </div>
         <button class="btn gh" type="button" id="btn-salvar-lista">Salvar lista</button>
         <button class="btn pri" type="button" id="btn-sortear" style="margin-top:10px">Realizar sorteio</button>
+        <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--line)">
+          <p class="hint" style="margin-bottom:8px">Área de manutenção — use para limpar testes ou recomeçar.
+            <b>Não pode ser desfeito.</b></p>
+          <button class="btn gh" type="button" id="btn-reset" style="font-size:13px">↺ Apagar sorteio (manter participantes)</button>
+          <button class="btn gh" type="button" id="btn-limpar" style="font-size:13px; margin-top:8px; color:#fca5a5; border-color:rgba(248,113,113,.4)">🗑 Apagar tudo (participantes e sorteio)</button>
+        </div>
       </div>
 
       <div id="adm-tab-visual" class="hidden">
@@ -624,6 +630,28 @@ $("#btn-sortear").addEventListener("click", async () => {
     aviso($("#msg-adm"), String(e.message || e));
     btn.disabled = false; btn.textContent = "Realizar sorteio";
   }
+});
+
+/* --- reset / limpar --- */
+$("#btn-reset").addEventListener("click", async () => {
+  if (!confirm("Apagar o sorteio?\n\nOs participantes e os códigos continuam, mas o sorteio será refeito do zero.")) return;
+  try {
+    const d = await apiPost({ acao: "reset", senha: senhaAdm });
+    if (!d.ok) throw new Error(d.erro);
+    aviso($("#msg-adm"), d.mensagem || "Sorteio apagado.", "ok");
+    carregarAdm();
+  } catch (e) { aviso($("#msg-adm"), String(e.message || e)); }
+});
+
+$("#btn-limpar").addEventListener("click", async () => {
+  if (!confirm("APAGAR TUDO?\n\nIsso remove todos os participantes, os e-mails, o que preencheram e o resultado do sorteio. A aparência e os campos extras são mantidos.")) return;
+  if (!confirm("Tem certeza? Não há como recuperar.")) return;
+  try {
+    const d = await apiPost({ acao: "limpartudo", senha: senhaAdm });
+    if (!d.ok) throw new Error(d.erro);
+    aviso($("#msg-adm"), d.mensagem || "Tudo apagado.", "ok");
+    carregarAdm();
+  } catch (e) { aviso($("#msg-adm"), String(e.message || e)); }
 });
 
 function rota() {
