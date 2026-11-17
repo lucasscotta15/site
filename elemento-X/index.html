@@ -136,8 +136,24 @@
     <div class="msg" id="msg-meus"></div>
     <form id="form-meus">
       <label class="f"><span>Seu nome</span>
-        <input type="text" id="m-nome" placeholder="Nome e sobrenome" autocomplete="name">
+        <input type="text" id="m-nome" placeholder="Nome e sobrenome"
+               autocomplete="name" list="lista-sugestoes">
+        <datalist id="lista-sugestoes"></datalist>
+        <span id="hint-nome" style="display:none; margin-top:6px; font-size:12px; color:var(--mut)">
+          Já existe: <b id="hint-nome-quem" style="color:var(--acc2)"></b>
+          <button type="button" id="btn-sou-eu"
+                  style="background:none;border:none;color:var(--acc2);text-decoration:underline;
+                         font-size:12px;cursor:pointer;padding:0 0 0 4px">Sou eu</button>
+        </span>
       </label>
+      <div id="box-confirma" class="hidden" style="background:rgba(251,191,36,.1);
+           border:1px solid rgba(251,191,36,.4); border-radius:12px; padding:12px 14px; margin-bottom:12px">
+        <div style="font-size:13px; color:var(--txt); margin-bottom:9px">
+          Já existe <b id="conf-nomes"></b> neste sorteio. É você?
+        </div>
+        <button class="btn pri" type="button" id="btn-conf-sim" style="padding:9px; font-size:13px">Sim, sou eu</button>
+        <button class="btn gh" type="button" id="btn-conf-nao" style="padding:9px; font-size:13px; margin-top:7px">Não, sou outra pessoa</button>
+      </div>
       <label class="f"><span id="lbl-email">E-mail</span>
         <input type="email" id="m-email" placeholder="seu@email.com" inputmode="email">
       </label>
@@ -355,6 +371,8 @@ function mostrar(id) {
 
 let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false, LISTA_ABERTA = false;
 let COD_EVENTO = "";   // código digitado na tela de entrada
+let NOMES_DISP = [];   // nomes já cadastrados (autocomplete)
+let NOME_EXISTENTE = "";  // "sou eu" confirmado
 let nomeEscolhido = null, senhaAdm = "", codAdm = "", confAdm = null;
 let logoB64 = null, fundoB64 = null, logoTipo = "", fundoTipo = "";
 
@@ -429,6 +447,25 @@ function renderExtrasMeus() {
   });
 }
 
+$("#btn-sou-eu").addEventListener("click", () => {
+  const quem = $("#hint-nome-quem").textContent;
+  $("#m-nome").value = quem;
+  NOME_EXISTENTE = quem;
+  $("#hint-nome").style.display = "none";
+  $("#box-confirma").classList.add("hidden");
+});
+
+$("#btn-conf-sim").addEventListener("click", () => {
+  $("#box-confirma").classList.add("hidden");
+  enviarCadastro(true);
+});
+$("#btn-conf-nao").addEventListener("click", () => {
+  $("#box-confirma").classList.add("hidden");
+  NOME_EXISTENTE = "";
+  $("#hint-nome").style.display = "none";
+  aviso($("#msg-meus"), "Coloque seu nome completo, com sobrenome.", "ok");
+});
+
 $("#m-sem-email").addEventListener("change", (e) => {
   const on = e.target.checked;
   $("#lbl-email").textContent = on ? "E-mail de quem vai te avisar" : "E-mail";
@@ -436,6 +473,74 @@ $("#m-sem-email").addEventListener("change", (e) => {
   $("#txt-sem-email").textContent = on
     ? "Use o e-mail de alguém da família — o resultado vai para lá"
     : "Vou usar o e-mail de alguém da família";
+});
+
+/* ---------- autocomplete de nomes ---------- */
+async function carregarNomes(cod) {
+  try {
+    const d = await apiGet({ acao: "nomes", codigo_evento: cod });
+    NOMES_DISP = (d && d.ok && d.nomes) ? d.nomes : [];
+  } catch (e) { NOMES_DISP = []; }
+}
+
+function normNome(s) {
+  return String(s || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+}
+
+function dist(a, b) {
+  a = normNome(a); b = normNome(b);
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function parecido(nome) {
+  const alvo = normNome(nome);
+  if (alvo.length < 3) return null;
+  const p1 = alvo.split(" ")[0];
+  for (const o of NOMES_DISP) {
+    const n = normNome(o.nome);
+    if (!n || n === alvo) continue;
+    const apelido = n.split(" ")[0] === p1;
+    const quase = dist(n, alvo) <= Math.max(1, Math.floor(alvo.length / 6));
+    if ((apelido || quase) && o.preencheu) return o.nome;
+  }
+  return null;
+}
+
+function atualizaSugestoes() {
+  const dl = $("#lista-sugestoes");
+  if (!dl) return;
+  dl.innerHTML = "";
+  NOMES_DISP.filter(o => !o.preencheu).forEach(o => {
+    const opt = document.createElement("option");
+    opt.value = o.nome;
+    dl.appendChild(opt);
+  });
+}
+
+$("#m-nome").addEventListener("input", () => {
+  const v = $("#m-nome").value;
+  NOME_EXISTENTE = "";
+  $("#box-confirma").classList.add("hidden");
+  const achou = parecido(v);
+  const hint = $("#hint-nome");
+  if (achou) {
+    $("#hint-nome-quem").textContent = achou;
+    hint.style.display = "inline-block";
+  } else {
+    hint.style.display = "none";
+  }
 });
 
 /* ---------- tela de entrada (código do evento) ---------- */
@@ -463,6 +568,7 @@ async function entrarComCodigo(cod) {
     $("#ev-badge").classList.remove("hidden");
     $("#ev-codigo-badge").textContent = c;
     renderExtrasMeus();
+    carregarNomes(c).then(atualizaSugestoes);
     if (sorteado) { mostrar("tela-codigo"); }
     else if (LISTA_ABERTA) { desenharNomes(); mostrar("tela-nome"); }
     else { mostrar("tela-meus"); }
@@ -493,8 +599,12 @@ $("#ir-meus").addEventListener("click", () => {
   mostrar("tela-meus");
 });
 
-$("#form-meus").addEventListener("submit", async (e) => {
+$("#form-meus").addEventListener("submit", (e) => {
   e.preventDefault();
+  enviarCadastro(false);
+});
+
+async function enviarCadastro(confirmado) {
   const btn = $("#btn-meus");
   const codigo = COD_EVENTO;
   const nome = $("#m-nome").value.trim();
@@ -505,7 +615,6 @@ $("#form-meus").addEventListener("submit", async (e) => {
   if (!codigo) return aviso($("#msg-meus"), "Digite o código do evento.");
   if (!nome) return aviso($("#msg-meus"), "Digite seu nome.");
   if (!re.test(email)) return aviso($("#msg-meus"), "Digite um e-mail válido.");
-  if (semEmail && !email) return aviso($("#msg-meus"), "Informe o e-mail de quem vai te avisar.");
 
   const extras = {};
   for (const c of EXTRA_CAMPOS) {
@@ -519,8 +628,19 @@ $("#form-meus").addEventListener("submit", async (e) => {
   btn.innerHTML = '<span class="spin"></span>Enviando…';
   try {
     const d = await apiPost({ acao: "cadastrar", nome, email,
-      codigo_evento: codigo, sem_email: semEmail, dono_email: "", extras });
+      codigo_evento: codigo, sem_email: semEmail, dono_email: "",
+      confirmar_existente: !!confirmado, extras });
+
+    // backend pediu confirmação: existe alguém com nome parecido
+    if (!d.ok && d.precisa_confirmar) {
+      const lista = (d.parecidos || []).map(p => p.nome).join(", ");
+      $("#conf-nomes").textContent = lista;
+      $("#box-confirma").classList.remove("hidden");
+      aviso($("#msg-meus"), "Confirme se é você ou use seu nome completo.");
+      return;
+    }
     if (!d.ok) throw new Error(d.erro || "não foi possível cadastrar");
+
     $("#ok-nome").textContent = d.nome || nome;
     mostrar("tela-ok");
   } catch (err) {
@@ -529,7 +649,7 @@ $("#form-meus").addEventListener("submit", async (e) => {
     btn.disabled = false;
     btn.textContent = "Entrar no sorteio";
   }
-});
+}
 
 async function carregar() {
   try {
@@ -634,6 +754,8 @@ $("#form-cad").addEventListener("submit", async (e) => {
 
 $("#btn-voltar").addEventListener("click", () => {
   limpa($("#msg-cad"));
+  $("#box-confirma").classList.add("hidden");
+  $("#hint-nome").style.display = "none";
   mostrar(LISTA_ABERTA ? "tela-nome" : (COD_EVENTO ? "tela-meus" : "tela-entrada"));
 });
 $("#btn-ja-tenho").addEventListener("click", () => { limpa($("#msg-cod")); mostrar("tela-codigo"); });
@@ -796,7 +918,7 @@ function preencherAdm(d) {
 
 $("#btn-salvar-lista").addEventListener("click", async () => {
   const nomes = $("#adm-nomes").value.split("\n").map(s => s.trim()).filter(Boolean);
-  if (nomes.length < 3) return aviso($("#msg-adm"), "Mínimo de 3 nomes.");
+  // lista pode ficar vazia ou parcial — o mínimo é exigido só na hora do sorteio
   const btn = $("#btn-salvar-lista");
   btn.disabled = true;
   try {
