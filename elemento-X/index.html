@@ -122,11 +122,43 @@
     </div>
   </header>
 
+  <!-- ===== MEUS DADOS (auto-cadastro rápido) ===== -->
+  <section id="tela-meus" class="card hidden">
+    <h2>Meus dados</h2>
+    <p class="hint">Preencha para entrar no sorteio. Você só precisa fazer isso uma vez.</p>
+    <div class="msg" id="msg-meus"></div>
+    <form id="form-meus">
+      <label class="f"><span>Código do evento</span>
+        <input type="text" id="m-codigo" placeholder="Ex.: FAMILIA2026"
+               autocapitalize="characters" spellcheck="false" style="text-transform:uppercase">
+      </label>
+      <label class="f"><span>Seu nome</span>
+        <input type="text" id="m-nome" placeholder="Nome e sobrenome" autocomplete="name">
+      </label>
+      <label class="f"><span>E-mail</span>
+        <input type="email" id="m-email" placeholder="seu@email.com" inputmode="email">
+      </label>
+      <label class="f" style="display:flex; gap:9px; align-items:flex-start; cursor:pointer;
+             background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:11px 13px">
+        <input type="checkbox" id="m-sem-email" style="width:19px; height:19px; margin-top:1px; accent-color:var(--acc2); flex:none">
+        <span style="margin:0; font-size:13.5px; color:var(--txt); font-weight:500; line-height:1.4">
+          Não tenho e-mail — estou usando o de outra pessoa
+        </span>
+      </label>
+      <label class="f hidden" id="wrap-dono"><span>E-mail de quem?</span>
+        <input type="text" id="m-dono" placeholder="Nome de quem emprestou o e-mail" autocomplete="off">
+      </label>
+      <div id="extras-meus"></div>
+      <button class="btn pri" type="submit" id="btn-meus">Entrar no sorteio</button>
+    </form>
+  </section>
+
   <!-- ===== ESCOLHER NOME ===== -->
   <section id="tela-nome" class="card">
     <h2>Quem é você?</h2>
     <p class="hint" id="txt-boas">Escolha seu nome na lista e preencha seus dados.</p>
     <div class="lista" id="lista-nomes"></div>
+    <button class="btn gh" type="button" id="ir-meus" style="margin-top:14px">Meu nome não está na lista</button>
   </section>
 
   <!-- ===== CADASTRO ===== -->
@@ -195,12 +227,17 @@
         <label class="f" style="margin-top:14px"><span>Lista de nomes (um por linha)</span>
           <textarea id="adm-nomes" style="min-height:130px" placeholder="Andressa&#10;Beatriz&#10;Carlos"></textarea>
         </label>
+        <label class="f"><span>Código do evento (compartilhe com todos)</span>
+          <input type="text" id="adm-codigo" placeholder="Ex.: FAMILIA2026"
+                 style="text-transform:uppercase" autocapitalize="characters">
+        </label>
         <div class="grid2">
           <label class="f"><span>Mínimo</span><input type="number" id="adm-min" min="3" value="3"></label>
           <label class="f"><span>Máximo (0 = livre)</span><input type="number" id="adm-max" min="0" value="0"></label>
         </div>
         <button class="btn gh" type="button" id="btn-salvar-lista">Salvar lista</button>
         <button class="btn pri" type="button" id="btn-sortear" style="margin-top:10px">Realizar sorteio</button>
+        <button class="btn gh" type="button" id="btn-enviar" style="margin-top:8px">✉ Enviar resultados por e-mail</button>
         <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--line)">
           <p class="hint" style="margin-bottom:8px">Área de manutenção — use para limpar testes ou recomeçar.
             <b>Não pode ser desfeito.</b></p>
@@ -245,7 +282,7 @@ const API = (new URLSearchParams(location.search).get("api") === "local")
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const TELAS = ["tela-nome","tela-cadastro","tela-ok","tela-codigo","tela-resultado","tela-adm"];
+const TELAS = ["tela-meus","tela-nome","tela-cadastro","tela-ok","tela-codigo","tela-resultado","tela-adm"];
 
 function mostrar(id) {
   TELAS.forEach(t => $("#" + t).classList.toggle("hidden", t !== id));
@@ -308,6 +345,73 @@ async function aplicarImagens() {
     if (u) { $("#fundo").style.backgroundImage = 'url("' + u + '")'; $("#fundo").classList.add("on"); }
   }
 }
+
+/* ---------- #meusDados ---------- */
+function renderExtrasMeus() {
+  const box = $("#extras-meus");
+  box.innerHTML = "";
+  EXTRA_CAMPOS.forEach(c => {
+    const l = document.createElement("label");
+    l.className = "f";
+    l.innerHTML = '<span>' + esc(c.rotulo) + (c.obrigatorio ? " *" : "") + '</span>';
+    const inp = c.tipo === "textarea" ? document.createElement("textarea")
+                                      : document.createElement("input");
+    if (inp.tagName === "INPUT") inp.type = "text";
+    inp.placeholder = c.placeholder || "";
+    inp.id = "mx-" + c.id;
+    l.appendChild(inp);
+    box.appendChild(l);
+  });
+}
+
+$("#m-sem-email").addEventListener("change", (e) => {
+  $("#wrap-dono").classList.toggle("hidden", !e.target.checked);
+});
+
+$("#ir-meus").addEventListener("click", () => {
+  limpa($("#msg-meus"));
+  renderExtrasMeus();
+  mostrar("tela-meus");
+});
+
+$("#form-meus").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("#btn-meus");
+  const codigo = $("#m-codigo").value.trim();
+  const nome = $("#m-nome").value.trim();
+  const semEmail = $("#m-sem-email").checked;
+  const dono = $("#m-dono").value.trim();
+  const email = $("#m-email").value.trim();
+  const re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+  if (!codigo) return aviso($("#msg-meus"), "Digite o código do evento.");
+  if (!nome) return aviso($("#msg-meus"), "Digite seu nome.");
+  if (!re.test(email)) return aviso($("#msg-meus"), "Digite um e-mail válido.");
+  if (semEmail && !dono) return aviso($("#msg-meus"), "Informe de quem é o e-mail.");
+
+  const extras = {};
+  for (const c of EXTRA_CAMPOS) {
+    const el = $("#mx-" + c.id);
+    const v = el ? el.value.trim() : "";
+    if (c.obrigatorio && !v) return aviso($("#msg-meus"), "Preencha: " + c.rotulo);
+    extras[c.id] = v;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Enviando…';
+  try {
+    const d = await apiPost({ acao: "cadastrar", nome, email,
+      codigo_evento: codigo, sem_email: semEmail, dono_email: dono, extras });
+    if (!d.ok) throw new Error(d.erro || "não foi possível cadastrar");
+    $("#ok-nome").textContent = d.nome || nome;
+    mostrar("tela-ok");
+  } catch (err) {
+    aviso($("#msg-meus"), String(err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Entrar no sorteio";
+  }
+});
 
 async function carregar() {
   try {
@@ -489,6 +593,7 @@ function preencherAdm(d) {
     lista.appendChild(div);
   });
 
+  $("#btn-enviar").disabled = !d.sorteado;
   const btn = $("#btn-sortear");
   btn.disabled = d.sorteado || d.preencheram < d.total || d.total < 3;
   btn.textContent = d.sorteado ? "Sorteio já realizado" :
@@ -499,6 +604,7 @@ function preencherAdm(d) {
   $("#adm-sub").value = confAdm.subtitulo || "";
   $("#adm-boas").value = confAdm.texto_boas_vindas || "";
   $("#adm-ok").value = confAdm.texto_sucesso || "";
+  $("#adm-codigo").value = confAdm.codigo_evento || "";
   $("#adm-min").value = confAdm.min_participantes || 3;
   $("#adm-max").value = confAdm.max_participantes || 0;
   $("#adm-nomes").value = (d.participantes || []).map(p => p.nome).join("\n");
@@ -520,6 +626,7 @@ $("#btn-salvar-lista").addEventListener("click", async () => {
   btn.disabled = true;
   try {
     const c1 = await apiPost({ acao: "config", senha: senhaAdm,
+      codigo_evento: $("#adm-codigo").value.trim().toUpperCase(),
       min_participantes: String($("#adm-min").value),
       max_participantes: String($("#adm-max").value) });
     if (!c1.ok) throw new Error(c1.erro);
@@ -654,11 +761,30 @@ $("#btn-limpar").addEventListener("click", async () => {
   } catch (e) { aviso($("#msg-adm"), String(e.message || e)); }
 });
 
+$("#btn-enviar").addEventListener("click", async () => {
+  if (!confirm("Enviar o resultado por e-mail para todos os participantes?\n\nCada pessoa recebe um e-mail individual.")) return;
+  const btn = $("#btn-enviar");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Enviando…';
+  try {
+    const d = await apiPost({ acao: "enviar", senha: senhaAdm });
+    if (!d.ok) throw new Error(d.erro || "falhou");
+    let m = d.enviados + " e-mail(s) enviado(s).";
+    if (d.falhas) m += " " + d.falhas + " falha(s).";
+    if (d.sem_email) m += " " + d.sem_email + " sem e-mail.";
+    aviso($("#msg-adm"), m, "ok");
+  } catch (e) {
+    aviso($("#msg-adm"), String(e.message || e));
+  } finally { btn.disabled = false; btn.textContent = "✉ Enviar resultados por e-mail"; }
+});
+
 function rota() {
   const h = (location.hash || "").toLowerCase();
   if (h === "#adm") { mostrar("tela-adm"); return; }
   if (h === "#codigo") { mostrar("tela-codigo"); return; }
   if (h === "#lista") { mostrar("tela-nome"); return; }
+  if (h === "#meusdados" || h === "#meus-dados") {
+    renderExtrasMeus(); mostrar("tela-meus"); return;
+  }
   carregar();
 }
 window.addEventListener("hashchange", rota);
