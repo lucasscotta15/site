@@ -124,14 +124,17 @@
 
   <!-- ===== MEUS DADOS (auto-cadastro rápido) ===== -->
   <section id="tela-meus" class="card hidden">
+    <div id="ev-badge" class="hidden" style="display:inline-flex; align-items:center; gap:6px;
+         background:rgba(74,222,128,.12); border:1px solid rgba(74,222,128,.35);
+         border-radius:999px; padding:5px 12px; margin-bottom:12px; font-size:12px; color:var(--acc2)">
+      <span>Evento:</span><b id="ev-codigo-badge" style="letter-spacing:.5px"></b>
+      <button type="button" id="ev-trocar" style="background:none;border:none;color:var(--mut);
+              font-size:11px;cursor:pointer;padding:0 0 0 4px;text-decoration:underline">trocar</button>
+    </div>
     <h2>Meus dados</h2>
     <p class="hint">Preencha para entrar no sorteio. Você só precisa fazer isso uma vez.</p>
     <div class="msg" id="msg-meus"></div>
     <form id="form-meus">
-      <label class="f"><span>Código do evento</span>
-        <input type="text" id="m-codigo" placeholder="Ex.: FAMILIA2026"
-               autocapitalize="characters" spellcheck="false" style="text-transform:uppercase">
-      </label>
       <label class="f"><span>Seu nome</span>
         <input type="text" id="m-nome" placeholder="Nome e sobrenome" autocomplete="name">
       </label>
@@ -153,8 +156,23 @@
     </form>
   </section>
 
+  <!-- ===== ENTRADA: CÓDIGO DO EVENTO ===== -->
+  <section id="tela-entrada" class="card hidden">
+    <h2>Qual é o seu evento?</h2>
+    <p class="hint">Digite o código que o organizador enviou.</p>
+    <div class="msg" id="msg-ent"></div>
+    <form id="form-ent">
+      <label class="f"><span>Código do evento</span>
+        <input type="text" id="e-codigo" placeholder="Ex.: FAMILIA2026" maxlength="24"
+               autocapitalize="characters" spellcheck="false" autofocus
+               style="text-transform:uppercase; letter-spacing:1px; text-align:center; font-size:17px">
+      </label>
+      <button class="btn pri" type="submit" id="btn-ent">Entrar</button>
+    </form>
+  </section>
+
   <!-- ===== ESCOLHER NOME ===== -->
-  <section id="tela-nome" class="card">
+  <section id="tela-nome" class="card hidden">
     <h2>Quem é você?</h2>
     <p class="hint" id="txt-boas">Escolha seu nome na lista e preencha seus dados.</p>
     <div class="lista" id="lista-nomes"></div>
@@ -328,7 +346,7 @@ const API = (new URLSearchParams(location.search).get("api") === "local")
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const TELAS = ["tela-meus","tela-nome","tela-cadastro","tela-ok","tela-codigo","tela-resultado","tela-adm"];
+const TELAS = ["tela-entrada","tela-meus","tela-nome","tela-cadastro","tela-ok","tela-codigo","tela-resultado","tela-adm"];
 
 function mostrar(id) {
   TELAS.forEach(t => $("#" + t).classList.toggle("hidden", t !== id));
@@ -336,6 +354,7 @@ function mostrar(id) {
 }
 
 let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false, LISTA_ABERTA = false;
+let COD_EVENTO = "";   // código digitado na tela de entrada
 let nomeEscolhido = null, senhaAdm = "", codAdm = "", confAdm = null;
 let logoB64 = null, fundoB64 = null, logoTipo = "", fundoTipo = "";
 
@@ -376,7 +395,7 @@ function aplicarConf(c) {
 
 async function carregarImagem(chave) {
   try {
-    const d = await apiGet({ acao: "imagem", chave });
+    const d = await apiGet({ acao: "imagem", chave, evento: COD_EVENTO || "" });
     if (!d.ok) return null;
     return "data:" + d.tipo + ";base64," + d.base64;
   } catch (e) { return null; }
@@ -414,6 +433,55 @@ $("#m-sem-email").addEventListener("change", (e) => {
   $("#wrap-dono").classList.toggle("hidden", !e.target.checked);
 });
 
+/* ---------- tela de entrada (código do evento) ---------- */
+function guardaCodigo(c) {
+  try { localStorage.setItem("ex_codigo", c); } catch (e) {}
+}
+function leCodigoSalvo() {
+  try { return localStorage.getItem("ex_codigo") || ""; } catch (e) { return ""; }
+}
+
+async function entrarComCodigo(cod) {
+  const c = String(cod || "").trim().toUpperCase();
+  limpa($("#msg-ent"));
+  if (!c) return aviso($("#msg-ent"), "Digite o código do evento.");
+  try {
+    const d = await apiGet({ codigo_evento: c });
+    if (!d.ok) throw new Error(d.erro || "evento não encontrado");
+    COD_EVENTO = c;
+    guardaCodigo(c);
+    aplicarConf(d.conf);
+    aplicarImagens();
+    sorteado = !!d.sorteado;
+    NOMES = d.participantes || [];
+    LISTA_ABERTA = !!d.lista_aberta;
+    $("#ev-badge").classList.remove("hidden");
+    $("#ev-codigo-badge").textContent = c;
+    renderExtrasMeus();
+    if (sorteado) { mostrar("tela-codigo"); }
+    else if (LISTA_ABERTA) { desenharNomes(); mostrar("tela-nome"); }
+    else { mostrar("tela-meus"); }
+  } catch (e) {
+    aviso($("#msg-ent"), String(e.message || e));
+    COD_EVENTO = "";
+  }
+}
+
+$("#form-ent").addEventListener("submit", (e) => {
+  e.preventDefault();
+  entrarComCodigo($("#e-codigo").value);
+});
+
+$("#ev-trocar").addEventListener("click", () => {
+  COD_EVENTO = "";
+  guardaCodigo("");
+  $("#e-codigo").value = "";
+  $("#ev-badge").classList.add("hidden");
+  limpa($("#msg-ent"));
+  mostrar("tela-entrada");
+  setTimeout(() => { const el = $("#e-codigo"); if (el) el.focus(); }, 120);
+});
+
 $("#ir-meus").addEventListener("click", () => {
   limpa($("#msg-meus"));
   renderExtrasMeus();
@@ -423,7 +491,7 @@ $("#ir-meus").addEventListener("click", () => {
 $("#form-meus").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = $("#btn-meus");
-  const codigo = $("#m-codigo").value.trim();
+  const codigo = COD_EVENTO;
   const nome = $("#m-nome").value.trim();
   const semEmail = $("#m-sem-email").checked;
   const dono = $("#m-dono").value.trim();
@@ -461,29 +529,17 @@ $("#form-meus").addEventListener("submit", async (e) => {
 
 async function carregar() {
   try {
-    const cod = new URLSearchParams(location.search).get("ev") ||
-                (location.hash.match(/ev=([A-Za-z0-9]+)/) || [])[1] || "";
-    const d = await apiGet(cod ? { codigo_evento: cod } : {});
-    if (!d.ok) throw new Error(d.erro || "erro");
-    aplicarConf(d.conf);
-    aplicarImagens();
-    sorteado = !!d.sorteado;
-    NOMES = d.participantes || [];
-    LISTA_ABERTA = !!d.lista_aberta;
-    desenharNomes();
-    if (sorteado) {
-      $("#tt-sub").textContent = "Sorteio realizado — consulte seu código";
-      $("#tela-nome").classList.add("hidden");
-      mostrar("tela-codigo");
-      return;
-    }
-    // AUTO-CADASTRO: sem lista aberta, a entrada é o formulário direto
-    if (!LISTA_ABERTA && !(location.hash || "").toLowerCase().includes("lista")) {
-      if ((location.hash || "").toLowerCase() !== "#meusdados") {
-        renderExtrasMeus();
-        mostrar("tela-meus");
-      }
-    }
+    // 1. código vindo da URL (?ev=CODIGO ou #ev=CODIGO)
+    const daUrl = new URLSearchParams(location.search).get("ev") ||
+                  (location.hash.match(/ev=([A-Za-z0-9]+)/i) || [])[1] || "";
+    const salvo = leCodigoSalvo();
+    const cod = (daUrl || salvo || "").toUpperCase();
+
+    // 2. sem código: pede o código do evento (primeira coisa da tela)
+    if (!cod) { mostrar("tela-entrada"); return; }
+
+    // 3. com código: valida e já entra
+    await entrarComCodigo(cod);
   } catch (e) {
     $("#lista-nomes").innerHTML =
       '<p class="hint" style="color:var(--err)">Não foi possível carregar.<br>' +
@@ -572,7 +628,10 @@ $("#form-cad").addEventListener("submit", async (e) => {
   }
 });
 
-$("#btn-voltar").addEventListener("click", () => { limpa($("#msg-cad")); mostrar("tela-nome"); });
+$("#btn-voltar").addEventListener("click", () => {
+  limpa($("#msg-cad"));
+  mostrar(LISTA_ABERTA ? "tela-nome" : (COD_EVENTO ? "tela-meus" : "tela-entrada"));
+});
 $("#btn-ja-tenho").addEventListener("click", () => { limpa($("#msg-cod")); mostrar("tela-codigo"); });
 
 $("#form-cod").addEventListener("submit", async (e) => {
@@ -607,7 +666,8 @@ $("#form-cod").addEventListener("submit", async (e) => {
 $("#btn-inicio").addEventListener("click", () => {
   $("#f-codigo").value = "";
   limpa($("#msg-cod"));
-  mostrar(sorteado ? "tela-codigo" : "tela-nome");
+  if (!COD_EVENTO) { mostrar("tela-entrada"); return; }
+  mostrar(sorteado ? "tela-codigo" : (LISTA_ABERTA ? "tela-nome" : "tela-meus"));
 });
 
 /* ================= ADMIN ================= */
