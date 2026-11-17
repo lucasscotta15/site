@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Elemento-X</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>">
+<style>
+  :root{
+    --bg:#0b1f1a; --bg2:#112b24; --card:#16362d; --line:#215043;
+    --txt:#eaf6f1; --mut:#93b3a8; --acc:#4ade80; --acc2:#22c55e;
+    --warn:#fbbf24; --err:#f87171; --blue:#60a5fa;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--txt);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; min-height:100%}
+  body{background:
+    radial-gradient(1100px 600px at 12% -8%, rgba(74,222,128,.16), transparent 60%),
+    radial-gradient(900px 520px at 92% 8%, rgba(96,165,250,.12), transparent 62%),
+    var(--bg); padding:0 0 40px}
+  #fundo{position:fixed; inset:0; z-index:-1; background-size:cover;
+    background-position:center; opacity:0; transition:opacity .6s}
+  #fundo.on{opacity:.28}
+  #fundo::after{content:""; position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(11,31,26,.55), rgba(11,31,26,.92))}
+  .wrap{max-width:560px; margin:0 auto; padding:22px 16px 0; position:relative}
+  header.hero{display:flex; align-items:center; gap:13px; margin:6px 0 18px}
+  .emoji{width:56px; height:56px; flex:none; border-radius:18px; display:flex;
+    align-items:center; justify-content:center; font-size:30px; overflow:hidden;
+    background:linear-gradient(150deg, rgba(74,222,128,.26), rgba(96,165,250,.18));
+    border:1px solid var(--line)}
+  .emoji img{width:100%; height:100%; object-fit:cover}
+  h1{font-size:23px; margin:0; letter-spacing:-.4px; line-height:1.1}
+  .sub{font-size:13px; color:var(--mut); margin-top:3px}
+  .card{background:linear-gradient(180deg, rgba(22,54,45,.96), rgba(17,43,36,.96));
+    border:1px solid var(--line); border-radius:18px; padding:18px;
+    margin-bottom:14px; backdrop-filter:blur(6px)}
+  .card h2{font-size:15.5px; margin:0 0 4px}
+  .hint{font-size:12.5px; color:var(--mut); line-height:1.45; margin:0 0 12px}
+  .lista{display:flex; flex-wrap:wrap; gap:8px}
+  .nome{appearance:none; border:1px solid var(--line); background:var(--bg2);
+    color:var(--txt); border-radius:12px; padding:11px 15px; font-size:14.5px;
+    font-weight:600; cursor:pointer; transition:.15s}
+  .nome:hover{border-color:var(--acc2); background:#1a4034}
+  .nome.on{background:linear-gradient(150deg,var(--acc2),var(--acc));
+    color:#08211a; border-color:transparent}
+  .nome:disabled{opacity:.42; cursor:not-allowed}
+  .nome.ok::after{content:" ✓"; font-size:12px}
+  label.f{display:block; margin:0 0 12px}
+  label.f > span{display:block; font-size:12.5px; color:var(--mut); margin-bottom:6px;
+    font-weight:600; letter-spacing:.2px}
+  input,textarea,select{width:100%; background:#0e2620; color:var(--txt);
+    border:1px solid var(--line); border-radius:12px; padding:13px 14px;
+    font-size:15px; font-family:inherit; outline:none; transition:.15s}
+  input:focus,textarea:focus{border-color:var(--acc2); box-shadow:0 0 0 3px rgba(74,222,128,.12)}
+  textarea{resize:vertical; min-height:76px}
+  .btn{width:100%; border:0; border-radius:14px; padding:15px; font-size:15.5px;
+    font-weight:700; cursor:pointer; transition:.15s; font-family:inherit}
+  .btn.pri{background:linear-gradient(150deg,var(--acc2),var(--acc)); color:#08211a}
+  .btn.pri:hover{filter:brightness(1.07)}
+  .btn.gh{background:var(--bg2); color:var(--txt); border:1px solid var(--line)}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  .msg{border-radius:12px; padding:12px 14px; font-size:13.5px; line-height:1.45;
+    margin-bottom:12px; display:none}
+  .msg.show{display:block}
+  .msg.err{background:rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.4); color:#fecaca}
+  .msg.ok{background:rgba(74,222,128,.12); border:1px solid rgba(74,222,128,.4); color:#bbf7d0}
+  .resultado{text-align:center; padding:26px 18px}
+  .resultado .big{font-size:26px; font-weight:800; letter-spacing:-.6px; line-height:1.2;
+    background:linear-gradient(150deg,var(--acc),var(--blue));
+    -webkit-background-clip:text; background-clip:text; color:transparent}
+  .resultado .emoji-grande{font-size:52px; margin-bottom:10px}
+  .detalhe{background:rgba(74,222,128,.07); border:1px solid rgba(74,222,128,.28);
+    border-radius:14px; padding:14px; margin-top:16px; text-align:left}
+  .detalhe .l{font-size:11.5px; color:var(--mut); text-transform:uppercase;
+    letter-spacing:.6px; font-weight:700}
+  .detalhe .v{font-size:16px; font-weight:650; margin-top:2px}
+  .detalhe .l:not(:first-child){margin-top:12px}
+  .foot{text-align:center; font-size:11.5px; color:var(--mut); margin-top:22px; line-height:1.5}
+  .spin{width:15px; height:15px; border:2px solid rgba(255,255,255,.25);
+    border-top-color:#08211a; border-radius:50%; display:inline-block;
+    animation:sp .7s linear infinite; vertical-align:-2px; margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .adm-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0;
+    border-bottom:1px solid var(--line); font-size:14px}
+  .adm-row:last-child{border:0}
+  .adm-row .nm{font-weight:650}
+  .tag{font-size:11px; padding:3px 8px; border-radius:999px; font-weight:700}
+  .tag.ok{background:rgba(74,222,128,.16); color:var(--acc)}
+  .tag.no{background:rgba(251,191,36,.14); color:var(--warn)}
+  .hidden{display:none !important}
+  .codigo-form{display:flex; gap:8px}
+  .codigo-form input{text-transform:uppercase; letter-spacing:1.5px; font-weight:700}
+  .codigo-form .btn{width:auto; padding:0 20px; flex:none}
+  .tabs{display:flex; gap:6px; margin-bottom:14px}
+  .tab{flex:1; padding:9px; border-radius:11px; border:1px solid var(--line);
+    background:var(--bg2); color:var(--mut); font-size:12.5px; font-weight:700; cursor:pointer}
+  .tab.on{background:rgba(74,222,128,.14); color:var(--acc); border-color:rgba(74,222,128,.4)}
+  .campo-extra{display:flex; gap:6px; align-items:center; margin-bottom:8px;
+    padding:9px; border:1px solid var(--line); border-radius:11px; background:var(--bg2)}
+  .campo-extra input[type=text]{padding:8px 10px; font-size:13px}
+  .campo-extra input[type=checkbox]{width:18px; height:18px; flex:none; accent-color:var(--acc2)}
+  .campo-extra .del{border:0; background:rgba(248,113,113,.15); color:#fca5a5;
+    border-radius:8px; padding:7px 10px; cursor:pointer; font-size:13px}
+  .img-prev{width:100%; height:110px; border-radius:12px; border:1px dashed var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--mut);
+    background:var(--bg2); background-size:cover; background-position:center; margin-top:8px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+</style>
+</head>
+<body>
+<div id="fundo"></div>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="emoji" id="logo-box">🎁</div>
+    <div>
+      <h1 id="tt-evento">Elemento-X</h1>
+      <div class="sub" id="tt-sub">Sorteio oculto entre participantes</div>
+    </div>
+  </header>
+
+  <!-- ===== ESCOLHER NOME ===== -->
+  <section id="tela-nome" class="card">
+    <h2>Quem é você?</h2>
+    <p class="hint" id="txt-boas">Escolha seu nome na lista e preencha seus dados.</p>
+    <div class="lista" id="lista-nomes"></div>
+  </section>
+
+  <!-- ===== CADASTRO ===== -->
+  <section id="tela-cadastro" class="card hidden">
+    <h2 id="cad-titulo">Seus dados</h2>
+    <p class="hint" id="cad-hint">Preencha para entrar no sorteio.</p>
+    <div class="msg" id="msg-cad"></div>
+    <form id="form-cad" autocomplete="on">
+      <label class="f"><span>E-mail</span>
+        <input type="email" id="f-email" required placeholder="seu@email.com" inputmode="email">
+      </label>
+      <div id="extras-box"></div>
+      <button class="btn pri" type="submit" id="btn-cad">Entrar no sorteio</button>
+      <button class="btn gh" type="button" id="btn-voltar" style="margin-top:8px">Escolher outro nome</button>
+    </form>
+  </section>
+
+  <!-- ===== OK ===== -->
+  <section id="tela-ok" class="card hidden resultado">
+    <div class="emoji-grande">✅</div>
+    <div class="big">Pronto, <span id="ok-nome"></span>!</div>
+    <p class="hint" id="txt-ok" style="margin-top:10px">Seus dados foram registrados.</p>
+    <button class="btn gh" type="button" id="btn-ja-tenho">Já tenho meu código</button>
+  </section>
+
+  <!-- ===== CÓDIGO ===== -->
+  <section id="tela-codigo" class="card hidden">
+    <h2>Consultar meu sorteio</h2>
+    <p class="hint">Digite o código que você recebeu.</p>
+    <div class="msg" id="msg-cod"></div>
+    <form class="codigo-form" id="form-cod">
+      <input type="text" id="f-codigo" placeholder="X1A2BcD" maxlength="12"
+             autocapitalize="characters" spellcheck="false">
+      <button class="btn pri" type="submit" id="btn-cod">Ver</button>
+    </form>
+  </section>
+
+  <!-- ===== RESULTADO ===== -->
+  <section id="tela-resultado" class="card resultado hidden">
+    <div class="emoji-grande">🎉</div>
+    <div class="big"><span id="res-quem"></span>, você tirou<br><span id="res-tirou"></span>!</div>
+    <div class="detalhe" id="res-detalhe"></div>
+    <button class="btn gh" type="button" id="btn-inicio" style="margin-top:16px">Voltar ao início</button>
+  </section>
+
+  <!-- ===== ADMIN ===== -->
+  <section id="tela-adm" class="card hidden">
+    <h2>Painel do organizador</h2>
+    <div class="msg" id="msg-adm"></div>
+
+    <div id="adm-login">
+      <label class="f"><span>Senha</span><input type="password" id="f-senha"></label>
+      <button class="btn pri" type="button" id="btn-adm-entrar">Entrar</button>
+    </div>
+
+    <div id="adm-painel" class="hidden">
+      <div class="tabs">
+        <button class="tab on" data-tab="participantes">Participantes</button>
+        <button class="tab" data-tab="visual">Aparência</button>
+        <button class="tab" data-tab="campos">Campos</button>
+      </div>
+
+      <div id="adm-tab-participantes">
+        <p class="hint" id="adm-resumo"></p>
+        <div id="adm-lista"></div>
+        <label class="f" style="margin-top:14px"><span>Lista de nomes (um por linha)</span>
+          <textarea id="adm-nomes" style="min-height:130px" placeholder="Andressa&#10;Beatriz&#10;Carlos"></textarea>
+        </label>
+        <div class="grid2">
+          <label class="f"><span>Mínimo</span><input type="number" id="adm-min" min="3" value="3"></label>
+          <label class="f"><span>Máximo (0 = livre)</span><input type="number" id="adm-max" min="0" value="0"></label>
+        </div>
+        <button class="btn gh" type="button" id="btn-salvar-lista">Salvar lista</button>
+        <button class="btn pri" type="button" id="btn-sortear" style="margin-top:10px">Realizar sorteio</button>
+      </div>
+
+      <div id="adm-tab-visual" class="hidden">
+        <label class="f"><span>Nome do evento</span><input type="text" id="adm-evento"></label>
+        <label class="f"><span>Subtítulo</span><input type="text" id="adm-sub"></label>
+        <label class="f"><span>Texto de boas-vindas</span><textarea id="adm-boas"></textarea></label>
+        <label class="f"><span>Texto após cadastro</span><textarea id="adm-ok"></textarea></label>
+        <label class="f"><span>Logo (quadrada)</span>
+          <input type="file" id="adm-logo" accept="image/*">
+          <div class="img-prev" id="prev-logo">sem logo</div>
+        </label>
+        <label class="f"><span>Imagem de fundo</span>
+          <input type="file" id="adm-fundo" accept="image/*">
+          <div class="img-prev" id="prev-fundo">sem imagem</div>
+        </label>
+        <button class="btn pri" type="button" id="btn-salvar-visual">Salvar aparência</button>
+      </div>
+
+      <div id="adm-tab-campos" class="hidden">
+        <p class="hint">Cada campo extra aparece no cadastro do participante.
+          Ex.: "Tamanho", "Preferências". Marque <b>obrigatório</b> para exigir.</p>
+        <div id="lista-campos"></div>
+        <button class="btn gh" type="button" id="btn-add-campo">+ Adicionar campo</button>
+        <button class="btn pri" type="button" id="btn-salvar-campos" style="margin-top:10px">Salvar campos</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot" id="rodape">Sorteio oculto · nenhum código de outra pessoa fica visível</p>
+</div>
+
+<script>
+const API = (new URLSearchParams(location.search).get("api") === "local")
+  ? "/api"
+  : "https://script.google.com/macros/s/AKfycby8w7FQ74wXRL8IZNvbGMH3d398K-Ss_O8QYTjhMaXoMLdsxGL4c0hoGbaxASM42Tgdig/exec";
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const TELAS = ["tela-nome","tela-cadastro","tela-ok","tela-codigo","tela-resultado","tela-adm"];
+
+function mostrar(id) {
+  TELAS.forEach(t => $("#" + t).classList.toggle("hidden", t !== id));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false;
+let nomeEscolhido = null, senhaAdm = "", confAdm = null;
+let logoB64 = null, fundoB64 = null, logoTipo = "", fundoTipo = "";
+
+async function apiGet(params) {
+  const r = await fetch(API + "?" + new URLSearchParams(params).toString(), { cache: "no-store" });
+  return r.json();
+}
+async function apiPost(body) {
+  const r = await fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+function aviso(el, txt, tipo) {
+  el.textContent = txt;
+  el.className = "msg show " + (tipo === "ok" ? "ok" : "err");
+}
+function limpa(el) { el.className = "msg"; el.textContent = ""; }
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g,
+    c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[c]);
+}
+
+function aplicarConf(c) {
+  CONF = c || {};
+  document.title = CONF.nome_evento || "Elemento-X";
+  $("#tt-evento").textContent = CONF.nome_evento || "Elemento-X";
+  $("#tt-sub").textContent = CONF.subtitulo || "";
+  $("#txt-boas").textContent = CONF.texto_boas_vindas || "Escolha seu nome na lista.";
+  $("#txt-ok").textContent = CONF.texto_sucesso || "Seus dados foram registrados.";
+  $("#rodape").textContent = (CONF.nome_evento || "Elemento-X") + " · sorteio oculto";
+  try { EXTRA_CAMPOS = JSON.parse(CONF.campos_extras || "[]"); } catch (e) { EXTRA_CAMPOS = []; }
+  renderCamposForm();
+}
+
+async function carregarImagem(chave) {
+  try {
+    const d = await apiGet({ acao: "imagem", chave });
+    if (!d.ok) return null;
+    return "data:" + d.tipo + ";base64," + d.base64;
+  } catch (e) { return null; }
+}
+async function aplicarImagens() {
+  if (CONF.tem_logo) {
+    const u = await carregarImagem("logo");
+    if (u) $("#logo-box").innerHTML = '<img src="' + u + '" alt="logo">';
+  }
+  if (CONF.tem_fundo) {
+    const u = await carregarImagem("fundo");
+    if (u) { $("#fundo").style.backgroundImage = 'url("' + u + '")'; $("#fundo").classList.add("on"); }
+  }
+}
+
+async function carregar() {
+  try {
+    const d = await apiGet({});
+    if (!d.ok) throw new Error(d.erro || "erro");
+    aplicarConf(d.conf);
+    aplicarImagens();
+    sorteado = !!d.sorteado;
+    NOMES = d.participantes || [];
+    desenharNomes();
+    if (sorteado) {
+      $("#tt-sub").textContent = "Sorteio realizado — consulte seu código";
+      $("#tela-nome").classList.add("hidden");
+      mostrar("tela-codigo");
+    }
+  } catch (e) {
+    $("#lista-nomes").innerHTML =
+      '<p class="hint" style="color:var(--err)">Não foi possível carregar.<br>' +
+      esc(e.message || e) + '</p>';
+  }
+}
+
+function desenharNomes() {
+  const box = $("#lista-nomes");
+  box.innerHTML = "";
+  if (!NOMES.length) {
+    box.innerHTML = '<p class="hint">Nenhum nome cadastrado ainda. Aguarde o organizador.</p>';
+    return;
+  }
+  NOMES.forEach(p => {
+    const b = document.createElement("button");
+    b.className = "nome" + (p.preencheu ? " ok" : "");
+    b.textContent = p.nome;
+    b.disabled = p.preencheu;
+    b.title = p.preencheu ? "já cadastrado" : "escolher este nome";
+    b.addEventListener("click", () => escolher(p.nome));
+    box.appendChild(b);
+  });
+}
+
+function renderCamposForm() {
+  const box = $("#extras-box");
+  box.innerHTML = "";
+  EXTRA_CAMPOS.forEach(c => {
+    const l = document.createElement("label");
+    l.className = "f";
+    l.innerHTML = '<span>' + esc(c.rotulo) + (c.obrigatorio ? " *" : "") + '</span>';
+    let inp;
+    if (c.tipo === "textarea") {
+      inp = document.createElement("textarea");
+    } else {
+      inp = document.createElement("input");
+      inp.type = "text";
+    }
+    inp.placeholder = c.placeholder || "";
+    inp.id = "ex-" + c.id;
+    inp.dataset.campo = c.id;
+    l.appendChild(inp);
+    box.appendChild(l);
+  });
+}
+
+function escolher(nome) {
+  nomeEscolhido = nome;
+  $("#cad-titulo").textContent = "Olá, " + nome + "!";
+  limpa($("#msg-cad"));
+  $("#form-cad").reset();
+  renderCamposForm();
+  mostrar("tela-cadastro");
+  setTimeout(() => $("#f-email").focus(), 250);
+}
+
+$("#form-cad").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("#btn-cad");
+  const email = $("#f-email").value.trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return aviso($("#msg-cad"), "Digite um e-mail válido.");
+
+  const extras = {};
+  for (const c of EXTRA_CAMPOS) {
+    const el = $("#ex-" + c.id);
+    const v = el ? el.value.trim() : "";
+    if (c.obrigatorio && !v) return aviso($("#msg-cad"), "Preencha: " + c.rotulo);
+    extras[c.id] = v;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Enviando…';
+  try {
+    const d = await apiPost({ acao: "cadastrar", nome: nomeEscolhido, email, extras });
+    if (!d.ok) throw new Error(d.erro || "não foi possível cadastrar");
+    $("#ok-nome").textContent = d.nome || nomeEscolhido;
+    mostrar("tela-ok");
+  } catch (err) {
+    aviso($("#msg-cad"), String(err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Entrar no sorteio";
+  }
+});
+
+$("#btn-voltar").addEventListener("click", () => { limpa($("#msg-cad")); mostrar("tela-nome"); });
+$("#btn-ja-tenho").addEventListener("click", () => { limpa($("#msg-cod")); mostrar("tela-codigo"); });
+
+$("#form-cod").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const cod = $("#f-codigo").value.trim();
+  if (!cod) return aviso($("#msg-cod"), "Digite o código.");
+  const btn = $("#btn-cod");
+  btn.disabled = true;
+  try {
+    const d = await apiGet({ acao: "consultar", codigo: cod });
+    if (!d.ok) throw new Error(d.erro || "código não encontrado");
+    $("#res-quem").textContent = d.quem;
+    $("#res-tirou").textContent = d.tirou;
+    const det = $("#res-detalhe");
+    det.innerHTML = "";
+    if (EXTRA_CAMPOS.length) {
+      for (const c of EXTRA_CAMPOS) {
+        const v = (d.extras || {})[c.id];
+        det.insertAdjacentHTML("beforeend",
+          '<div class="l">' + esc(c.rotulo) + '</div><div class="v">' +
+          (v ? esc(v) : "não informado") + '</div>');
+      }
+    } else {
+      det.innerHTML = '<div class="l">Detalhes</div><div class="v">—</div>';
+    }
+    mostrar("tela-resultado");
+  } catch (err) {
+    aviso($("#msg-cod"), String(err.message || err));
+  } finally { btn.disabled = false; }
+});
+
+$("#btn-inicio").addEventListener("click", () => {
+  $("#f-codigo").value = "";
+  limpa($("#msg-cod"));
+  mostrar(sorteado ? "tela-codigo" : "tela-nome");
+});
+
+/* ================= ADMIN ================= */
+$("#btn-adm-entrar").addEventListener("click", carregarAdm);
+$("#f-senha").addEventListener("keydown", e => { if (e.key === "Enter") carregarAdm(); });
+
+$$(".tab").forEach(t => t.addEventListener("click", () => {
+  $$(".tab").forEach(o => o.classList.toggle("on", o === t));
+  ["participantes","visual","campos"].forEach(a =>
+    $("#adm-tab-" + a).classList.toggle("hidden", a !== t.dataset.tab));
+}));
+
+async function carregarAdm() {
+  senhaAdm = $("#f-senha").value;
+  limpa($("#msg-adm"));
+  try {
+    const d = await apiGet({ acao: "admin", senha: senhaAdm });
+    if (!d.ok) throw new Error(d.erro || "senha incorreta");
+    confAdm = d.conf;
+    $("#adm-login").classList.add("hidden");
+    $("#adm-painel").classList.remove("hidden");
+    preencherAdm(d);
+  } catch (e) {
+    aviso($("#msg-adm"), String(e.message || e));
+  }
+}
+
+function preencherAdm(d) {
+  $("#adm-resumo").innerHTML =
+    d.preencheram + " de " + d.total + " participantes preencheram." +
+    (d.sorteado ? " <b>Sorteio já realizado.</b>" : "") +
+    '<br><span style="font-size:11.5px">Você vê apenas quem preencheu. ' +
+    'O resultado não é exibido para o organizador.</span>';
+
+  const lista = $("#adm-lista");
+  lista.innerHTML = "";
+  (d.participantes || []).forEach(p => {
+    const div = document.createElement("div");
+    div.className = "adm-row";
+    div.innerHTML = '<span class="nm">' + esc(p.nome) + '</span><span class="tag ' +
+      (p.preencheu ? "ok" : "no") + '">' + (p.preencheu ? "preencheu" : "falta") + '</span>';
+    lista.appendChild(div);
+  });
+
+  const btn = $("#btn-sortear");
+  btn.disabled = d.sorteado || d.preencheram < d.total || d.total < 3;
+  btn.textContent = d.sorteado ? "Sorteio já realizado" :
+    (d.total < 3 ? "Mínimo de 3 participantes" :
+     d.preencheram < d.total ? "Aguardando todos preencherem" : "Realizar sorteio");
+
+  $("#adm-evento").value = confAdm.nome_evento || "";
+  $("#adm-sub").value = confAdm.subtitulo || "";
+  $("#adm-boas").value = confAdm.texto_boas_vindas || "";
+  $("#adm-ok").value = confAdm.texto_sucesso || "";
+  $("#adm-min").value = confAdm.min_participantes || 3;
+  $("#adm-max").value = confAdm.max_participantes || 0;
+  $("#adm-nomes").value = (d.participantes || []).map(p => p.nome).join("\n");
+
+  try { EXTRA_CAMPOS = JSON.parse(confAdm.campos_extras || "[]"); } catch (e) { EXTRA_CAMPOS = []; }
+  renderCamposAdm();
+  if (confAdm.tem_logo) carregarImagem("logo").then(u => {
+    if (u) { $("#prev-logo").style.backgroundImage = 'url("' + u + '")'; $("#prev-logo").textContent = ""; }
+  });
+  if (confAdm.tem_fundo) carregarImagem("fundo").then(u => {
+    if (u) { $("#prev-fundo").style.backgroundImage = 'url("' + u + '")'; $("#prev-fundo").textContent = ""; }
+  });
+}
+
+$("#btn-salvar-lista").addEventListener("click", async () => {
+  const nomes = $("#adm-nomes").value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (nomes.length < 3) return aviso($("#msg-adm"), "Mínimo de 3 nomes.");
+  const btn = $("#btn-salvar-lista");
+  btn.disabled = true;
+  try {
+    const c1 = await apiPost({ acao: "config", senha: senhaAdm,
+      min_participantes: String($("#adm-min").value),
+      max_participantes: String($("#adm-max").value) });
+    if (!c1.ok) throw new Error(c1.erro);
+    const c2 = await apiPost({ acao: "participantes", senha: senhaAdm, nomes });
+    if (!c2.ok) throw new Error(c2.erro);
+    aviso($("#msg-adm"), c2.total + " participantes salvos.", "ok");
+    carregarAdm();
+  } catch (e) {
+    aviso($("#msg-adm"), String(e.message || e));
+  } finally { btn.disabled = false; }
+});
+
+$("#btn-salvar-visual").addEventListener("click", async () => {
+  const btn = $("#btn-salvar-visual");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Salvando…';
+  try {
+    const payload = {
+      acao: "config", senha: senhaAdm,
+      nome_evento: $("#adm-evento").value.trim() || "Elemento-X",
+      subtitulo: $("#adm-sub").value.trim(),
+      texto_boas_vindas: $("#adm-boas").value.trim(),
+      texto_sucesso: $("#adm-ok").value.trim()
+    };
+    if (logoB64) { payload.logo_base64 = logoB64; payload.logo_tipo = logoTipo; }
+    if (fundoB64) { payload.fundo_base64 = fundoB64; payload.fundo_tipo = fundoTipo; }
+    const d = await apiPost(payload);
+    if (!d.ok) throw new Error(d.erro);
+    aviso($("#msg-adm"), "Aparência salva.", "ok");
+    await carregar();
+  } catch (e) {
+    aviso($("#msg-adm"), String(e.message || e));
+  } finally { btn.disabled = false; btn.textContent = "Salvar aparência"; }
+});
+
+function lerArquivo(input, cb) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (f.size > 3 * 1024 * 1024) return aviso($("#msg-adm"), "Imagem maior que 3 MB.");
+  const r = new FileReader();
+  r.onload = () => cb(String(r.result).split(",")[1], f.type);
+  r.readAsDataURL(f);
+}
+$("#adm-logo").addEventListener("change", e => lerArquivo(e.target, (b64, tipo) => {
+  logoB64 = b64; logoTipo = tipo;
+  $("#prev-logo").style.backgroundImage = 'url("data:' + tipo + ';base64,' + b64 + '")';
+  $("#prev-logo").textContent = "";
+}));
+$("#adm-fundo").addEventListener("change", e => lerArquivo(e.target, (b64, tipo) => {
+  fundoB64 = b64; fundoTipo = tipo;
+  $("#prev-fundo").style.backgroundImage = 'url("data:' + tipo + ';base64,' + b64 + '")';
+  $("#prev-fundo").textContent = "";
+}));
+
+function renderCamposAdm() {
+  const box = $("#lista-campos");
+  box.innerHTML = "";
+  if (!EXTRA_CAMPOS.length) {
+    box.innerHTML = '<p class="hint">Nenhum campo extra. O cadastro terá só e-mail.</p>';
+    return;
+  }
+  EXTRA_CAMPOS.forEach((c, i) => {
+    const d = document.createElement("div");
+    d.className = "campo-extra";
+    d.innerHTML = '<input type="text" value="' + esc(c.rotulo) + '" placeholder="Rótulo" data-i="' + i + '">' +
+      '<input type="checkbox" ' + (c.obrigatorio ? "checked" : "") + ' title="obrigatório" data-ob="' + i + '">' +
+      '<button class="del" data-del="' + i + '">✕</button>';
+    box.appendChild(d);
+  });
+  $$("[data-i]", box).forEach(inp => inp.addEventListener("input", () => {
+    EXTRA_CAMPOS[+inp.dataset.i].rotulo = inp.value;
+  }));
+  $$("[data-ob]", box).forEach(inp => inp.addEventListener("change", () => {
+    EXTRA_CAMPOS[+inp.dataset.ob].obrigatorio = inp.checked;
+  }));
+  $$("[data-del]", box).forEach(b => b.addEventListener("click", () => {
+    EXTRA_CAMPOS.splice(+b.dataset.del, 1); renderCamposAdm();
+  }));
+}
+$("#btn-add-campo").addEventListener("click", () => {
+  EXTRA_CAMPOS.push({ id: "c" + Date.now(), rotulo: "Novo campo", tipo: "texto",
+    obrigatorio: false, placeholder: "" });
+  renderCamposAdm();
+});
+$("#btn-salvar-campos").addEventListener("click", async () => {
+  const btn = $("#btn-salvar-campos");
+  btn.disabled = true;
+  try {
+    const d = await apiPost({ acao: "config", senha: senhaAdm,
+      campos_extras: JSON.stringify(EXTRA_CAMPOS) });
+    if (!d.ok) throw new Error(d.erro);
+    aviso($("#msg-adm"), "Campos salvos.", "ok");
+    await carregar();
+  } catch (e) {
+    aviso($("#msg-adm"), String(e.message || e));
+  } finally { btn.disabled = false; }
+});
+
+$("#btn-sortear").addEventListener("click", async () => {
+  if (!confirm("Realizar o sorteio agora?\n\n• Depois disso NÃO poderá ser desfeito nem refeito.\n• Você (organizador) NÃO verá quem tirou quem.\n• Cada participante descobre só o próprio resultado pelo código.")) return;
+  const btn = $("#btn-sortear");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Sorteando…';
+  try {
+    const d = await apiPost({ acao: "sortear", senha: senhaAdm });
+    if (!d.ok) throw new Error(d.erro || "falhou");
+    aviso($("#msg-adm"), "Sorteio realizado. Cada participante já pode consultar o seu código.", "ok");
+    btn.textContent = "Sorteio já realizado";
+  } catch (e) {
+    aviso($("#msg-adm"), String(e.message || e));
+    btn.disabled = false; btn.textContent = "Realizar sorteio";
+  }
+});
+
+function rota() {
+  const h = (location.hash || "").toLowerCase();
+  if (h === "#adm") { mostrar("tela-adm"); return; }
+  if (h === "#codigo") { mostrar("tela-codigo"); return; }
+  if (h === "#lista") { mostrar("tela-nome"); return; }
+  carregar();
+}
+window.addEventListener("hashchange", rota);
+rota();
+</script>
+</body>
+</html>
