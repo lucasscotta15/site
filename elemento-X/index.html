@@ -210,11 +210,47 @@
     <div class="msg" id="msg-adm"></div>
 
     <div id="adm-login">
-      <label class="f"><span>Senha</span><input type="password" id="f-senha"></label>
+      <label class="f"><span>Código do evento</span>
+        <input type="text" id="f-cod-adm" placeholder="Ex.: NATALFAMILIA26"
+               style="text-transform:uppercase" autocapitalize="characters">
+      </label>
+      <label class="f"><span>Senha do organizador</span>
+        <input type="password" id="f-senha">
+      </label>
       <button class="btn pri" type="button" id="btn-adm-entrar">Entrar</button>
+      <button class="btn gh" type="button" id="btn-novo-evento" style="margin-top:10px">
+        + Criar meu próprio sorteio
+      </button>
+    </div>
+
+    <div id="adm-novo" class="hidden">
+      <p class="hint">Crie um sorteio novo. Ele é <b>independente</b> de qualquer outro
+         — nada é apagado nem substituído.</p>
+      <label class="f"><span>Nome do evento</span>
+        <input type="text" id="nv-nome" placeholder="Ex.: Amigo Havaianas 2026"></label>
+      <label class="f"><span>Código do evento (compartilhe com todos)</span>
+        <input type="text" id="nv-codigo" placeholder="Ex.: FAMILIA2026"
+               style="text-transform:uppercase" autocapitalize="characters"></label>
+      <label class="f"><span>Senha do organizador (mín. 6 caracteres)</span>
+        <input type="password" id="nv-senha"></label>
+      <label class="f"><span>Repetir a senha</span>
+        <input type="password" id="nv-senha2"></label>
+      <button class="btn pri" type="button" id="btn-criar">Criar evento</button>
+      <button class="btn gh" type="button" id="btn-novo-voltar" style="margin-top:10px">Voltar</button>
+      <div class="msg" id="msg-novo"></div>
     </div>
 
     <div id="adm-painel" class="hidden">
+      <div style="display:flex; align-items:center; gap:10px; background:var(--bg2);
+                  border:1px solid var(--line); border-radius:12px; padding:10px 13px; margin-bottom:14px">
+        <div style="flex:1; min-width:0">
+          <div style="font-size:10.5px; color:var(--mut); text-transform:uppercase; letter-spacing:.5px">Evento</div>
+          <div id="adm-evento-nome" style="font-weight:600; font-size:14px;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap"></div>
+        </div>
+        <button class="btn gh" type="button" id="btn-sair"
+                style="width:auto; padding:7px 12px; font-size:12.5px; margin:0">Trocar</button>
+      </div>
       <div class="tabs">
         <button class="tab on" data-tab="participantes">Participantes</button>
         <button class="tab" data-tab="visual">Aparência</button>
@@ -300,7 +336,7 @@ function mostrar(id) {
 }
 
 let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false, LISTA_ABERTA = false;
-let nomeEscolhido = null, senhaAdm = "", confAdm = null;
+let nomeEscolhido = null, senhaAdm = "", codAdm = "", confAdm = null;
 let logoB64 = null, fundoB64 = null, logoTipo = "", fundoTipo = "";
 
 async function apiGet(params) {
@@ -425,7 +461,9 @@ $("#form-meus").addEventListener("submit", async (e) => {
 
 async function carregar() {
   try {
-    const d = await apiGet({});
+    const cod = new URLSearchParams(location.search).get("ev") ||
+                (location.hash.match(/ev=([A-Za-z0-9]+)/) || [])[1] || "";
+    const d = await apiGet(cod ? { codigo_evento: cod } : {});
     if (!d.ok) throw new Error(d.erro || "erro");
     aplicarConf(d.conf);
     aplicarImagens();
@@ -576,6 +614,49 @@ $("#btn-inicio").addEventListener("click", () => {
 $("#btn-adm-entrar").addEventListener("click", carregarAdm);
 $("#f-senha").addEventListener("keydown", e => { if (e.key === "Enter") carregarAdm(); });
 
+$("#btn-sair").addEventListener("click", () => {
+  senhaAdm = ""; codAdm = ""; confAdm = null;
+  $("#f-senha").value = ""; $("#f-cod-adm").value = "";
+  $("#adm-painel").classList.add("hidden");
+  $("#adm-login").classList.remove("hidden");
+  limpa($("#msg-adm"));
+});
+
+/* ---- criar novo evento (independente) ---- */
+$("#btn-novo-evento").addEventListener("click", () => {
+  $("#adm-login").classList.add("hidden");
+  $("#adm-novo").classList.remove("hidden");
+  limpa($("#msg-novo"));
+});
+$("#btn-novo-voltar").addEventListener("click", () => {
+  $("#adm-novo").classList.add("hidden");
+  $("#adm-login").classList.remove("hidden");
+  limpa($("#msg-novo"));
+});
+
+$("#btn-criar").addEventListener("click", async () => {
+  const nome = $("#nv-nome").value.trim();
+  const codigo = $("#nv-codigo").value.trim().toUpperCase();
+  const s1 = $("#nv-senha").value, s2 = $("#nv-senha2").value;
+  limpa($("#msg-novo"));
+  if (!nome) return aviso($("#msg-novo"), "informe o nome do evento");
+  if (!codigo) return aviso($("#msg-novo"), "informe o código do evento");
+  if (s1.length < 6) return aviso($("#msg-novo"), "a senha precisa ter ao menos 6 caracteres");
+  if (s1 !== s2) return aviso($("#msg-novo"), "as senhas não conferem");
+  try {
+    const d = await apiPost({ acao: "criar_evento", nome_evento: nome,
+                              codigo_evento: codigo, senha: s1 });
+    if (!d.ok) throw new Error(d.erro || "erro ao criar");
+    $("#nv-nome").value = ""; $("#nv-codigo").value = "";
+    $("#nv-senha").value = ""; $("#nv-senha2").value = "";
+    $("#f-cod-adm").value = codigo;
+    $("#f-senha").value = s1;
+    $("#adm-novo").classList.add("hidden");
+    aviso($("#msg-adm"), "Evento criado! Entrando no painel…", true);
+    setTimeout(carregarAdm, 600);
+  } catch (e) { aviso($("#msg-novo"), String(e.message || e)); }
+});
+
 $$(".tab").forEach(t => t.addEventListener("click", () => {
   $$(".tab").forEach(o => o.classList.toggle("on", o === t));
   ["participantes","visual","campos"].forEach(a =>
@@ -584,13 +665,16 @@ $$(".tab").forEach(t => t.addEventListener("click", () => {
 
 async function carregarAdm() {
   senhaAdm = $("#f-senha").value;
+  codAdm = $("#f-cod-adm").value.trim().toUpperCase();
   limpa($("#msg-adm"));
+  if (!codAdm) { aviso($("#msg-adm"), "informe o código do evento"); return; }
   try {
-    const d = await apiGet({ acao: "admin", senha: senhaAdm });
+    const d = await apiGet({ acao: "admin", codigo_evento: codAdm, senha: senhaAdm });
     if (!d.ok) throw new Error(d.erro || "senha incorreta");
     confAdm = d.conf;
     $("#adm-login").classList.add("hidden");
     $("#adm-painel").classList.remove("hidden");
+    $("#adm-evento-nome").textContent = (d.evento && d.evento.nome) ? d.evento.nome : "";
     preencherAdm(d);
   } catch (e) {
     aviso($("#msg-adm"), String(e.message || e));
@@ -650,13 +734,13 @@ $("#btn-salvar-lista").addEventListener("click", async () => {
   const btn = $("#btn-salvar-lista");
   btn.disabled = true;
   try {
-    const c1 = await apiPost({ acao: "config", senha: senhaAdm,
+    const c1 = await apiPost({ acao: "config", senha: senhaAdm, codigo_evento: codAdm,
       codigo_evento: $("#adm-codigo").value.trim().toUpperCase(),
       lista_aberta: $("#adm-lista-aberta").checked ? "SIM" : "NAO",
       min_participantes: String($("#adm-min").value),
       max_participantes: String($("#adm-max").value) });
     if (!c1.ok) throw new Error(c1.erro);
-    const c2 = await apiPost({ acao: "participantes", senha: senhaAdm, nomes });
+    const c2 = await apiPost({ acao: "participantes", senha: senhaAdm, codigo_evento: codAdm, nomes });
     if (!c2.ok) throw new Error(c2.erro);
     aviso($("#msg-adm"), c2.total + " participantes salvos.", "ok");
     carregarAdm();
@@ -670,7 +754,7 @@ $("#btn-salvar-visual").addEventListener("click", async () => {
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Salvando…';
   try {
     const payload = {
-      acao: "config", senha: senhaAdm,
+      acao: "config", senha: senhaAdm, codigo_evento: codAdm,
       nome_evento: $("#adm-evento").value.trim() || "Elemento-X",
       subtitulo: $("#adm-sub").value.trim(),
       texto_boas_vindas: $("#adm-boas").value.trim(),
@@ -740,7 +824,7 @@ $("#btn-salvar-campos").addEventListener("click", async () => {
   const btn = $("#btn-salvar-campos");
   btn.disabled = true;
   try {
-    const d = await apiPost({ acao: "config", senha: senhaAdm,
+    const d = await apiPost({ acao: "config", senha: senhaAdm, codigo_evento: codAdm,
       campos_extras: JSON.stringify(EXTRA_CAMPOS) });
     if (!d.ok) throw new Error(d.erro);
     aviso($("#msg-adm"), "Campos salvos.", "ok");
