@@ -545,7 +545,10 @@ $("#m-nome").addEventListener("input", () => {
 
 /* ---------- tela de entrada (código do evento) ---------- */
 function guardaCodigo(c) {
-  try { localStorage.setItem("ex_codigo", c); } catch (e) {}
+  try {
+    if (c) localStorage.setItem("ex_codigo", c);
+    else localStorage.removeItem("ex_codigo");   // sempre revalidar ao abrir
+  } catch (e) {}
 }
 function leCodigoSalvo() {
   try { return localStorage.getItem("ex_codigo") || ""; } catch (e) { return ""; }
@@ -665,11 +668,22 @@ async function carregar() {
     // 1. código vindo da URL (?ev=CODIGO ou #ev=CODIGO)
     const daUrl = new URLSearchParams(location.search).get("ev") ||
                   (location.hash.match(/ev=([A-Za-z0-9]+)/i) || [])[1] || "";
-    const salvo = leCodigoSalvo();
-    const cod = (daUrl || salvo || "").toUpperCase();
+    const cod = (daUrl || "").toUpperCase();
 
-    // 2. sem código: pede o código do evento (primeira coisa da tela)
-    if (!cod) { mostrar("tela-entrada"); return; }
+    // 2. SEMPRE pede o código ao abrir o site (só o link direto ?ev= pula)
+    if (!cod) {
+      COD_EVENTO = "";
+      NOMES_DISP = [];
+      CONF = {};
+      guardaCodigo("");
+      $("#ev-badge").classList.add("hidden");
+      // limpa logo/fundo do evento anterior
+      $("#logo-box").innerHTML = "";
+      $("#fundo").style.backgroundImage = "";
+      mostrar("tela-entrada");
+      setTimeout(() => { const el = $("#e-codigo"); if (el) el.focus(); }, 150);
+      return;
+    }
 
     // 3. com código: valida e já entra
     await entrarComCodigo(cod);
@@ -821,8 +835,7 @@ $("#form-cod").addEventListener("submit", async (e) => {
 $("#btn-inicio").addEventListener("click", () => {
   $("#f-codigo").value = "";
   limpa($("#msg-cod"));
-  if (!COD_EVENTO) { mostrar("tela-entrada"); return; }
-  mostrar(sorteado ? "tela-codigo" : (LISTA_ABERTA ? "tela-nome" : "tela-meus"));
+  mostrar("tela-entrada");
 });
 
 /* ================= ADMIN ================= */
