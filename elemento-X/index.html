@@ -748,13 +748,26 @@ function jaPreencheu(nome) {
   const p = $("#txt-boas");
   if (p) p.textContent = "Escolha seu nome na lista e preencha seus dados.";
   const box = $("#lista-nomes");
+  const antigo = $("#aviso-bloq");
+  if (antigo) antigo.remove();
   const av = document.createElement("div");
+  av.id = "aviso-bloq";
   av.className = "msg show err";
   av.style.margin = "0 0 12px";
   av.innerHTML = "<b>" + esc(nome) + "</b> já preencheu os dados.<br>" +
-    "Se não foi você, peça ao organizador para remover o nome e preencher novamente.";
+    "Se não foi você, peça ao organizador para remover o nome.<br><br>" +
+    '<button type="button" class="btn gh" id="btn-sou-outro" ' +
+    'style="width:auto;padding:7px 12px;font-size:12.5px;margin:0">Sou outra pessoa — usar meu nome</button>';
   box.parentNode.insertBefore(av, box);
-  setTimeout(() => av.remove(), 7000);
+  const btn = $("#btn-sou-outro");
+  if (btn) btn.addEventListener("click", () => {
+    av.remove();
+    nomeEscolhido = "";
+    limpa($("#msg-meus"));
+    renderExtrasMeus();
+    mostrar("tela-meus");
+    setTimeout(() => $("#m-nome") && $("#m-nome").focus(), 150);
+  });
 }
 
 function escolher(nome) {
@@ -770,6 +783,18 @@ function escolher(nome) {
 $("#form-cad").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = $("#btn-cad");
+
+  // garante o nome escolhido (a variável pode ter sido zerada por um reload de estado)
+  if (!nomeEscolhido) {
+    const t = ($("#cad-titulo").textContent || "").replace(/^Olá,\s*/i, "").replace(/!$/, "").trim();
+    if (t && t !== "Seus dados") nomeEscolhido = t;
+  }
+  if (!nomeEscolhido) {
+    aviso($("#msg-cad"), "Escolha seu nome na lista.");
+    mostrar("tela-nome");
+    return;
+  }
+
   const email = $("#f-email").value.trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return aviso($("#msg-cad"), "Digite um e-mail válido.");
 
@@ -790,6 +815,8 @@ $("#form-cad").addEventListener("submit", async (e) => {
     // nome já preenchido: nunca sobrescreve
     if (!d.ok && d.ja_preencheu) {
       aviso($("#msg-cad"), d.mensagem || "Este nome já foi preenchido.");
+      const bv = $("#btn-voltar");
+      if (bv) bv.textContent = "Escolher outro nome";
       return;
     }
     if (!d.ok) throw new Error(d.erro || "não foi possível cadastrar");
