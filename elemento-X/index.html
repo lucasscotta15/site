@@ -457,7 +457,7 @@ $("#btn-sou-eu").addEventListener("click", () => {
 
 $("#btn-conf-sim").addEventListener("click", () => {
   $("#box-confirma").classList.add("hidden");
-  enviarCadastro(true);
+  enviarCadastro(true);   // se já preencheu, o backend recusa de novo
 });
 $("#btn-conf-nao").addEventListener("click", () => {
   $("#box-confirma").classList.add("hidden");
@@ -631,6 +631,15 @@ async function enviarCadastro(confirmado) {
       codigo_evento: codigo, sem_email: semEmail, dono_email: "",
       confirmar_existente: !!confirmado, extras });
 
+    // nome já preenchido: NUNCA sobrescreve — avisa que só o ADM pode liberar
+    if (!d.ok && d.ja_preencheu) {
+      $("#box-confirma").classList.add("hidden");
+      $("#hint-nome").style.display = "none";
+      aviso($("#msg-meus"),
+        d.mensagem || "Este nome já foi preenchido. Peça ao organizador para remover e preencher novamente.");
+      return;
+    }
+
     // backend pediu confirmação: existe alguém com nome parecido
     if (!d.ok && d.precisa_confirmar) {
       const lista = (d.parecidos || []).map(p => p.nome).join(", ");
@@ -682,11 +691,17 @@ function desenharNomes() {
   }
   NOMES.forEach(p => {
     const b = document.createElement("button");
+    b.type = "button";
     b.className = "nome" + (p.preencheu ? " ok" : "");
-    b.textContent = p.nome;
-    b.disabled = p.preencheu;
-    b.title = p.preencheu ? "já cadastrado" : "escolher este nome";
-    b.addEventListener("click", () => escolher(p.nome));
+    b.innerHTML = esc(p.nome) +
+      (p.preencheu ? ' <span style="font-size:11px;opacity:.75">✓ já preencheu</span>' : "");
+    b.title = p.preencheu
+      ? "Este nome já foi preenchido — só o organizador pode liberar"
+      : "escolher este nome";
+    b.addEventListener("click", () => {
+      if (p.preencheu) { jaPreencheu(p.nome); return; }   // não deixa escolher
+      escolher(p.nome);
+    });
     box.appendChild(b);
   });
 }
@@ -711,6 +726,20 @@ function renderCamposForm() {
     l.appendChild(inp);
     box.appendChild(l);
   });
+}
+
+function jaPreencheu(nome) {
+  mostrar("tela-nome");
+  const p = $("#txt-boas");
+  if (p) p.textContent = "Escolha seu nome na lista e preencha seus dados.";
+  const box = $("#lista-nomes");
+  const av = document.createElement("div");
+  av.className = "msg show err";
+  av.style.margin = "0 0 12px";
+  av.innerHTML = "<b>" + esc(nome) + "</b> já preencheu os dados.<br>" +
+    "Se não foi você, peça ao organizador para remover o nome e preencher novamente.";
+  box.parentNode.insertBefore(av, box);
+  setTimeout(() => av.remove(), 7000);
 }
 
 function escolher(nome) {
@@ -882,9 +911,29 @@ function preencherAdm(d) {
     div.innerHTML = '<span class="nm">' + esc(p.nome) +
       (p.sem_email ? ' <span style="font-size:10.5px; color:var(--mut)">(sem e-mail próprio)</span>' : '') +
       '</span><span class="tag ' +
-      (p.preencheu ? "ok" : "no") + '">' + (p.preencheu ? "preencheu" : "falta") + '</span>';
+      (p.preencheu ? "ok" : "no") + '">' + (p.preencheu ? "preencheu" : "falta") + '</span>' +
+      (p.preencheu && !d.sorteado
+        ? '<button type="button" class="btn gh liberar" data-nome="' + esc(p.nome) + '"' +
+          ' style="width:auto;padding:5px 9px;font-size:11px;margin:0 0 0 8px">liberar</button>'
+        : '');
     lista.appendChild(div);
   });
+
+  $$(".liberar").forEach(b => b.addEventListener("click", async () => {
+    const nome = b.dataset.nome;
+    if (!confirm("Liberar \"" + nome + "\" para preencher novamente?\n\n" +
+                 "Os dados atuais serão apagados.")) return;
+    b.disabled = true;
+    try {
+      const r = await apiPost({ acao: "remover", senha: senhaAdm, codigo_evento: codAdm, nome });
+      if (!r.ok) throw new Error(r.erro || "erro");
+      aviso($("#msg-adm"), r.mensagem, "ok");
+      setTimeout(carregarAdm, 400);
+    } catch (e) {
+      aviso($("#msg-adm"), String(e.message || e));
+      b.disabled = false;
+    }
+  }));
 
   $("#btn-enviar").disabled = !d.sorteado;
   const btn = $("#btn-sortear");
