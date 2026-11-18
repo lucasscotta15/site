@@ -373,6 +373,7 @@ let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false, LISTA_ABERTA = f
 let COD_EVENTO = "";   // código digitado na tela de entrada
 let NOMES_DISP = [];   // nomes já cadastrados (autocomplete)
 let NOME_EXISTENTE = "";  // "sou eu" confirmado
+let ULTIMO_ADM = null;    // último estado do painel
 let nomeEscolhido = null, senhaAdm = "", codAdm = "", confAdm = null;
 let logoB64 = null, fundoB64 = null, logoTipo = "", fundoTipo = "";
 
@@ -966,7 +967,11 @@ function preencherAdm(d) {
   $("#adm-codigo").value = confAdm.codigo_evento || "";
   $("#adm-min").value = confAdm.min_participantes || 3;
   $("#adm-max").value = confAdm.max_participantes || 0;
-  $("#adm-nomes").value = (d.participantes || []).map(p => p.nome).join("\n");
+  // a lista do painel mostra TODOS: quem preencheu vem primeiro e não some
+  $("#adm-nomes").value = (d.participantes || [])
+    .slice().sort((a, b) => (b.preencheu ? 1 : 0) - (a.preencheu ? 1 : 0))
+    .map(p => p.nome).join("\n");
+  ULTIMO_ADM = d;
 
   try { EXTRA_CAMPOS = JSON.parse(confAdm.campos_extras || "[]"); } catch (e) { EXTRA_CAMPOS = []; }
   renderCamposAdm();
@@ -980,6 +985,20 @@ function preencherAdm(d) {
 
 $("#btn-salvar-lista").addEventListener("click", async () => {
   const nomes = $("#adm-nomes").value.split("\n").map(s => s.trim()).filter(Boolean);
+
+  // checagem de segurança: quem já preencheu não pode sair da lista
+  const preenchidos = (ULTIMO_ADM && ULTIMO_ADM.participantes || []).filter(p => p.preencheu);
+  if (preenchidos.length) {
+    const atuais = new Set(nomes.map(n => n.toLowerCase().trim()));
+    const saindo = preenchidos.filter(p => !atuais.has(p.nome.toLowerCase().trim()));
+    if (saindo.length) {
+      const quais = saindo.map(p => p.nome).join(", ");
+      if (!confirm("Atenção: " + quais + " já preencheram os dados.\n\n" +
+                   "Esses nomes serão MANTIDOS mesmo fora da lista.\n\nContinuar?")) return;
+    }
+    if (!confirm("Salvar a lista?\n\n" +
+        preenchidos.length + " pessoa(s) já preencheram e terão os dados preservados.")) return;
+  }
   // lista pode ficar vazia ou parcial — o mínimo é exigido só na hora do sorteio
   const btn = $("#btn-salvar-lista");
   btn.disabled = true;
@@ -992,8 +1011,12 @@ $("#btn-salvar-lista").addEventListener("click", async () => {
     if (!c1.ok) throw new Error(c1.erro);
     const c2 = await apiPost({ acao: "participantes", senha: senhaAdm, codigo_evento: codAdm, nomes });
     if (!c2.ok) throw new Error(c2.erro);
-    aviso($("#msg-adm"), c2.total + " participantes salvos.", "ok");
-    carregarAdm();
+    let msg = c2.total + " participantes na lista.";
+    if (c2.removidos) msg += " " + c2.removidos + " removido(s).";
+    if (c2.aviso) msg += " ⚠️ " + c2.aviso;
+    aviso($("#msg-adm"), msg, "ok");
+    // recarrega o painel para refletir a planilha (inclui quem preencheu)
+    setTimeout(carregarAdm, 350);
   } catch (e) {
     aviso($("#msg-adm"), String(e.message || e));
   } finally { btn.disabled = false; }
