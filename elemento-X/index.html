@@ -147,12 +147,14 @@
         </span>
       </label>
       <div id="box-confirma" class="hidden" style="background:rgba(251,191,36,.1);
-           border:1px solid rgba(251,191,36,.4); border-radius:12px; padding:12px 14px; margin-bottom:12px">
-        <div style="font-size:13px; color:var(--txt); margin-bottom:9px">
-          Já existe <b id="conf-nomes"></b> neste sorteio. É você?
+           border:1px solid rgba(251,191,36,.4); border-radius:12px; padding:13px 14px; margin-bottom:12px">
+        <div style="font-size:13px; color:var(--txt); margin-bottom:4px">
+          Já existe alguém com nome parecido:
         </div>
-        <button class="btn pri" type="button" id="btn-conf-sim" style="padding:9px; font-size:13px">Sim, sou eu</button>
-        <button class="btn gh" type="button" id="btn-conf-nao" style="padding:9px; font-size:13px; margin-top:7px">Não, sou outra pessoa</button>
+        <div id="conf-nomes" style="font-size:14px; font-weight:600; color:var(--acc2); margin-bottom:10px"></div>
+        <div style="font-size:12.5px; color:var(--mut); margin-bottom:11px">É você?</div>
+        <button class="btn pri" type="button" id="btn-conf-sim" style="padding:9px; font-size:13px">Sou eu</button>
+        <button class="btn gh" type="button" id="btn-conf-nao" style="padding:9px; font-size:13px; margin-top:7px">Não sou eu</button>
       </div>
       <label class="f"><span id="lbl-email">E-mail</span>
         <input type="email" id="m-email" placeholder="seu@email.com" inputmode="email">
@@ -373,6 +375,7 @@ let NOMES = [], CONF = {}, EXTRA_CAMPOS = [], sorteado = false, LISTA_ABERTA = f
 let COD_EVENTO = "";   // código digitado na tela de entrada
 let NOMES_DISP = [];   // nomes já cadastrados (autocomplete)
 let NOME_EXISTENTE = "";  // "sou eu" confirmado
+let SOU_OUTRA = false;    // "não sou eu" — outra pessoa com nome parecido
 let ULTIMO_ADM = null;    // último estado do painel
 let nomeEscolhido = null, senhaAdm = "", codAdm = "", confAdm = null;
 let logoB64 = null, fundoB64 = null, logoTipo = "", fundoTipo = "";
@@ -457,14 +460,22 @@ $("#btn-sou-eu").addEventListener("click", () => {
 });
 
 $("#btn-conf-sim").addEventListener("click", () => {
+  const quem = ($("#conf-nomes").textContent || "").split(",")[0].trim();
   $("#box-confirma").classList.add("hidden");
-  enviarCadastro(true);   // se já preencheu, o backend recusa de novo
+  if (quem) $("#m-nome").value = quem;
+  NOME_EXISTENTE = quem;
+  $("#hint-nome").style.display = "none";
+  enviarCadastro(true);          // backend: se já preencheu, não sobrescreve
 });
+
 $("#btn-conf-nao").addEventListener("click", () => {
   $("#box-confirma").classList.add("hidden");
   NOME_EXISTENTE = "";
+  SOU_OUTRA = true;              // não pergunta de novo neste envio
   $("#hint-nome").style.display = "none";
-  aviso($("#msg-meus"), "Coloque seu nome completo, com sobrenome.", "ok");
+  $("#m-nome").value = "";       // limpa o parecido e pede o nome completo
+  aviso($("#msg-meus"), "Ok. Digite seu nome completo, com sobrenome.", "ok");
+  setTimeout(() => $("#m-nome") && $("#m-nome").focus(), 120);
 });
 
 $("#m-sem-email").addEventListener("change", (e) => {
@@ -533,6 +544,7 @@ function atualizaSugestoes() {
 $("#m-nome").addEventListener("input", () => {
   const v = $("#m-nome").value;
   NOME_EXISTENTE = "";
+  SOU_OUTRA = false;
   $("#box-confirma").classList.add("hidden");
   const achou = parecido(v);
   const hint = $("#hint-nome");
@@ -633,7 +645,8 @@ async function enviarCadastro(confirmado) {
   try {
     const d = await apiPost({ acao: "cadastrar", nome, email,
       codigo_evento: codigo, sem_email: semEmail, dono_email: "",
-      confirmar_existente: !!confirmado, extras });
+      confirmar_existente: !!confirmado,
+      sou_outra_pessoa: !!SOU_OUTRA, extras });
 
     // nome já preenchido: NUNCA sobrescreve — avisa que só o ADM pode liberar
     if (!d.ok && d.ja_preencheu) {
