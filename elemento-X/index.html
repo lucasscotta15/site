@@ -784,8 +784,16 @@ $("#form-cad").addEventListener("submit", async (e) => {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span>Enviando…';
   try {
-    const d = await apiPost({ acao: "cadastrar", nome: nomeEscolhido, email, extras });
+    const d = await apiPost({ acao: "cadastrar", nome: nomeEscolhido, email, extras,
+      codigo_evento: COD_EVENTO, sem_email: false, dono_email: "" });
+
+    // nome já preenchido: nunca sobrescreve
+    if (!d.ok && d.ja_preencheu) {
+      aviso($("#msg-cad"), d.mensagem || "Este nome já foi preenchido.");
+      return;
+    }
     if (!d.ok) throw new Error(d.erro || "não foi possível cadastrar");
+
     $("#ok-nome").textContent = d.nome || nomeEscolhido;
     mostrar("tela-ok");
   } catch (err) {
