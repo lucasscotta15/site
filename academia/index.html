@@ -1462,17 +1462,38 @@ function loadStagnation(exId, atRef) {
     if (s.data > ref) continue;
     const ex = s.exercicios.find(x => x.exercicioId === exId);
     if (!ex || !ex.series || !ex.series.length) continue;
+    // Só séries com peso E reps juntos: nada de cruzar o maior peso com a maior
+    // repetição de séries diferentes (40x8 + 30x15 daria 40x15 = 600, que nunca existiu).
+    const validas = ex.series.filter(v => v.peso != null && v.reps != null);
     const ws = ex.series.map(v => v.peso).filter(v => v != null);
     if (!ws.length) continue;
     const pesoMax = Math.max(...ws);
-    // melhor conjunto do dia pelo critério escolhido
-    const reps = ex.series.map(v => v.reps).filter(v => v != null);
-    const repsMax = reps.length ? Math.max(...reps) : null;
+
+    // melhor série do dia pelo critério escolhido
+    let repsMax = null, melhorPeso = pesoMax, melhorVolume = null;
+    if (validas.length) {
+      if (modoProg === "reps") {
+        const m = validas.reduce((a, b) => (b.reps > a.reps ? b : a));
+        repsMax = m.reps; melhorPeso = m.peso; melhorVolume = m.peso * m.reps;
+      } else if (modoProg === "carga") {
+        const m = validas.reduce((a, b) => (b.peso > a.peso ? b : a));
+        repsMax = m.reps; melhorPeso = m.peso; melhorVolume = m.peso * m.reps;
+      } else {
+        // volume real = peso × reps DA MESMA SÉRIE
+        const m = validas.reduce((a, b) => (b.peso * b.reps > a.peso * a.reps ? b : a));
+        repsMax = m.reps; melhorPeso = m.peso; melhorVolume = m.peso * m.reps;
+      }
+    } else {
+      const reps = ex.series.map(v => v.reps).filter(v => v != null);
+      repsMax = reps.length ? Math.max(...reps) : null;
+    }
+
     let chave;
     if (modoProg === "reps") chave = repsMax != null ? repsMax : pesoMax;
     else if (modoProg === "carga") chave = pesoMax;
-    else chave = repsMax != null ? pesoMax * repsMax : pesoMax;   // volume = carga × reps
-    pts.push({ data: s.data, chave, peso: pesoMax, reps: repsMax });
+    else chave = melhorVolume != null ? melhorVolume : pesoMax;   // volume = peso × reps da mesma série
+    pts.push({ data: s.data, chave, peso: melhorPeso, pesoMax, reps: repsMax,
+             volume: melhorVolume });
   }
   if (pts.length < cfg.vezes) return null;
   // ordena e faz um ponto por dia (mantém o melhor do dia)
@@ -1501,7 +1522,7 @@ function loadStagnation(exId, atRef) {
     if (todasNoTeto) { teto = true; dispara = true; }
   }
   if (!dispara) return null;
-  return { dias, peso: ultimo.peso, reps: ultimo.reps, volume: ultimo.reps != null ? ultimo.peso * ultimo.reps : null,
+  return { dias, peso: ultimo.peso, reps: ultimo.reps, volume: ultimo.volume != null ? ultimo.volume : null,
            metric: modoProg, desde: serie[inicioSeq].data, ate: ultimo.data,
            teto, tetoReps,
            registros, semanas: cfg.semanas, vezesCfg: cfg.vezes, modo: cfg.modo };
